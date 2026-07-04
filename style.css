@@ -1473,6 +1473,47 @@ a { color: inherit; text-decoration: none; }
   transform: scale(1.4);
 }
 
+/* === JS SLIDER === */
+.js-carousel-outer {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius);
+}
+.js-carousel-track {
+  display: flex;
+  transition: transform 0.38s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+  align-items: stretch;
+}
+.js-carousel-track > * {
+  min-width: 100% !important;
+  max-width: 100% !important;
+  flex-shrink: 0 !important;
+  box-sizing: border-box;
+}
+.js-carousel-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(20, 28, 47, 0.92);
+  border: 1px solid var(--border);
+  color: var(--primary);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  padding: 0;
+  transition: background 0.2s;
+}
+.js-carousel-btn:hover { background: rgba(119, 203, 245, 0.18); }
+.js-carousel-btn:disabled { opacity: 0.18; pointer-events: none; }
+.js-carousel-btn-prev { left: 6px; }
+.js-carousel-btn-next { right: 6px; }
+
 /* === RESPONSIVE === */
 
 @media (max-width: 900px) {

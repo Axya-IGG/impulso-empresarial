@@ -141,40 +141,85 @@ if (hamburger && mainNav) {
 }
 
 // === CARROSSÉIS (somente mobile) ===
-function initCarouselDots(trackId, dotsId) {
-  const track = document.getElementById(trackId);
-  const dotsContainer = document.getElementById(dotsId);
-  if (!track || !dotsContainer) return;
+function buildCarousel(containerId, dotsContainerId) {
+  const el = document.getElementById(containerId);
+  const dotsEl = dotsContainerId ? document.getElementById(dotsContainerId) : null;
+  if (!el) return;
 
-  const items = Array.from(track.children);
-  if (!items.length) return;
+  const items = Array.from(el.children);
+  if (items.length < 2) return;
 
-  const dots = items.map((_, i) => {
-    const dot = document.createElement('button');
-    dot.className = 'carousel-dot' + (i === 0 ? ' active' : '');
-    dot.setAttribute('aria-label', 'Slide ' + (i + 1));
-    dot.addEventListener('click', () => {
-      const itemLeft = items[i].offsetLeft - track.offsetLeft;
-      track.scrollTo({ left: itemLeft, behavior: 'smooth' });
+  // Monta estrutura: outer > track (com itens) + botões
+  const outer = document.createElement('div');
+  outer.className = 'js-carousel-outer';
+
+  const track = document.createElement('div');
+  track.className = 'js-carousel-track';
+  items.forEach(item => track.appendChild(item));
+  outer.appendChild(track);
+
+  // Substitui o container original pelo outer
+  el.parentNode.insertBefore(outer, el);
+  el.remove();
+
+  // Setas
+  const svgL = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
+  const svgR = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
+
+  const prevBtn = document.createElement('button');
+  prevBtn.className = 'js-carousel-btn js-carousel-btn-prev';
+  prevBtn.setAttribute('aria-label', 'Anterior');
+  prevBtn.innerHTML = svgL;
+
+  const nextBtn = document.createElement('button');
+  nextBtn.className = 'js-carousel-btn js-carousel-btn-next';
+  nextBtn.setAttribute('aria-label', 'Próximo');
+  nextBtn.innerHTML = svgR;
+
+  outer.appendChild(prevBtn);
+  outer.appendChild(nextBtn);
+
+  // Pontos
+  let dots = [];
+  if (dotsEl) {
+    dotsEl.innerHTML = '';
+    dots = items.map((_, i) => {
+      const dot = document.createElement('button');
+      dot.className = 'carousel-dot' + (i === 0 ? ' active' : '');
+      dot.setAttribute('aria-label', `Slide ${i + 1}`);
+      dot.addEventListener('click', () => goTo(i));
+      dotsEl.appendChild(dot);
+      return dot;
     });
-    dotsContainer.appendChild(dot);
-    return dot;
-  });
-
-  function updateActiveDot() {
-    const trackRect = track.getBoundingClientRect();
-    let closestIdx = 0, minDist = Infinity;
-    items.forEach((item, i) => {
-      const dist = Math.abs(item.getBoundingClientRect().left - trackRect.left);
-      if (dist < minDist) { minDist = dist; closestIdx = i; }
-    });
-    dots.forEach((d, i) => d.classList.toggle('active', i === closestIdx));
   }
 
-  track.addEventListener('scroll', updateActiveDot, { passive: true });
+  let idx = 0;
+
+  function goTo(n) {
+    idx = Math.max(0, Math.min(n, items.length - 1));
+    track.style.transform = `translateX(${-idx * 100}%)`;
+    dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+    prevBtn.disabled = idx === 0;
+    nextBtn.disabled = idx === items.length - 1;
+  }
+
+  prevBtn.addEventListener('click', () => goTo(idx - 1));
+  nextBtn.addEventListener('click', () => goTo(idx + 1));
+
+  // Suporte a swipe
+  let tx = 0;
+  outer.addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, { passive: true });
+  outer.addEventListener('touchend', e => {
+    const dx = tx - e.changedTouches[0].clientX;
+    if (Math.abs(dx) > 40) dx > 0 ? goTo(idx + 1) : goTo(idx - 1);
+  }, { passive: true });
+
+  window.addEventListener('resize', () => goTo(idx), { passive: true });
+
+  goTo(0);
 }
 
 if (window.innerWidth <= 768) {
-  initCarouselDots('checklist-carousel', 'checklist-dots');
-  initCarouselDots('speakers-carousel', 'speakers-dots');
+  buildCarousel('checklist-carousel', 'checklist-dots');
+  buildCarousel('speakers-carousel', 'speakers-dots');
 }
