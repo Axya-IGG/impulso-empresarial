@@ -1,43 +1,62 @@
 // ==========================================
-// IMPULSO EMPRESARIAL — Main Script
+// IMPULSO EMPRESARIAL 2026 — Script
 // ==========================================
 
-// === COUNTDOWN TIMER ===
-// Set your pre-sale end date here (YYYY, MM-1, DD, HH, MM, SS)
-const PRE_SALE_END = new Date(2025, 6, 31, 23, 59, 59); // July 31, 2025 — update as needed
+// === COUNTDOWN — PRÉ-VENDA (5 DIAS) ===
+// O countdown usa localStorage para manter a data consistente entre sessões.
+// Na primeira visita, define o prazo como 5 dias a partir de agora.
+const STORAGE_KEY = 'impulso_presale_end';
+const DAYS_PRESALE = 5;
+
+function getOrSetEndDate() {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored) {
+    const date = new Date(parseInt(stored, 10));
+    if (date > new Date()) return date;
+  }
+  const end = new Date();
+  end.setDate(end.getDate() + DAYS_PRESALE);
+  end.setHours(23, 59, 59, 0);
+  localStorage.setItem(STORAGE_KEY, end.getTime().toString());
+  return end;
+}
+
+const PRE_SALE_END = getOrSetEndDate();
 
 function updateCountdown() {
   const now = new Date();
   const diff = PRE_SALE_END - now;
 
+  const ids = [
+    ['cd-days', 'cd-hours', 'cd-minutes', 'cd-seconds'],
+    ['cd2-days', 'cd2-hours', 'cd2-minutes', 'cd2-seconds'],
+    ['cd3-days', 'cd3-hours', 'cd3-minutes', 'cd3-seconds'],
+  ];
+
   if (diff <= 0) {
-    // Pre-sale ended
-    ['countdown', 'countdown2'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.innerHTML = '<p style="color:var(--primary);font-weight:700;">Pré-venda encerrada!</p>';
+    ids.forEach(([d, h, m, s]) => {
+      ['0', '0', '0', '0'].forEach((v, i) => {
+        const el = document.getElementById([d, h, m, s][i]);
+        if (el) el.textContent = '00';
+      });
     });
     return;
   }
 
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const days    = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours   = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
   const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
   const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
   const pad = n => String(n).padStart(2, '0');
 
-  // Countdown 1 (hero)
-  const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-  setEl('cd-days',    pad(days));
-  setEl('cd-hours',   pad(hours));
-  setEl('cd-minutes', pad(minutes));
-  setEl('cd-seconds', pad(seconds));
-
-  // Countdown 2 (CTA final)
-  setEl('cd2-days',    pad(days));
-  setEl('cd2-hours',   pad(hours));
-  setEl('cd2-minutes', pad(minutes));
-  setEl('cd2-seconds', pad(seconds));
+  ids.forEach(([d, h, m, s]) => {
+    const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    setEl(d, pad(days));
+    setEl(h, pad(hours));
+    setEl(m, pad(minutes));
+    setEl(s, pad(seconds));
+  });
 }
 
 updateCountdown();
@@ -50,8 +69,10 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     if (target) {
       e.preventDefault();
       const headerHeight = document.querySelector('.header')?.offsetHeight || 70;
-      const top = target.getBoundingClientRect().top + window.scrollY - headerHeight - 16;
-      window.scrollTo({ top, behavior: 'smooth' });
+      window.scrollTo({
+        top: target.getBoundingClientRect().top + window.scrollY - headerHeight - 16,
+        behavior: 'smooth'
+      });
     }
   });
 });
@@ -64,21 +85,21 @@ const revealObserver = new IntersectionObserver((entries) => {
       revealObserver.unobserve(entry.target);
     }
   });
-}, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+}, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
 
 document.querySelectorAll(
-  '.card, .module-card, .speaker-card, .testimonial-card, .ticket-card, .schedule-item, .faq-item'
+  '.card, .module-card, .speaker-card, .testimonial-card, .ticket-card, ' +
+  '.schedule-item, .faq-item, .checklist-item, .brand-main-card, .sponsor-card'
 ).forEach(el => {
   el.classList.add('reveal-on-scroll');
   revealObserver.observe(el);
 });
 
-// Inject reveal styles
 const revealStyle = document.createElement('style');
 revealStyle.textContent = `
   .reveal-on-scroll {
     opacity: 0;
-    transform: translateY(24px);
+    transform: translateY(20px);
     transition: opacity 0.5s ease, transform 0.5s ease;
   }
   .reveal-on-scroll.revealed {
@@ -88,16 +109,12 @@ revealStyle.textContent = `
 `;
 document.head.appendChild(revealStyle);
 
-// === HEADER SCROLL SHADOW ===
+// === HEADER SHADOW ON SCROLL ===
 const header = document.querySelector('.header');
 window.addEventListener('scroll', () => {
-  if (window.scrollY > 10) {
-    header?.classList.add('scrolled');
-  } else {
-    header?.classList.remove('scrolled');
-  }
+  header?.classList.toggle('scrolled', window.scrollY > 10);
 }, { passive: true });
 
 const headerStyle = document.createElement('style');
-headerStyle.textContent = `.header.scrolled { box-shadow: 0 2px 20px rgba(0,0,0,0.5); }`;
+headerStyle.textContent = `.header.scrolled { box-shadow: 0 2px 20px rgba(0,0,0,0.6); }`;
 document.head.appendChild(headerStyle);
