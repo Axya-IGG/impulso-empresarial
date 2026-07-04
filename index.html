@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Impulso Empresarial 2026 — São José dos Campos</title>
+  <meta name="description" content="O maior evento de gestão e compliance empresarial de São José dos Campos. Garanta sua vaga com preço de pré-venda." />
+  <meta property="og:title" content="Impulso Empresarial 2026" />
+  <meta property="og:description" content="O evento que vai transformar a gestão da sua empresa. São José dos Campos, 14 de abril de 2026." />
+  <meta property="og:image" content="/images/og-image.jpg" />
+  <meta property="og:url" content="https://oimpulsoempresarial.com.br" />
+  <link rel="icon" href="/favicon.ico" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ========== ANNOUNCEMENT BAR ========== -->
+<div class="announcement-bar">
+  <p>🔥 <strong>PRÉ-VENDA ENCERRA EM BREVE</strong> — Garanta sua vaga pelo menor preço! &nbsp;
+    <a href="#ingressos">Quero garantir agora →</a>
+  </p>
+</div>
+
+<!-- ========== HEADER ========== -->
+<header class="header">
+  <div class="container header-inner">
+    <div class="logo">
+      <span class="logo-text">IMPULSO <span class="logo-accent">EMPRESARIAL</span></span>
+    </div>
+    <nav class="nav-links">
+      <a href="#sobre">Sobre</a>
+      <a href="#palestrantes">Palestrantes</a>
+      <a href="#programacao">Programação</a>
+      <a href="#ingressos">Ingressos</a>
+    </nav>
+    <a href="#ingressos" class="btn btn-primary btn-sm">Garantir vaga</a>
+  </div>
+</header>
+
+<!-- ========== HERO ========== -->
+<section class="hero">
+  <div class="hero-bg-overlay"></div>
+  <div class="container hero-content">
+    <div class="event-badge">Pré-venda — Vagas Limitadas</div>
+    <h1 class="hero-title">
+      O evento que vai<br />
+      <span class="highlight">transformar</span> a gestão<br />
+      da sua empresa
+    </h1>
+    <p class="hero-subtitle">
+      Gestão, compliance, liderança e crescimento em um único dia intenso.<br />
+      Conteúdo prático, palestrantes renomados e networking de alto nível.
+    </p>
+
+    <div class="event-info-row">
+      <div class="event-info-item">
+        <span class="event-info-icon">📅</span>
+        <div>
+          <strong>14 de Abril, 2026</strong>
+          <span>Terça-feira</span>
+        </div>
+      </div>
+      <div class="event-info-divider"></div>
+      <div class="event-info-item">
+        <span class="event-info-icon">🕗</span>
+        <div>
+          <strong>8h às 13h</strong>
+          <span>Credenciamento 7h30</span>
+        </div>
+      </div>
+      <div class="event-info-divider"></div>
+      <div class="event-info-item">
+        <span class="event-info-icon">📍</span>
+        <div>
+          <strong>Hotel Monreale Plus</strong>
+          <span>São José dos Campos, SP</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Countdown -->
+    <div class="countdown-wrapper">
+      <p class="countdown-label">Preço de pré-venda encerra em:</p>
+      <div class="countdown" id="countdown">
+        <div class="countdown-item">
+          <span class="countdown-num" id="cd-days">00</span>
+          <span class="countdown-unit">dias</span>
+        </div>
+        <span class="countdown-sep">:</span>
+        <div class="countdown-item">
+          <span class="countdown-num" id="cd-hours">00</span>
+          <span class="countdown-unit">horas</span>
+        </div>
+        <span class="countdown-sep">:</span>
+        <div class="countdown-item">
+          <span class="countdown-num" id="cd-minutes">00</span>
+          <span class="countdown-unit">min</span>
+        </div>
+        <span class="countdown-sep">:</span>
+        <div class="countdown-item">
+          <span class="countdown-num" id="cd-seconds">00</span>
+          <span class="countdown-unit">seg</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-cta-group">
+      <a href="#ingressos" class="btn btn-primary btn-lg">
+        🎟️ QUERO GARANTIR MINHA VAGA
+      </a>
+      <p class="hero-cta-note">Pré-venda por tempo limitado • Vagas esgotando</p>
+    </div>
+  </div>
+
+  <!-- Scroll indicator -->
+  <div class="scroll-indicator">
+    <span></span>
+  </div>
+</section>
+
+<!-- ========== PARA QUEM É ========== -->
+<section class="section section-dark" id="sobre">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">Para quem é</span>
+      <h2 class="section-title">Este evento foi feito para <span class="highlight">você</span> se...</h2>
+    </div>
+    <div class="cards-grid-3">
+      <div class="card card-bordered">
+        <div class="card-icon">🏢</div>
+        <h3>Empresário e Empreendedor</h3>
+        <p>Você quer proteger seu negócio, crescer com consistência e estar à frente das obrigações legais sem perder o foco no resultado.</p>
+      </div>
+      <div class="card card-bordered">
+        <div class="card-icon">👥</div>
+        <h3>Gestor e Diretor</h3>
+        <p>Você lidera equipes e precisa de estratégias reais de gestão de pessoas, compliance e liderança sob pressão.</p>
+      </div>
+      <div class="card card-bordered">
+        <div class="card-icon">📊</div>
+        <h3>RH e Departamento Pessoal</h3>
+        <p>Você cuida do ativo mais importante da empresa e quer ferramentas práticas para aplicar no dia seguinte ao evento.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== O QUE VOCÊ VAI APRENDER ========== -->
+<section class="section section-accent" id="aprender">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">Conteúdo</span>
+      <h2 class="section-title">O que você vai <span class="highlight">aprender</span> no evento</h2>
+      <p class="section-subtitle">Conteúdo 100% prático para aplicar na sua empresa imediatamente</p>
+    </div>
+    <div class="modules-grid">
+      <div class="module-card">
+        <div class="module-number">01</div>
+        <div class="module-content">
+          <h3>NR-1 na Prática</h3>
+          <p>Como implementar as novas exigências da NR-1 sem complicação e sem colocar sua empresa em risco.</p>
+        </div>
+      </div>
+      <div class="module-card">
+        <div class="module-number">02</div>
+        <div class="module-content">
+          <h3>Liderança Sob Pressão</h3>
+          <p>Protocolos práticos de liderança para manter a equipe engajada e produtiva mesmo nos momentos difíceis.</p>
+        </div>
+      </div>
+      <div class="module-card">
+        <div class="module-number">03</div>
+        <div class="module-content">
+          <h3>Benefícios Estratégicos</h3>
+          <p>Como usar o pacote de benefícios para reter talentos, reduzir custos e aumentar a competitividade da empresa.</p>
+        </div>
+      </div>
+      <div class="module-card">
+        <div class="module-number">04</div>
+        <div class="module-content">
+          <h3>Gestão Integrada de Riscos</h3>
+          <p>O Protocolo GRP: como identificar, mapear e neutralizar riscos antes que eles virem problemas jurídicos e financeiros.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== PALESTRANTES ========== -->
+<section class="section section-dark" id="palestrantes">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">Palestrantes</span>
+      <h2 class="section-title">Especialistas que vão <span class="highlight">transformar</span> seu dia</h2>
+      <p class="section-subtitle">Referências nacionais em gestão, compliance e liderança empresarial</p>
+    </div>
+    <div class="speakers-grid">
+
+      <div class="speaker-card">
+        <div class="speaker-photo speaker-placeholder">
+          <span>FOTO</span>
+        </div>
+        <div class="speaker-info">
+          <h3 class="speaker-name">Nome do Palestrante</h3>
+          <span class="speaker-role">Especialista em RH & Compliance</span>
+          <p class="speaker-bio">Breve descrição do palestrante e sua experiência no mercado.</p>
+        </div>
+      </div>
+
+      <div class="speaker-card">
+        <div class="speaker-photo speaker-placeholder">
+          <span>FOTO</span>
+        </div>
+        <div class="speaker-info">
+          <h3 class="speaker-name">Nome do Palestrante</h3>
+          <span class="speaker-role">Especialista em Liderança</span>
+          <p class="speaker-bio">Breve descrição do palestrante e sua experiência no mercado.</p>
+        </div>
+      </div>
+
+      <div class="speaker-card">
+        <div class="speaker-photo speaker-placeholder">
+          <span>FOTO</span>
+        </div>
+        <div class="speaker-info">
+          <h3 class="speaker-name">Nome do Palestrante</h3>
+          <span class="speaker-role">Especialista em Gestão Empresarial</span>
+          <p class="speaker-bio">Breve descrição do palestrante e sua experiência no mercado.</p>
+        </div>
+      </div>
+
+      <div class="speaker-card">
+        <div class="speaker-photo speaker-placeholder">
+          <span>FOTO</span>
+        </div>
+        <div class="speaker-info">
+          <h3 class="speaker-name">Nome do Palestrante</h3>
+          <span class="speaker-role">Especialista em Benefícios</span>
+          <p class="speaker-bio">Breve descrição do palestrante e sua experiência no mercado.</p>
+        </div>
+      </div>
+
+    </div>
+    <div class="section-cta">
+      <p class="teaser-note">+ mais palestrantes sendo confirmados</p>
+    </div>
+  </div>
+</section>
+
+<!-- ========== PROGRAMAÇÃO ========== -->
+<section class="section section-mid" id="programacao">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">Agenda</span>
+      <h2 class="section-title">Programação do <span class="highlight">dia</span></h2>
+      <p class="section-subtitle">14 de Abril de 2026 — Hotel Monreale Plus, SJC</p>
+    </div>
+    <div class="schedule-wrapper">
+      <div class="schedule-item">
+        <div class="schedule-time">7:30</div>
+        <div class="schedule-content">
+          <h4>Credenciamento e Recepção</h4>
+          <p>Boas-vindas e entrega de materiais</p>
+        </div>
+      </div>
+      <div class="schedule-item">
+        <div class="schedule-time">8:00</div>
+        <div class="schedule-content">
+          <h4>Abertura Oficial</h4>
+          <p>Apresentação do evento e palestrantes</p>
+        </div>
+      </div>
+      <div class="schedule-item">
+        <div class="schedule-time">8:30</div>
+        <div class="schedule-content">
+          <h4>Palestra: NR-1 — Obrigação ou Oportunidade?</h4>
+          <p>Compliance trabalhista na prática para sua empresa</p>
+        </div>
+      </div>
+      <div class="schedule-item">
+        <div class="schedule-time">9:30</div>
+        <div class="schedule-content">
+          <h4>Painel: Gestão de Riscos Integrada</h4>
+          <p>O Protocolo GRP e como implementar na sua empresa</p>
+        </div>
+      </div>
+      <div class="schedule-item schedule-break">
+        <div class="schedule-time">10:30</div>
+        <div class="schedule-content">
+          <h4>☕ Coffee Break & Networking</h4>
+          <p>Pausa para conexões e relacionamentos</p>
+        </div>
+      </div>
+      <div class="schedule-item">
+        <div class="schedule-time">11:00</div>
+        <div class="schedule-content">
+          <h4>Palestra: Liderança Sob Pressão</h4>
+          <p>Como liderar equipes em momentos de crise e mudança</p>
+        </div>
+      </div>
+      <div class="schedule-item">
+        <div class="schedule-time">11:45</div>
+        <div class="schedule-content">
+          <h4>Painel: Benefícios Estratégicos como Diferencial Competitivo</h4>
+          <p>Reter talentos e reduzir custos ao mesmo tempo</p>
+        </div>
+      </div>
+      <div class="schedule-item">
+        <div class="schedule-time">12:30</div>
+        <div class="schedule-content">
+          <h4>Mesa Redonda & Q&A</h4>
+          <p>Perguntas para todos os palestrantes</p>
+        </div>
+      </div>
+      <div class="schedule-item schedule-end">
+        <div class="schedule-time">13:00</div>
+        <div class="schedule-content">
+          <h4>🏁 Encerramento</h4>
+          <p>Networking livre e despedida</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== INGRESSOS ========== -->
+<section class="section section-dark" id="ingressos">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">Ingressos</span>
+      <h2 class="section-title">Garanta sua vaga com <span class="highlight">preço de pré-venda</span></h2>
+      <p class="section-subtitle">Investimento especial por tempo limitado — após encerrar, o valor sobe</p>
+    </div>
+
+    <div class="tickets-grid">
+      <!-- Individual -->
+      <div class="ticket-card">
+        <div class="ticket-badge">Mais popular</div>
+        <div class="ticket-header">
+          <h3 class="ticket-title">Ingresso Individual</h3>
+          <p class="ticket-desc">Para você que quer transformar sua gestão</p>
+        </div>
+        <div class="ticket-price-block">
+          <span class="ticket-original">De R$ 397,00</span>
+          <div class="ticket-price-row">
+            <span class="ticket-currency">R$</span>
+            <span class="ticket-amount">97</span>
+            <span class="ticket-period">,00</span>
+          </div>
+          <span class="ticket-installment">ou 12x de R$ 10,03 no cartão</span>
+        </div>
+        <ul class="ticket-features">
+          <li>✅ 1 ingresso para o evento</li>
+          <li>✅ Acesso a todas as palestras</li>
+          <li>✅ Material do evento</li>
+          <li>✅ Coffee break incluso</li>
+          <li>✅ Certificado de participação</li>
+          <li>✅ Acesso à área de networking</li>
+        </ul>
+        <a href="LINK_CHECKOUT_INDIVIDUAL" class="btn btn-primary btn-lg btn-full" target="_blank" rel="noopener">
+          GARANTIR MINHA VAGA
+        </a>
+        <p class="ticket-urgency">⚡ Restam poucas vagas!</p>
+      </div>
+
+      <!-- Dupla -->
+      <div class="ticket-card ticket-featured">
+        <div class="ticket-badge ticket-badge-gold">Melhor custo-benefício</div>
+        <div class="ticket-header">
+          <h3 class="ticket-title">Ingresso Duplo</h3>
+          <p class="ticket-desc">Venha com sócio, parceiro ou colaborador</p>
+        </div>
+        <div class="ticket-price-block">
+          <span class="ticket-original">De R$ 497,00</span>
+          <div class="ticket-price-row">
+            <span class="ticket-currency">R$</span>
+            <span class="ticket-amount">147</span>
+            <span class="ticket-period">,00</span>
+          </div>
+          <span class="ticket-installment">ou 12x de R$ 15,20 no cartão</span>
+        </div>
+        <ul class="ticket-features">
+          <li>✅ 2 ingressos para o evento</li>
+          <li>✅ Acesso a todas as palestras</li>
+          <li>✅ Material do evento (2 unidades)</li>
+          <li>✅ Coffee break incluso</li>
+          <li>✅ Certificado de participação</li>
+          <li>✅ Acesso à área de networking</li>
+          <li>⭐ Economia de R$ 47 vs. 2 individuais</li>
+        </ul>
+        <a href="LINK_CHECKOUT_DUPLO" class="btn btn-gold btn-lg btn-full" target="_blank" rel="noopener">
+          GARANTIR NOSSAS VAGAS
+        </a>
+        <p class="ticket-urgency">⚡ Melhor custo-benefício!</p>
+      </div>
+    </div>
+
+    <div class="payment-methods">
+      <p>Pagamento via PIX, Boleto ou Cartão de crédito</p>
+      <div class="payment-icons">
+        <span class="payment-icon">💳 Cartão</span>
+        <span class="payment-icon">📱 PIX</span>
+        <span class="payment-icon">📄 Boleto</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== GARANTIA ========== -->
+<section class="section section-guarantee">
+  <div class="container">
+    <div class="guarantee-box">
+      <div class="guarantee-icon">🛡️</div>
+      <div class="guarantee-content">
+        <h3>Satisfação Garantida</h3>
+        <p>Se você participar do evento e sentir que não valeu o investimento, devolveremos 100% do seu dinheiro. Sem burocracia, sem questionamentos. Nossa missão é entregar valor real para a sua empresa.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== DEPOIMENTOS ========== -->
+<section class="section section-mid" id="depoimentos">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">Depoimentos</span>
+      <h2 class="section-title">O que dizem quem <span class="highlight">já participou</span></h2>
+    </div>
+    <div class="testimonials-grid">
+      <div class="testimonial-card">
+        <div class="testimonial-photo placeholder-avatar">
+          <span>FOTO</span>
+        </div>
+        <blockquote>
+          "Foi o melhor investimento do ano para minha empresa. Saí com um plano de ação concreto e já estou implementando. Recomendo para todo empresário de SJC."
+        </blockquote>
+        <div class="testimonial-author">
+          <strong>Nome do Participante</strong>
+          <span>Empresário, São José dos Campos</span>
+        </div>
+        <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
+      </div>
+      <div class="testimonial-card">
+        <div class="testimonial-photo placeholder-avatar">
+          <span>FOTO</span>
+        </div>
+        <blockquote>
+          "O conteúdo foi extremamente prático. Nada de teoria vazia — cada palestra tinha aplicação imediata. Já apliquei a NR-1 na minha empresa seguindo o que aprendi."
+        </blockquote>
+        <div class="testimonial-author">
+          <strong>Nome do Participante</strong>
+          <span>Diretora de RH, Vale do Paraíba</span>
+        </div>
+        <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
+      </div>
+      <div class="testimonial-card">
+        <div class="testimonial-photo placeholder-avatar">
+          <span>FOTO</span>
+        </div>
+        <blockquote>
+          "O networking que fiz no evento valeu por meses de esforço comercial. Além disso, o conteúdo sobre liderança mudou minha forma de gerir minha equipe."
+        </blockquote>
+        <div class="testimonial-author">
+          <strong>Nome do Participante</strong>
+          <span>Gestor Comercial, SJC</span>
+        </div>
+        <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== IMPACTO SOCIAL ========== -->
+<section class="section section-social">
+  <div class="container">
+    <div class="social-box">
+      <div class="social-icon">🤝</div>
+      <div class="social-content">
+        <h3>Impacto Social</h3>
+        <p>Parte dos recursos arrecadados é destinada ao <strong>Instituto Empreendedor do Futuro</strong>, que desenvolve jovens talentos do Vale do Paraíba. Ao comprar seu ingresso, você também está investindo no futuro da nossa região.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== FAQ ========== -->
+<section class="section section-dark" id="faq">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">Dúvidas</span>
+      <h2 class="section-title">Perguntas <span class="highlight">frequentes</span></h2>
+    </div>
+    <div class="faq-list">
+      <details class="faq-item">
+        <summary>O evento é presencial ou online?</summary>
+        <div class="faq-answer">
+          <p>O Impulso Empresarial 2026 é 100% presencial, no Hotel Monreale Plus em São José dos Campos, SP. Não há transmissão online.</p>
+        </div>
+      </details>
+      <details class="faq-item">
+        <summary>Vou receber certificado de participação?</summary>
+        <div class="faq-answer">
+          <p>Sim! Todos os participantes receberão certificado de participação digital após o evento.</p>
+        </div>
+      </details>
+      <details class="faq-item">
+        <summary>O coffee break está incluso no ingresso?</summary>
+        <div class="faq-answer">
+          <p>Sim, todos os ingressos incluem coffee break. O almoço não está incluso.</p>
+        </div>
+      </details>
+      <details class="faq-item">
+        <summary>Posso transferir meu ingresso para outra pessoa?</summary>
+        <div class="faq-answer">
+          <p>Sim, é possível transferir o ingresso até 48h antes do evento. Entre em contato conosco pelo WhatsApp para realizar a transferência.</p>
+        </div>
+      </details>
+      <details class="faq-item">
+        <summary>Como funciona a política de reembolso?</summary>
+        <div class="faq-answer">
+          <p>Você pode solicitar reembolso total até 7 dias antes do evento. Após essa data, oferecemos crédito para o próximo evento.</p>
+        </div>
+      </details>
+      <details class="faq-item">
+        <summary>Onde fica o Hotel Monreale Plus?</summary>
+        <div class="faq-answer">
+          <p>O Hotel Monreale Plus fica em São José dos Campos, SP. O endereço completo e informações de acesso serão enviados por e-mail após a confirmação do pagamento.</p>
+        </div>
+      </details>
+      <details class="faq-item">
+        <summary>Tenho dúvidas. Como falo com a organização?</summary>
+        <div class="faq-answer">
+          <p>Entre em contato pelo nosso WhatsApp clicando no botão abaixo. Respondemos de segunda a sexta, das 8h às 18h.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ========== CTA FINAL ========== -->
+<section class="section section-cta-final">
+  <div class="container">
+    <div class="cta-final-content">
+      <h2>Sua empresa não pode ficar de fora</h2>
+      <p>Aproveite o preço de pré-venda antes que encerre. Vagas limitadas.</p>
+      <div class="cta-final-timer" id="countdown2">
+        <div class="countdown-item">
+          <span class="countdown-num" id="cd2-days">00</span>
+          <span class="countdown-unit">dias</span>
+        </div>
+        <span class="countdown-sep">:</span>
+        <div class="countdown-item">
+          <span class="countdown-num" id="cd2-hours">00</span>
+          <span class="countdown-unit">horas</span>
+        </div>
+        <span class="countdown-sep">:</span>
+        <div class="countdown-item">
+          <span class="countdown-num" id="cd2-minutes">00</span>
+          <span class="countdown-unit">min</span>
+        </div>
+        <span class="countdown-sep">:</span>
+        <div class="countdown-item">
+          <span class="countdown-num" id="cd2-seconds">00</span>
+          <span class="countdown-unit">seg</span>
+        </div>
+      </div>
+      <div class="cta-final-buttons">
+        <a href="LINK_CHECKOUT_INDIVIDUAL" class="btn btn-primary btn-xl" target="_blank" rel="noopener">
+          🎟️ INGRESSO INDIVIDUAL — R$ 97
+        </a>
+        <a href="LINK_CHECKOUT_DUPLO" class="btn btn-gold btn-xl" target="_blank" rel="noopener">
+          🎟️ INGRESSO DUPLO — R$ 147
+        </a>
+      </div>
+      <p class="cta-final-note">Pagamento seguro via PIX, Boleto ou Cartão</p>
+    </div>
+  </div>
+</section>
+
+<!-- ========== FOOTER ========== -->
+<footer class="footer">
+  <div class="container footer-inner">
+    <div class="footer-brand">
+      <span class="logo-text">IMPULSO <span class="logo-accent">EMPRESARIAL</span></span>
+      <p>O evento de gestão e compliance que vai transformar sua empresa.</p>
+    </div>
+    <div class="footer-info">
+      <p>📅 14 de Abril de 2026</p>
+      <p>📍 Hotel Monreale Plus — São José dos Campos, SP</p>
+      <p>🕗 8h às 13h (Credenciamento 7h30)</p>
+    </div>
+    <div class="footer-contact">
+      <a href="https://wa.me/5512XXXXXXXXX" class="btn btn-whatsapp" target="_blank" rel="noopener">
+        💬 Fale conosco no WhatsApp
+      </a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2026 Impulso Empresarial. Todos os direitos reservados.</p>
+    <p>
+      <a href="/politica-privacidade">Política de Privacidade</a> &nbsp;|&nbsp;
+      <a href="/termos">Termos de Uso</a>
+    </p>
+  </div>
+</footer>
+
+<!-- WhatsApp Float Button -->
+<a href="https://wa.me/5512XXXXXXXXX" class="whatsapp-float" target="_blank" rel="noopener" aria-label="WhatsApp">
+  <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+    <path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.555 4.116 1.524 5.847L.057 23.744a.5.5 0 0 0 .615.644l6.094-1.597A11.938 11.938 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.802a9.79 9.79 0 0 1-5.004-1.372l-.359-.213-3.72.975.992-3.618-.234-.371A9.768 9.768 0 0 1 2.198 12c0-5.406 4.396-9.802 9.802-9.802 5.406 0 9.802 4.396 9.802 9.802 0 5.406-4.396 9.802-9.802 9.802z"/>
+  </svg>
+</a>
+
+<script src="script.js"></script>
+</body>
+</html>
