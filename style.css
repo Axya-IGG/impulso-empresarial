@@ -1380,6 +1380,50 @@ a { color: inherit; text-decoration: none; }
   margin-top: 12px;
 }
 
+/* === SVG ICONS === */
+.event-info-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.sched-icon {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 8px;
+  vertical-align: middle;
+  opacity: 0.8;
+}
+
+.feat-check {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: var(--primary);
+  margin-right: 8px;
+}
+.feat-check-accent { color: var(--offwhite); }
+
+.footer-icon {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 8px;
+  color: var(--primary);
+  vertical-align: middle;
+}
+
+.ticket-features li {
+  display: flex;
+  align-items: center;
+}
+
+.social-icon {
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
 /* === RESPONSIVE === */
 @media (max-width: 900px) {
   .cards-grid-3 { grid-template-columns: 1fr; }
