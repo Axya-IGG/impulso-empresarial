@@ -31,13 +31,18 @@
     <div class="logo">
       <span class="logo-text">IMPULSO <span class="logo-accent">EMPRESARIAL</span></span>
     </div>
-    <nav class="nav-links">
+    <nav class="nav-links" id="nav-links">
       <a href="#sobre">Para quem é</a>
       <a href="#palestrantes">Palestrantes</a>
       <a href="#programacao">Programação</a>
       <a href="#ingressos">Ingressos</a>
     </nav>
-    <a href="#ingressos" class="btn btn-primary btn-sm">Garantir vaga</a>
+    <div class="header-actions">
+      <a href="#ingressos" class="btn btn-primary btn-sm">Garantir vaga</a>
+      <button class="hamburger" id="hamburger" aria-label="Abrir menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
   </div>
 </header>
 
@@ -139,7 +144,7 @@
       <span class="section-tag">Para quem é</span>
       <h2 class="section-title">Este evento é pra <span class="highlight">você</span> que:</h2>
     </div>
-    <div class="checklist-grid">
+    <div class="checklist-grid" id="checklist-carousel">
       <div class="checklist-item">
         <span class="check-icon">
           <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -183,6 +188,7 @@
         <p>Está cansado de decidir sem ter poder proporcional e, no fundo, só quer ser ouvido.</p>
       </div>
     </div>
+    <div class="carousel-dots" id="checklist-dots" aria-hidden="true"></div>
     <div class="section-cta-center">
       <a href="#ingressos" class="btn btn-primary btn-lg">
         QUERO GARANTIR MINHA VAGA NA PRÉ-VENDA
@@ -199,7 +205,7 @@
       <h2 class="section-title">Quem vai te conduzir<br />nessa <span class="highlight">jornada</span></h2>
     </div>
 
-    <div class="speakers-confirmed-grid">
+    <div class="speakers-confirmed-grid" id="speakers-carousel">
       <div class="speaker-card speaker-confirmed">
         <div class="speaker-photo-wrap">
           <div class="speaker-photo speaker-placeholder">
@@ -240,6 +246,7 @@
       </div>
     </div>
 
+    <div class="carousel-dots" id="speakers-dots" aria-hidden="true"></div>
     <div class="speakers-soon-row">
       <div class="speaker-soon-card">
         <div class="speaker-soon-photo"></div>

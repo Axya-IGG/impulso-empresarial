@@ -118,3 +118,63 @@ window.addEventListener('scroll', () => {
 const headerStyle = document.createElement('style');
 headerStyle.textContent = `.header.scrolled { box-shadow: 0 2px 20px rgba(0,0,0,0.6); }`;
 document.head.appendChild(headerStyle);
+
+// === MENU HAMBURGER ===
+const hamburger = document.getElementById('hamburger');
+const mainNav = document.getElementById('nav-links');
+
+if (hamburger && mainNav) {
+  hamburger.addEventListener('click', () => {
+    const isOpen = mainNav.classList.toggle('nav-open');
+    hamburger.classList.toggle('active', isOpen);
+    hamburger.setAttribute('aria-expanded', String(isOpen));
+    document.body.style.overflow = isOpen ? 'hidden' : '';
+  });
+  mainNav.querySelectorAll('a').forEach(a => {
+    a.addEventListener('click', () => {
+      mainNav.classList.remove('nav-open');
+      hamburger.classList.remove('active');
+      hamburger.setAttribute('aria-expanded', 'false');
+      document.body.style.overflow = '';
+    });
+  });
+}
+
+// === CARROSSÉIS (somente mobile) ===
+function initCarouselDots(trackId, dotsId) {
+  const track = document.getElementById(trackId);
+  const dotsContainer = document.getElementById(dotsId);
+  if (!track || !dotsContainer) return;
+
+  const items = Array.from(track.children);
+  if (!items.length) return;
+
+  const dots = items.map((_, i) => {
+    const dot = document.createElement('button');
+    dot.className = 'carousel-dot' + (i === 0 ? ' active' : '');
+    dot.setAttribute('aria-label', 'Slide ' + (i + 1));
+    dot.addEventListener('click', () => {
+      const itemLeft = items[i].offsetLeft - track.offsetLeft;
+      track.scrollTo({ left: itemLeft, behavior: 'smooth' });
+    });
+    dotsContainer.appendChild(dot);
+    return dot;
+  });
+
+  function updateActiveDot() {
+    const trackRect = track.getBoundingClientRect();
+    let closestIdx = 0, minDist = Infinity;
+    items.forEach((item, i) => {
+      const dist = Math.abs(item.getBoundingClientRect().left - trackRect.left);
+      if (dist < minDist) { minDist = dist; closestIdx = i; }
+    });
+    dots.forEach((d, i) => d.classList.toggle('active', i === closestIdx));
+  }
+
+  track.addEventListener('scroll', updateActiveDot, { passive: true });
+}
+
+if (window.innerWidth <= 768) {
+  initCarouselDots('checklist-carousel', 'checklist-dots');
+  initCarouselDots('speakers-carousel', 'speakers-dots');
+}
