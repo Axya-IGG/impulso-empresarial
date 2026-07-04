@@ -1596,7 +1596,7 @@ a { color: inherit; text-decoration: none; }
   .hero { padding: 90px 0 64px; min-height: auto; }
   .event-theme-badge { display: none; }
   .hero-badge-row { margin-bottom: 18px; }
-  .event-info-row { flex-direction: column; gap: 14px; padding: 20px 72px; align-items: stretch; }
+  .event-info-row { flex-direction: column; gap: 14px; padding: 20px 80px; align-items: stretch; }
   .event-info-divider { display: none; }
   .event-info-item { justify-content: flex-start; }
 
