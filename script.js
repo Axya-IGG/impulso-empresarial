@@ -220,6 +220,5 @@ function buildCarousel(containerId, dotsContainerId) {
 }
 
 if (window.innerWidth <= 768) {
-  buildCarousel('checklist-carousel', 'checklist-dots');
   buildCarousel('speakers-carousel', 'speakers-dots');
 }
