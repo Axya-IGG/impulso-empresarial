@@ -15,3 +15,11 @@
 
 /*.js
   Cache-Control: public, max-age=31536000, immutable
+
+# Imagens e vídeo: cache de 7 dias. Não usa "immutable" porque estes
+# arquivos não têm hash no nome e podem ser substituídos no lugar.
+/assets/*
+  Cache-Control: public, max-age=604800
+
+/images/*
+  Cache-Control: public, max-age=604800

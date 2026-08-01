@@ -2,65 +2,81 @@
 // IMPULSO EMPRESARIAL 2026 — Script
 // ==========================================
 
-// === COUNTDOWN — PRÉ-VENDA (5 DIAS) ===
-// O countdown usa localStorage para manter a data consistente entre sessões.
-// Na primeira visita, define o prazo como 5 dias a partir de agora.
-const STORAGE_KEY = 'impulso_presale_end';
-const DAYS_PRESALE = 5;
+// === COUNTDOWN — PRÉ-VENDA ===
+// Janela fixa da pré-venda, ancorada no fuso de Brasília (-03:00) para que
+// o prazo seja o mesmo independente do fuso de quem acessa.
+const PRESALE_START = new Date('2026-08-10T00:00:00-03:00').getTime();
+const PRESALE_END   = new Date('2026-08-21T23:59:59-03:00').getTime();
 
-function getOrSetEndDate() {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) {
-    const date = new Date(parseInt(stored, 10));
-    if (date > new Date()) return date;
-  }
-  const end = new Date();
-  end.setDate(end.getDate() + DAYS_PRESALE);
-  end.setHours(23, 59, 59, 0);
-  localStorage.setItem(STORAGE_KEY, end.getTime().toString());
-  return end;
+const COUNTDOWN_IDS = [
+  ['cd-days',  'cd-hours',  'cd-minutes',  'cd-seconds'],
+  ['cd2-days', 'cd2-hours', 'cd2-minutes', 'cd2-seconds'],
+  ['cd3-days', 'cd3-hours', 'cd3-minutes', 'cd3-seconds'],
+];
+
+const pad = n => String(n).padStart(2, '0');
+
+function paintCountdown(diff) {
+  const parts = [
+    Math.floor(diff / 86400000),
+    Math.floor((diff % 86400000) / 3600000),
+    Math.floor((diff % 3600000) / 60000),
+    Math.floor((diff % 60000) / 1000),
+  ];
+  COUNTDOWN_IDS.forEach(ids => {
+    ids.forEach((id, i) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = pad(parts[i]);
+    });
+  });
 }
 
-const PRE_SALE_END = getOrSetEndDate();
+function setCountdownLabel(text) {
+  document.querySelectorAll('.countdown-label').forEach(el => { el.textContent = text; });
+}
 
 function updateCountdown() {
-  const now = new Date();
-  const diff = PRE_SALE_END - now;
+  const now = Date.now();
 
-  const ids = [
-    ['cd-days', 'cd-hours', 'cd-minutes', 'cd-seconds'],
-    ['cd2-days', 'cd2-hours', 'cd2-minutes', 'cd2-seconds'],
-    ['cd3-days', 'cd3-hours', 'cd3-minutes', 'cd3-seconds'],
-  ];
-
-  if (diff <= 0) {
-    ids.forEach(([d, h, m, s]) => {
-      ['0', '0', '0', '0'].forEach((v, i) => {
-        const el = document.getElementById([d, h, m, s][i]);
-        if (el) el.textContent = '00';
-      });
-    });
-    return;
+  if (now < PRESALE_START) {
+    setCountdownLabel('Pré-venda começa em:');
+    paintCountdown(PRESALE_START - now);
+  } else if (now <= PRESALE_END) {
+    setCountdownLabel('Pré-venda encerra em:');
+    paintCountdown(PRESALE_END - now);
+  } else {
+    setCountdownLabel('Pré-venda encerrada');
+    paintCountdown(0);
   }
-
-  const days    = Math.floor(diff / (1000 * 60 * 60 * 24));
-  const hours   = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-  const pad = n => String(n).padStart(2, '0');
-
-  ids.forEach(([d, h, m, s]) => {
-    const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-    setEl(d, pad(days));
-    setEl(h, pad(hours));
-    setEl(m, pad(minutes));
-    setEl(s, pad(seconds));
-  });
 }
 
 updateCountdown();
 setInterval(updateCountdown, 1000);
+
+// === VÍDEO DA AÇÃO SOCIAL ===
+// O play sobreposto some assim que a reprodução começa; daí em diante
+// quem manda são os controles nativos.
+const socialVideo = document.getElementById('social-video-player');
+const socialPlayBtn = document.querySelector('.social-video-play');
+
+if (socialVideo && socialPlayBtn) {
+  // Com JS: poster limpo + play sobreposto. Os controles nativos entram
+  // ao iniciar a reprodução, para não poluir o poster.
+  socialVideo.controls = false;
+  socialPlayBtn.hidden = false;
+
+  socialPlayBtn.addEventListener('click', () => {
+    socialVideo.controls = true;
+    socialVideo.play();
+  });
+  socialVideo.addEventListener('play', () => { socialPlayBtn.hidden = true; });
+  // Se o arquivo não carregar, devolve os controles e o link do Instagram
+  // abaixo continua valendo.
+  socialVideo.addEventListener('error', () => {
+    socialPlayBtn.hidden = true;
+    socialVideo.controls = true;
+  });
+}
 
 // === SMOOTH SCROLL ===
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
