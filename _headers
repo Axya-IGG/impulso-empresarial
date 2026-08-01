@@ -20,3 +20,6 @@
 # arquivos não têm hash no nome e podem ser substituídos no lugar.
 /assets/*
   Cache-Control: public, max-age=604800
+
+/images/*
+  Cache-Control: public, max-age=604800

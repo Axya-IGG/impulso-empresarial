@@ -36,7 +36,9 @@ $Files = @(
     '_headers', '_redirects',
     'favicon.ico', 'favicon-32.png', 'favicon-192.png', 'apple-touch-icon.png'
 )
-$Dirs = @('assets')
+# assets/ = otimizados nesta máquina; images/ = fotos das palestrantes e logos
+# das realizadoras. São duas convenções por razões históricas; ambas publicam.
+$Dirs = @('assets', 'images')
 
 # --- monta o diretório de publicação -------------------------------------
 $Stage = Join-Path ([System.IO.Path]::GetTempPath()) ("impulso-deploy-" + (Get-Date -Format 'yyyyMMddHHmmss'))

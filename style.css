@@ -517,24 +517,11 @@ a { color: inherit; text-decoration: none; }
 }
 
 .speaker-photo {
+  display: block;
   width: 100%;
-  aspect-ratio: 1;
+  aspect-ratio: 3 / 4;
   object-fit: cover;
-}
-
-.speaker-placeholder {
-  background: linear-gradient(135deg, var(--dark-3), var(--mid));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  aspect-ratio: 1;
-}
-.speaker-placeholder span {
-  font-family: var(--font-heading);
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--border);
-  letter-spacing: 2px;
+  object-position: top center;
 }
 
 .speaker-info { padding: 20px 16px; }
@@ -1209,11 +1196,9 @@ a { color: inherit; text-decoration: none; }
   flex-direction: column;
 }
 .speaker-photo-wrap { width: 100%; }
-.speaker-photo {
-  width: 100%;
-  aspect-ratio: 1;
-  object-fit: cover;
-}
+/* O recorte de .speaker-photo é definido lá em cima (3/4, topo centralizado).
+   Não redeclarar aspect-ratio aqui: esta regra vem depois no arquivo e
+   sobrescreveria o retrato de volta para quadrado. */
 .speaker-info { padding: 20px 20px 24px; flex: 1; }
 
 .speakers-soon-row {
@@ -1235,7 +1220,15 @@ a { color: inherit; text-decoration: none; }
   border-radius: 50%;
   background: var(--mid);
   border: 2px dashed var(--border);
-  filter: grayscale(100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.person-icon {
+  width: 52%;
+  height: 52%;
+  color: var(--text-muted);
+  opacity: 0.25;
 }
 .speaker-soon-card p {
   font-size: 12px;
@@ -1269,26 +1262,22 @@ a { color: inherit; text-decoration: none; }
 }
 .brand-logo-placeholder {
   width: 100%;
-  height: 80px;
+  height: 110px;
   border-radius: var(--radius);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-heading);
-  font-weight: 900;
-  font-size: 28px;
-  letter-spacing: 2px;
+  background: #fff;
+  padding: 16px 28px;
 }
-.brand-axya {
-  background: rgba(119,203,245,0.08);
-  border: 1px solid rgba(119,203,245,0.25);
-  color: var(--primary);
+.brand-logo-img {
+  max-height: 70px;
+  max-width: 100%;
+  object-fit: contain;
+  display: block;
 }
-.brand-bufunffa {
-  background: rgba(163,185,198,0.08);
-  border: 1px solid rgba(163,185,198,0.25);
-  color: var(--slate);
-}
+.brand-axya { border: 1px solid rgba(119,203,245,0.20); }
+.brand-bufunffa { border: 1px solid rgba(163,185,198,0.20); }
 .brand-info h3 {
   font-family: var(--font-heading);
   font-size: 18px;
@@ -1821,7 +1810,9 @@ a { color: inherit; text-decoration: none; }
 
   /* Marcas realização */
   .brand-main-card { padding: 20px; }
-  .brand-logo-placeholder { font-size: 22px; height: 66px; }
+  /* Altura acompanha a logo (max-height 70px) + padding; 66px cortava a arte. */
+  .brand-logo-placeholder { height: 88px; padding: 12px 18px; }
+  .brand-logo-img { max-height: 60px; }
 
   /* Seção header */
   .section-header { margin-bottom: 28px; }

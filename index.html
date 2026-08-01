@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20260801b" />
+  <link rel="stylesheet" href="style.css?v=20260801c" />
 </head>
 <body>
 
@@ -192,9 +192,7 @@
     <div class="speakers-confirmed-grid" id="speakers-carousel">
       <div class="speaker-card speaker-confirmed">
         <div class="speaker-photo-wrap">
-          <div class="speaker-photo speaker-placeholder">
-            <span>FOTO<br/>KATHLEEN</span>
-          </div>
+          <img class="speaker-photo" src="images/kathleen-amaro.jpg" alt="Kathleen Amaro Oliveira" />
         </div>
         <div class="speaker-info">
           <h3 class="speaker-name">Kathleen Amaro Oliveira</h3>
@@ -205,9 +203,7 @@
 
       <div class="speaker-card speaker-confirmed">
         <div class="speaker-photo-wrap">
-          <div class="speaker-photo speaker-placeholder">
-            <span>FOTO<br/>LUCIANA</span>
-          </div>
+          <img class="speaker-photo" src="images/luciana-splicigo.jpg" alt="Luciana Splicigo" />
         </div>
         <div class="speaker-info">
           <h3 class="speaker-name">Luciana Splicigo</h3>
@@ -218,9 +214,7 @@
 
       <div class="speaker-card speaker-confirmed">
         <div class="speaker-photo-wrap">
-          <div class="speaker-photo speaker-placeholder">
-            <span>FOTO<br/>ANDRESSA</span>
-          </div>
+          <img class="speaker-photo" src="images/andressa-costa.jpg" alt="Andressa Costa" />
         </div>
         <div class="speaker-info">
           <h3 class="speaker-name">Andressa Costa</h3>
@@ -233,23 +227,23 @@
     <div class="carousel-dots" id="speakers-dots" aria-hidden="true"></div>
     <div class="speakers-soon-row">
       <div class="speaker-soon-card">
-        <div class="speaker-soon-photo"></div>
+        <div class="speaker-soon-photo"><svg class="person-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></div>
         <p>Em breve</p>
       </div>
       <div class="speaker-soon-card">
-        <div class="speaker-soon-photo"></div>
+        <div class="speaker-soon-photo"><svg class="person-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></div>
         <p>Em breve</p>
       </div>
       <div class="speaker-soon-card">
-        <div class="speaker-soon-photo"></div>
+        <div class="speaker-soon-photo"><svg class="person-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></div>
         <p>Em breve</p>
       </div>
       <div class="speaker-soon-card">
-        <div class="speaker-soon-photo"></div>
+        <div class="speaker-soon-photo"><svg class="person-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></div>
         <p>Em breve</p>
       </div>
       <div class="speaker-soon-card">
-        <div class="speaker-soon-photo"></div>
+        <div class="speaker-soon-photo"><svg class="person-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></div>
         <p>Em breve</p>
       </div>
     </div>
@@ -262,7 +256,7 @@
   </div>
 </section>
 
-<!-- ========== DOBRA 4 — CRONOGRAMA ========== -->
+<!-- ========== DOBRA 4 — CRONOGRAMA (oculto até definição das palestras/painéis) ==========
 <section class="section section-dark" id="programacao">
   <div class="container">
     <div class="section-header">
@@ -359,6 +353,7 @@
     </div>
   </div>
 </section>
+========== /DOBRA 4 — CRONOGRAMA ========== -->
 
 <!-- ========== DOBRA 5 — INGRESSOS ========== -->
 <section class="section section-accent" id="ingressos">
@@ -487,14 +482,20 @@
     </div>
     <div class="brands-main-grid">
       <div class="brand-main-card">
-        <div class="brand-logo-placeholder brand-axya"><span>axya</span></div>
+        <div class="brand-logo-placeholder brand-axya"><img src="images/axya.png" alt="axya" class="brand-logo-img" /></div>
         <div class="brand-info">
           <h3>axya | Inteligência em Gente e Gestão</h3>
           <p>Fundada por Kathleen Amaro e Luciana Splicigo, a <strong>axya</strong> é uma consultoria empresarial especializada em gestão de pessoas em Pequenas e Médias Empresas.</p>
         </div>
       </div>
       <div class="brand-main-card">
-        <div class="brand-logo-placeholder brand-bufunffa"><span>Bufunffa</span></div>
+        <div class="brand-logo-placeholder brand-bufunffa">
+          <!-- AVIF é bem menor, mas Safari 15 e anteriores não leem: PNG como fallback. -->
+          <picture>
+            <source srcset="images/bufunffa.avif" type="image/avif" />
+            <img src="images/bufunffa.png" alt="Bufunffa" class="brand-logo-img" />
+          </picture>
+        </div>
         <div class="brand-info">
           <h3>Bufunffa</h3>
           <p>Fundada por Andressa Costa, a <strong>Bufunffa</strong> é uma plataforma de educação financeira corporativa que transforma saúde financeira em resultado prático dentro das empresas.</p>
@@ -779,6 +780,6 @@
   <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.555 4.116 1.524 5.847L.057 23.744a.5.5 0 0 0 .615.644l6.094-1.597A11.938 11.938 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.802a9.79 9.79 0 0 1-5.004-1.372l-.359-.213-3.72.975.992-3.618-.234-.371A9.768 9.768 0 0 1 2.198 12c0-5.406 4.396-9.802 9.802-9.802 5.406 0 9.802 4.396 9.802 9.802 0 5.406-4.396 9.802-9.802 9.802z"/></svg>
 </a>
 
-<script src="script.js?v=20260801b"></script>
+<script src="script.js?v=20260801c"></script>
 </body>
 </html>
