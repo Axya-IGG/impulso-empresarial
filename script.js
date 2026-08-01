@@ -53,6 +53,31 @@ function updateCountdown() {
 updateCountdown();
 setInterval(updateCountdown, 1000);
 
+// === VÍDEO DA AÇÃO SOCIAL ===
+// O play sobreposto some assim que a reprodução começa; daí em diante
+// quem manda são os controles nativos.
+const socialVideo = document.getElementById('social-video-player');
+const socialPlayBtn = document.querySelector('.social-video-play');
+
+if (socialVideo && socialPlayBtn) {
+  // Com JS: poster limpo + play sobreposto. Os controles nativos entram
+  // ao iniciar a reprodução, para não poluir o poster.
+  socialVideo.controls = false;
+  socialPlayBtn.hidden = false;
+
+  socialPlayBtn.addEventListener('click', () => {
+    socialVideo.controls = true;
+    socialVideo.play();
+  });
+  socialVideo.addEventListener('play', () => { socialPlayBtn.hidden = true; });
+  // Se o arquivo não carregar, devolve os controles e o link do Instagram
+  // abaixo continua valendo.
+  socialVideo.addEventListener('error', () => {
+    socialPlayBtn.hidden = true;
+    socialVideo.controls = true;
+  });
+}
+
 // === SMOOTH SCROLL ===
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
   anchor.addEventListener('click', function(e) {
