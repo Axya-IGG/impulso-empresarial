@@ -676,14 +676,21 @@ a { color: inherit; text-decoration: none; }
   justify-content: center;
   margin-top: 10px;
 }
+/* inline-flex + align-items: o SVG é inline e ficava apoiado na linha de
+   base do texto, o que o deslocava para cima. */
 .payment-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   background: var(--dark-2);
   border: 1px solid var(--border);
   padding: 8px 16px;
   border-radius: 8px;
   font-size: 13px;
   font-weight: 600;
+  line-height: 1;
 }
+.payment-icon svg { flex-shrink: 0; }
 
 /* === GUARANTEE === */
 .section-guarantee {
@@ -919,7 +926,9 @@ a { color: inherit; text-decoration: none; }
   padding-bottom: 48px;
 }
 
-.footer-logo { width: 190px; height: auto; }
+/* Um pouco maior que antes: a logo completa traz a tagline, que precisa de
+   largura para continuar legível. */
+.footer-logo { width: 235px; height: auto; }
 .footer-brand p {
   margin-top: 10px;
   font-size: 13px;
@@ -1357,6 +1366,10 @@ a { color: inherit; text-decoration: none; }
   background: rgba(119, 203, 245, 0.07);
 }
 .sponsor-card p { font-size: 12px; color: var(--text-muted); }
+
+/* O cabeçalho desta seção tem só a tag (o título repetia "Patrocínio e
+   apoio"), então precisa de menos respiro que os demais. */
+#apoio .section-header { margin-bottom: 28px; }
 
 /* === SPONSORS MARQUEE === */
 .sponsors-marquee-wrapper {
@@ -1875,7 +1888,7 @@ a { color: inherit; text-decoration: none; }
   /* Footer */
   .footer { padding: 48px 0 0; }
   .footer-inner { gap: 24px; padding-bottom: 36px; }
-  .footer-logo { width: 160px; }
+  .footer-logo { width: 210px; }
 
   /* Ação social */
   .social-box { padding: 22px 16px; }
