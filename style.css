@@ -881,16 +881,16 @@ a { color: inherit; text-decoration: none; }
 }
 .social-box {
   display: flex;
-  align-items: center;
-  gap: 28px;
-  max-width: 700px;
+  flex-direction: column;
+  gap: 32px;
+  max-width: 920px;
   margin: 0 auto;
   background: rgba(255,255,255,0.02);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 32px 36px;
+  padding: 36px 40px;
 }
-.social-icon { font-size: 60px; flex-shrink: 0; }
+.social-content { text-align: center; }
 .social-content h3 {
   font-family: var(--font-heading);
   font-size: 20px;
@@ -1016,7 +1016,7 @@ a { color: inherit; text-decoration: none; }
   padding-bottom: 48px;
 }
 
-.footer-brand .logo-text { font-size: 16px; }
+.footer-logo { width: 190px; height: auto; }
 .footer-brand p {
   margin-top: 10px;
   font-size: 13px;
@@ -1167,6 +1167,18 @@ a { color: inherit; text-decoration: none; }
   border-radius: 100px;
 }
 .hero-year { color: var(--primary); }
+
+/* Logo do evento no lugar do título textual */
+.hero-title-logo {
+  margin-bottom: 20px;
+  line-height: 0;
+}
+.hero-title-logo img {
+  width: min(620px, 82vw);
+  height: auto;
+  margin: 0 auto;
+}
+
 .hero-subtitle-main {
   font-family: var(--font-heading);
   font-size: clamp(18px, 3vw, 28px);
@@ -1300,45 +1312,88 @@ a { color: inherit; text-decoration: none; }
 /* === CLIENT LOGOS === */
 .client-logos-grid {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 16px;
-  align-items: center;
+  list-style: none;
+  padding: 0;
 }
-.client-logo-placeholder {
-  height: 70px;
+.client-logo {
   background: var(--dark-2);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--border);
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  transition: border-color 0.2s;
+  overflow: hidden;
+  transition: transform 0.25s ease, border-color 0.25s ease;
 }
-.client-logo-placeholder:hover { border-color: var(--text-muted); }
-
-/* === SOCIAL IMPACT (updated) === */
-.social-image-placeholder {
-  margin-top: 20px;
+.client-logo img {
   width: 100%;
-  height: 200px;
-  background: var(--mid);
-  border: 2px dashed var(--border);
+  height: auto;
+  aspect-ratio: 2 / 1;
+  object-fit: cover;
+}
+.client-logo:hover {
+  transform: translateY(-3px);
+  border-color: rgba(119, 203, 245, 0.45);
+}
+
+/* === SOCIAL IMPACT — fotos + vídeo === */
+.social-media {
+  display: grid;
+  grid-template-columns: 270px 400px;
+  gap: 40px;
+  justify-content: center;
+  align-items: center;
+}
+
+.social-photos { display: grid; gap: 20px; }
+.social-photo { margin: 0; }
+.social-photo img {
+  width: 270px;
+  height: 270px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid rgba(119, 203, 245, 0.28);
+}
+
+.social-video { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; }
+.social-video-frame {
+  position: relative;
+  width: 100%;
+  height: 700px;
   border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--dark-2);
+}
+.social-video-fallback {
+  position: absolute;
+  inset: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--border);
-  letter-spacing: 1px;
-  text-transform: uppercase;
+  padding: 24px;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.9;
+  color: var(--text-muted);
 }
-.section-social .social-box { flex-direction: column; max-width: 760px; }
+.social-video-fallback a { color: var(--primary); font-weight: 600; }
+.social-video-frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+.social-video-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary);
+  transition: color 0.2s;
+}
+.social-video-link:hover { color: var(--primary-light); }
 
 /* === SPONSORS === */
 .sponsors-grid {
@@ -1355,22 +1410,28 @@ a { color: inherit; text-decoration: none; }
   gap: 12px;
   text-align: center;
 }
-.sponsor-logo-placeholder {
+.sponsor-logo {
   width: 100%;
-  height: 90px;
-  background: var(--dark-2);
+  height: 112px;
+  background: rgba(255,255,255,0.03);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-heading);
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--text-muted);
-  transition: border-color 0.2s;
+  padding: 14px 20px;
+  transition: border-color 0.2s, background 0.2s;
 }
-.sponsor-logo-placeholder:hover { border-color: var(--primary); }
+.sponsor-logo img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  object-fit: contain;
+}
+.sponsor-card:hover .sponsor-logo {
+  border-color: var(--primary);
+  background: rgba(119, 203, 245, 0.07);
+}
 .sponsor-card p { font-size: 12px; color: var(--text-muted); }
 
 /* === SPONSORS MARQUEE === */
@@ -1384,7 +1445,7 @@ a { color: inherit; text-decoration: none; }
   display: flex;
   gap: 28px;
   width: max-content;
-  animation: sponsors-scroll 16s linear infinite;
+  animation: sponsors-scroll 30s linear infinite;
 }
 .sponsors-marquee-wrapper:hover .sponsors-marquee-track {
   animation-play-state: paused;
@@ -1393,8 +1454,11 @@ a { color: inherit; text-decoration: none; }
   flex-shrink: 0;
   width: 200px;
 }
-.sponsors-marquee-track .sponsor-logo-placeholder {
+.sponsors-marquee-track .sponsor-logo {
   width: 200px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sponsors-marquee-track { animation: none; }
 }
 @keyframes sponsors-scroll {
   from { transform: translateX(0); }
@@ -1448,11 +1512,6 @@ a { color: inherit; text-decoration: none; }
 .ticket-features li {
   display: flex;
   align-items: center;
-}
-
-.social-icon {
-  color: var(--primary);
-  flex-shrink: 0;
 }
 
 /* === HAMBURGER === */
@@ -1555,6 +1614,7 @@ a { color: inherit; text-decoration: none; }
   .tickets-grid { grid-template-columns: 1fr; max-width: 460px; }
   .footer-inner { grid-template-columns: 1fr; text-align: center; }
   .footer-brand p { max-width: 100%; }
+  .footer-logo { margin: 0 auto; }
   .footer-contact { text-align: center; }
   .footer-bottom { justify-content: center; text-align: center; }
   .speakers-confirmed-grid { grid-template-columns: repeat(2, 1fr); }
@@ -1597,8 +1657,8 @@ a { color: inherit; text-decoration: none; }
 
   /* Hero */
   .hero { padding: 90px 0 64px; min-height: auto; }
-  .event-theme-badge { display: none; }
-  .hero-badge-row { margin-bottom: 18px; }
+  /* A logo já carrega "2ª Edição"; a frase-tema não cabe bem no mobile. */
+  .hero-badge-row { display: none; }
   .event-info-row { flex-direction: column; gap: 14px; padding: 20px 72px; align-items: stretch; }
   .event-info-divider { display: none; }
   .event-info-item { justify-content: flex-start; }
@@ -1661,7 +1721,12 @@ a { color: inherit; text-decoration: none; }
   .client-logos-grid { grid-template-columns: repeat(3, 1fr); gap: 12px; }
 
   /* Social */
-  .social-box { flex-direction: column; text-align: center; padding: 24px 20px; }
+  .social-box { padding: 28px 20px; gap: 26px; }
+  .social-media { grid-template-columns: 1fr; gap: 28px; }
+  .social-photos { grid-template-columns: 1fr 1fr; gap: 16px; }
+  .social-photo img { width: 100%; height: auto; aspect-ratio: 1; }
+  .social-video { max-width: 400px; margin: 0 auto; }
+  .social-video-frame { height: 660px; }
 
   /* Ingresso */
   .ticket-card { padding: 28px 22px; }
@@ -1711,11 +1776,10 @@ a { color: inherit; text-decoration: none; }
 
   /* Patrocinadores */
   .sponsors-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
-  .sponsor-logo-placeholder { height: 70px; font-size: 13px; }
+  .sponsor-logo { height: 78px; padding: 14px 18px; }
 
   /* Logos parceiros */
-  .client-logos-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
-  .client-logo-placeholder { height: 56px; font-size: 10px; }
+  .client-logos-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
 
   /* Pagamento */
   .payment-icons { flex-wrap: wrap; gap: 8px; justify-content: center; }
@@ -1724,11 +1788,11 @@ a { color: inherit; text-decoration: none; }
   /* Footer */
   .footer { padding: 48px 0 0; }
   .footer-inner { gap: 24px; padding-bottom: 36px; }
-  .footer-brand .logo-text { font-size: 14px; }
+  .footer-logo { width: 160px; }
 
   /* Ação social */
-  .social-box { padding: 20px 16px; }
-  .social-icon svg { width: 40px !important; height: 40px !important; }
+  .social-box { padding: 22px 16px; }
+  .social-video-frame { height: 620px; }
 
   /* FAQ */
   .faq-item summary { font-size: 14px; padding: 16px 18px; }
