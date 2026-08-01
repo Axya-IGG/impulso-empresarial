@@ -157,7 +157,8 @@ if (hamburger && mainNav) {
 }
 
 // === CARROSSÉIS (somente mobile) ===
-function buildCarousel(containerId, dotsContainerId) {
+function buildCarousel(containerId, dotsContainerId, options = {}) {
+  const { autoplayMs = 0 } = options;
   const el = document.getElementById(containerId);
   const dotsEl = dotsContainerId ? document.getElementById(dotsContainerId) : null;
   if (!el) return;
@@ -219,22 +220,52 @@ function buildCarousel(containerId, dotsContainerId) {
     nextBtn.disabled = idx === items.length - 1;
   }
 
-  prevBtn.addEventListener('click', () => goTo(idx - 1));
-  nextBtn.addEventListener('click', () => goTo(idx + 1));
+  // === AUTOPLAY ===
+  // Avança sozinho e dá a volta ao chegar no último. Para de vez assim que
+  // a pessoa assume o controle: retomar depois atrapalharia a leitura.
+  let timer = null;
+  let assumiuControle = false;
+  const prefereMenosMovimento =
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function iniciaAutoplay() {
+    if (!autoplayMs || prefereMenosMovimento || assumiuControle) return;
+    paraAutoplay();
+    timer = setInterval(() => goTo((idx + 1) % items.length), autoplayMs);
+  }
+  function paraAutoplay() {
+    if (timer) { clearInterval(timer); timer = null; }
+  }
+  function cedeControle() {
+    assumiuControle = true;
+    paraAutoplay();
+  }
+
+  prevBtn.addEventListener('click', () => { cedeControle(); goTo(idx - 1); });
+  nextBtn.addEventListener('click', () => { cedeControle(); goTo(idx + 1); });
+  dots.forEach(d => d.addEventListener('click', cedeControle));
 
   // Suporte a swipe
   let tx = 0;
   outer.addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, { passive: true });
   outer.addEventListener('touchend', e => {
     const dx = tx - e.changedTouches[0].clientX;
-    if (Math.abs(dx) > 40) dx > 0 ? goTo(idx + 1) : goTo(idx - 1);
+    if (Math.abs(dx) > 40) { cedeControle(); dx > 0 ? goTo(idx + 1) : goTo(idx - 1); }
   }, { passive: true });
+
+  // Não gira em aba oculta: gastaria bateria e a pessoa voltaria num slide
+  // aleatório.
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) paraAutoplay();
+    else iniciaAutoplay();
+  });
 
   window.addEventListener('resize', () => goTo(idx), { passive: true });
 
   goTo(0);
+  iniciaAutoplay();
 }
 
 if (window.innerWidth <= 768) {
-  buildCarousel('speakers-carousel', 'speakers-dots');
+  buildCarousel('speakers-carousel', 'speakers-dots', { autoplayMs: 2000 });
 }
