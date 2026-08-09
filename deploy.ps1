@@ -72,18 +72,41 @@ if ($WhatIf) {
 }
 
 # --- publica --------------------------------------------------------------
-# XDG_CONFIG_HOME aponta para o perfil da Axya; sem ele o wrangler usa o
-# login da AR&D. CLOUDFLARE_ACCOUNT_ID evita que ele herde o account id em
-# cache de .wrangler/ de um diretorio pai.
-$env:XDG_CONFIG_HOME        = $WranglerCfg
+# XDG_CONFIG_HOME aponta para o perfil da Axya, usado nas maquinas em que o
+# login padrao do wrangler e o da AR&D. Onde esse perfil nao existe, o login
+# padrao ja e o da Axya — por isso a checagem de conta logo abaixo, que vale
+# nos dois casos. CLOUDFLARE_ACCOUNT_ID evita herdar o account id em cache de
+# .wrangler/ de um diretorio pai.
+if (Test-Path -LiteralPath (Join-Path $WranglerCfg '.wrangler\config\default.toml')) {
+    $env:XDG_CONFIG_HOME = $WranglerCfg
+}
 $env:CLOUDFLARE_ACCOUNT_ID  = $AccountId
 
 $branch = if ($Preview) { "preview-$(Get-Date -Format 'yyyyMMdd-HHmm')" } else { 'master' }
 
+# O wrangler é chamado via `node caminho\wrangler.js`, e não via `npx`: o
+# lançador do npx passa pelo cmd.exe, que quebra em perfis de usuário com '&'
+# no nome (ex.: "AR&D Assessoria") — o caminho é truncado no '&' e o módulo
+# não é encontrado. Sem instalação global, cai no npx mesmo.
+$WranglerJs = Join-Path $env:APPDATA 'npm\node_modules\wrangler\bin\wrangler.js'
+function Invoke-Wrangler {
+    if (Test-Path -LiteralPath $WranglerJs) { node $WranglerJs @args }
+    else { npx wrangler @args }
+}
+
+# Confere em qual conta o wrangler esta logado ANTES de publicar: publicar na
+# conta errada criaria um projeto Pages novo e publico fora do controle da Axya.
+$whoami = Invoke-Wrangler whoami 2>&1 | Out-String
+if ($whoami -notmatch [regex]::Escape($AccountId)) {
+    Write-Host $whoami
+    throw "wrangler nao esta logado na conta da Axya ($AccountId). Rode 'wrangler login' com ferramentasaxya@gmail.com."
+}
+Write-Host "Conta Cloudflare confirmada: $AccountId" -ForegroundColor DarkGray
+
 Write-Host "`nPublicando em '$ProjectName' (branch: $branch)..." -ForegroundColor Cyan
 Push-Location $Stage
 try {
-    npx wrangler pages deploy . --project-name=$ProjectName --branch=$branch --commit-dirty=true
+    Invoke-Wrangler pages deploy . "--project-name=$ProjectName" "--branch=$branch" --commit-dirty=true
     if ($LASTEXITCODE -ne 0) { throw "wrangler retornou codigo $LASTEXITCODE" }
 }
 finally {
