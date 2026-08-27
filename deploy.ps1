@@ -93,8 +93,14 @@ $branch = if ($Preview) { "preview-$(Get-Date -Format 'yyyyMMdd-HHmm')" } else {
 # não é encontrado. Sem instalação global, cai no npx mesmo.
 $WranglerJs = Join-Path $env:APPDATA 'npm\node_modules\wrangler\bin\wrangler.js'
 function Invoke-Wrangler {
-    if (Test-Path -LiteralPath $WranglerJs) { node $WranglerJs @args }
-    else { npx wrangler @args }
+    # O $args precisa ser copiado antes de splatar. No PowerShell 5.1 o splat
+    # da variavel automatica se perde quando o comando nativo ja tem um
+    # argumento literal antes dele: `npx wrangler @args` chega ao wrangler sem
+    # argumento nenhum e ele responde com o help — o que fazia a checagem de
+    # conta abaixo acusar "nao esta logado" mesmo com a sessao valida.
+    $cmdArgs = @($args)
+    if (Test-Path -LiteralPath $WranglerJs) { node $WranglerJs @cmdArgs }
+    else { npx wrangler @cmdArgs }
 }
 
 # Confere em qual conta o wrangler esta logado ANTES de publicar: publicar na
