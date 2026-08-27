@@ -2,12 +2,13 @@
 // IMPULSO EMPRESARIAL 2026 — Script
 // ==========================================
 
-// === COUNTDOWN — PRÉ-VENDA ===
-// Janela fixa da pré-venda, ancorada no fuso de Brasília (-03:00) para que
+// === COUNTDOWN ===
+// As fases vêm do JSON em #countdown-config, dentro do HTML de cada página.
+// Assim a pré-venda arquivada e a página de vendas dividem este script sem
+// que uma carregue as datas da outra. Cada fase traz o instante em que
+// termina e o rótulo que vale até lá; vencida a última, fica o rótulo de
+// `encerrado`. As datas são ancoradas no fuso de Brasília (-03:00) para que
 // o prazo seja o mesmo independente do fuso de quem acessa.
-const PRESALE_START = new Date('2026-08-10T00:00:00-03:00').getTime();
-const PRESALE_END   = new Date('2026-08-21T23:59:59-03:00').getTime();
-
 const COUNTDOWN_IDS = [
   ['cd-days',  'cd-hours',  'cd-minutes',  'cd-seconds'],
   ['cd2-days', 'cd2-hours', 'cd2-minutes', 'cd2-seconds'],
@@ -35,23 +36,40 @@ function setCountdownLabel(text) {
   document.querySelectorAll('.countdown-label').forEach(el => { el.textContent = text; });
 }
 
+function lerConfigCountdown() {
+  const el = document.getElementById('countdown-config');
+  if (!el) return null;
+  try {
+    const cfg = JSON.parse(el.textContent);
+    // Converte para milissegundos uma única vez, na leitura.
+    cfg.fases = (cfg.fases || []).map(f => ({ label: f.label, ate: new Date(f.ate).getTime() }));
+    return cfg.fases.length ? cfg : null;
+  } catch {
+    // Config quebrada não deve derrubar o resto da página: o markup
+    // estático do contador fica como está.
+    return null;
+  }
+}
+
+const countdownCfg = lerConfigCountdown();
+
 function updateCountdown() {
   const now = Date.now();
+  const fase = countdownCfg.fases.find(f => now < f.ate);
 
-  if (now < PRESALE_START) {
-    setCountdownLabel('Pré-venda começa em:');
-    paintCountdown(PRESALE_START - now);
-  } else if (now <= PRESALE_END) {
-    setCountdownLabel('Pré-venda encerra em:');
-    paintCountdown(PRESALE_END - now);
+  if (fase) {
+    setCountdownLabel(fase.label);
+    paintCountdown(fase.ate - now);
   } else {
-    setCountdownLabel('Pré-venda encerrada');
+    setCountdownLabel(countdownCfg.encerrado);
     paintCountdown(0);
   }
 }
 
-updateCountdown();
-setInterval(updateCountdown, 1000);
+if (countdownCfg) {
+  updateCountdown();
+  setInterval(updateCountdown, 1000);
+}
 
 // === VÍDEO DA AÇÃO SOCIAL ===
 // O play sobreposto some assim que a reprodução começa; daí em diante
