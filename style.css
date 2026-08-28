@@ -5,6 +5,12 @@
 /* === RESET & BASE === */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* Qualquer regra de `display` própria vence o [hidden] da folha do
+   navegador, então `el.hidden = true` deixa de esconder — foi o que fez o
+   formulário do popup continuar por cima da confirmação da lista de espera.
+   Esta regra vale para toda a página e fecha a armadilha de uma vez. */
+[hidden] { display: none !important; }
+
 :root {
   /* Paleta do evento Impulso Empresarial */
   --navy:      #141c2f;   /* azul escuro — fundo principal */
@@ -1905,21 +1911,6 @@ a { color: inherit; text-decoration: none; }
   .section-header { margin-bottom: 28px; }
 }
 
-/* === BOTÃO DE CHECKOUT BLOQUEADO (antes da abertura das vendas) === */
-/* Precisa parecer inerte à primeira vista: sem o gradiente da marca, sem
-   cursor de link e sem a elevação no hover que o .btn dá por padrão. */
-.btn-bloqueado,
-.btn-bloqueado:hover {
-  background: var(--dark-3);
-  background-image: none;
-  color: var(--text-muted);
-  border: 1px solid var(--border);
-  cursor: not-allowed;
-  box-shadow: none;
-  transform: none;
-  letter-spacing: 0.08em;
-}
-
 /* === POPUP DE CAPTURA DE LEAD === */
 .lead-modal {
   position: fixed;
@@ -2051,4 +2042,44 @@ a { color: inherit; text-decoration: none; }
 @media (max-width: 480px) {
   .lead-modal-caixa { padding: 30px 20px 22px; }
   .lead-modal-caixa h3 { font-size: 1.2rem; }
+}
+
+/* === AVISO DE DATA ABAIXO DOS CTAs (enquanto as vendas não abriram) === */
+/* Fica no HTML e o JS só alterna o hidden — inserir por script quebraria o
+   flex de .cta-final-buttons, onde a nota precisa vir depois do par. */
+.nota-espera {
+  margin-top: 10px;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+  text-align: center;
+}
+.nota-espera[hidden] { display: none; }
+
+/* === CONFIRMAÇÃO DA LISTA DE ESPERA === */
+.lead-sucesso {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+  padding: 6px 0 4px;
+}
+.lead-sucesso[hidden] { display: none; }
+
+.lead-sucesso-icone {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--green);
+  background: rgba(34, 197, 94, 0.14);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+}
+
+.lead-sucesso p {
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--text-light);
 }

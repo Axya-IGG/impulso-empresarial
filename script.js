@@ -71,77 +71,134 @@ if (countdownCfg) {
   setInterval(updateCountdown, 1000);
 }
 
-// === CHECKOUT: TRAVA ATE A ABERTURA DAS VENDAS ===
-// Antes de `vendas_abrem` os CTAs de compra ficam inertes, com o aviso no
-// lugar do rotulo. O estado e reavaliado a cada segundo junto do contador,
-// para que a pagina que ficou aberta a noite toda destrave sozinha na
-// virada, sem depender de alguem recarregar.
+// === CHECKOUT E LISTA DE ESPERA ===
+// Antes de `vendas_abrem` os CTAs de compra nao levam ao checkout: viram
+// entrada para a lista de espera, com o aviso da data logo abaixo. Assim os
+// dias que antecedem a estreia continuam gerando contato, em vez de esbarrar
+// num botao morto. O estado e reavaliado a cada segundo junto do contador,
+// para que a pagina aberta durante a noite destrave sozinha na virada.
 const CTAS_CHECKOUT = document.querySelectorAll('[data-checkout]');
-const abremEm = countdownCfg?.vendas_abrem ? new Date(countdownCfg.vendas_abrem).getTime() : 0;
-const avisoBloqueio = countdownCfg?.aviso_bloqueado || 'EM BREVE';
+const NOTAS_ESPERA  = document.querySelectorAll('[data-nota-espera]');
+const cfgEspera     = countdownCfg?.espera || {};
+const abremEm       = countdownCfg?.vendas_abrem ? new Date(countdownCfg.vendas_abrem).getTime() : 0;
+
+const emEspera = () => Boolean(abremEm) && Date.now() < abremEm;
+
+// O destino tem de ser guardado antes da primeira pintura: o
+// removeAttribute('href') apagaria o unico lugar onde ele existe.
+CTAS_CHECKOUT.forEach(a => { a.dataset.destino = a.getAttribute('href') || ''; });
 
 function pintarCheckout() {
-  const travado = abremEm && Date.now() < abremEm;
+  const espera = emEspera();
 
   CTAS_CHECKOUT.forEach(a => {
-    // O rotulo original e guardado na primeira passada: e ele que volta
-    // quando as vendas abrem.
     if (!a.dataset.rotulo) a.dataset.rotulo = a.textContent.trim();
 
-    if (travado) {
-      // Tirar o href e o que realmente desabilita: sem ele o link nao e
-      // clicavel nem por teclado, nem por "abrir em nova aba".
+    if (espera && a.dataset.modo !== 'espera') {
+      // Sai o href de verdade: se o JS falhasse depois de apenas trocar o
+      // rotulo, um clique ainda abriria o checkout antes da hora.
       a.removeAttribute('href');
-      a.setAttribute('aria-disabled', 'true');
-      a.classList.add('btn-bloqueado');
-      a.textContent = avisoBloqueio;
-    } else if (a.getAttribute('aria-disabled')) {
+      a.removeAttribute('target');
+      a.dataset.modo = 'espera';
+      a.textContent = cfgEspera.rotulo || 'ENTRAR NA LISTA DE ESPERA';
+      // <a> sem href sai da ordem de tabulacao e deixa de se anunciar como
+      // controle; role + tabindex devolvem as duas coisas.
+      a.setAttribute('role', 'button');
+      a.setAttribute('tabindex', '0');
+    } else if (!espera && a.dataset.modo === 'espera') {
       a.href = a.dataset.destino;
-      a.removeAttribute('aria-disabled');
-      a.classList.remove('btn-bloqueado');
+      a.target = '_blank';
+      delete a.dataset.modo;
       a.textContent = a.dataset.rotulo;
+      a.removeAttribute('role');
+      a.removeAttribute('tabindex');
     }
+  });
+
+  NOTAS_ESPERA.forEach(n => {
+    if (espera && cfgEspera.nota) { n.textContent = cfgEspera.nota; n.hidden = false; }
+    else n.hidden = true;
   });
 }
 
-// O destino tem de ser guardado antes da primeira pintura, senao o
-// removeAttribute('href') apaga o unico lugar onde ele existia.
-CTAS_CHECKOUT.forEach(a => { a.dataset.destino = a.getAttribute('href') || ''; });
 pintarCheckout();
 setInterval(pintarCheckout, 1000);
 
 // === POPUP DE CAPTURA DE LEAD ===
-// Dispara no primeiro clique num CTA liberado. Quem ja preencheu vai direto
-// para o checkout: a marca fica no localStorage e, como ele se perde ao
-// limpar o navegador, o servidor tambem devolve um cookie de um ano e trata
-// o WhatsApp como chave unica.
+// Abre no primeiro clique num CTA. Com as vendas abertas ele e a ponte para
+// o checkout; antes disso, e o cadastro na lista de espera. Quem ja
+// preencheu nao ve o formulario de novo: a marca fica no localStorage e,
+// como ele se perde ao limpar o navegador, o servidor tambem devolve um
+// cookie de um ano e trata o WhatsApp como chave unica.
 const JA_CADASTRADO = 'impulso_lead_ok';
 
-const modal      = document.getElementById('lead-modal');
-const formLead   = document.getElementById('lead-form');
-const erroLead   = document.getElementById('lead-erro');
+const modal        = document.getElementById('lead-modal');
+const formLead     = document.getElementById('lead-form');
+const erroLead     = document.getElementById('lead-erro');
+const tituloLead   = document.getElementById('lead-modal-titulo');
+const subLead      = document.getElementById('lead-modal-sub');
+const sucessoLead  = document.getElementById('lead-sucesso');
+const sucessoTexto = document.getElementById('lead-sucesso-texto');
 
 const jaCadastrou = () => {
   try { return localStorage.getItem(JA_CADASTRADO) === '1'; }
   catch { return document.cookie.includes('impulso_lead=1'); }
 };
 const marcarCadastrado = () => {
-  try { localStorage.setItem(JA_CADASTRADO, '1'); } catch { /* modo privado */ }
+  try { localStorage.setItem(JA_CADASTRADO, '1'); } catch { /* navegacao privada */ }
 };
 
 if (modal && formLead) {
-  let destinoPendente = '';
-  let origemPendente = '';
-  let ultimoFoco = null;
+  const botaoLead = formLead.querySelector('button[type="submit"]');
 
-  const abrirModal = (destino, origem) => {
+  // A copy de checkout mora no HTML; guardamos para restaurar depois de uma
+  // abertura em modo lista de espera.
+  const COPY_PADRAO = {
+    titulo: tituloLead.textContent,
+    sub: subLead.textContent,
+    botao: botaoLead.textContent.trim(),
+  };
+
+  let destinoPendente = '';
+  let origemPendente  = '';
+  let modoPendente    = '';
+  let ultimoFoco      = null;
+
+  function mostrarSucesso(texto) {
+    formLead.hidden = true;
+    subLead.hidden = true;
+    sucessoTexto.textContent = texto;
+    sucessoLead.hidden = false;
+  }
+
+  function abrirModal({ destino = '', origem = '', modo = '', jaNaLista = false }) {
     destinoPendente = destino;
     origemPendente = origem;
+    modoPendente = modo;
+
+    const espera = modo === 'espera';
+    tituloLead.textContent = espera ? (cfgEspera.titulo || COPY_PADRAO.titulo) : COPY_PADRAO.titulo;
+    subLead.textContent    = espera ? (cfgEspera.sub || COPY_PADRAO.sub) : COPY_PADRAO.sub;
+    botaoLead.textContent  = espera ? (cfgEspera.botao || COPY_PADRAO.botao) : COPY_PADRAO.botao;
+
+    erroLead.hidden = true;
+    botaoLead.disabled = false;
+
+    // Quem ja se cadastrou e clica de novo durante a espera nao precisa
+    // preencher nada: recebe so a confirmacao de que esta na lista.
+    if (jaNaLista) {
+      mostrarSucesso(cfgEspera.ja_inscrito || 'Você já está na lista de espera.');
+    } else {
+      formLead.hidden = false;
+      subLead.hidden = false;
+      sucessoLead.hidden = true;
+    }
+
     ultimoFoco = document.activeElement;
     modal.hidden = false;
     document.body.style.overflow = 'hidden';
-    modal.querySelector('input[name="nome"]')?.focus();
-  };
+    if (!jaNaLista) modal.querySelector('input[name="nome"]')?.focus();
+  }
 
   const fecharModal = () => {
     modal.hidden = true;
@@ -155,24 +212,34 @@ if (modal && formLead) {
     if (e.key === 'Escape' && !modal.hidden) fecharModal();
   });
 
-  CTAS_CHECKOUT.forEach(a => {
-    a.addEventListener('click', e => {
-      if (a.getAttribute('aria-disabled')) { e.preventDefault(); return; }
-      if (jaCadastrou()) return;               // segue direto para a Eduzz
+  function aoAcionarCta(e, a) {
+    if (a.dataset.modo === 'espera') {
       e.preventDefault();
-      abrirModal(a.dataset.destino, a.dataset.checkout);
+      abrirModal({ origem: 'espera-' + a.dataset.checkout, modo: 'espera', jaNaLista: jaCadastrou() });
+      return;
+    }
+    if (jaCadastrou()) return;          // segue direto para a Eduzz
+    e.preventDefault();
+    abrirModal({ destino: a.dataset.destino, origem: a.dataset.checkout });
+  }
+
+  CTAS_CHECKOUT.forEach(a => {
+    a.addEventListener('click', e => aoAcionarCta(e, a));
+    // Sem href, o Enter num <a> nao dispara click: precisa ser no braco.
+    a.addEventListener('keydown', e => {
+      if (a.dataset.modo === 'espera' && (e.key === 'Enter' || e.key === ' ')) aoAcionarCta(e, a);
     });
   });
 
   formLead.addEventListener('submit', async e => {
     e.preventDefault();
-    const botao = formLead.querySelector('button[type="submit"]');
     const dados = Object.fromEntries(new FormData(formLead));
     dados.origem = origemPendente;
 
     erroLead.hidden = true;
-    botao.disabled = true;
-    botao.textContent = 'ENVIANDO...';
+    botaoLead.disabled = true;
+    const rotulo = botaoLead.textContent;
+    botaoLead.textContent = 'ENVIANDO...';
 
     try {
       const r = await fetch('/api/lead', {
@@ -184,14 +251,19 @@ if (modal && formLead) {
       if (!r.ok) throw new Error(corpo.erro || 'Não foi possível enviar.');
 
       marcarCadastrado();
-      // Navegacao direta, e nao window.open: o clique original ja foi
-      // consumido pelo preventDefault, entao um popup seria bloqueado.
-      window.location.href = destinoPendente;
+
+      if (modoPendente === 'espera') {
+        mostrarSucesso(cfgEspera.sucesso || 'Pronto, você está na lista!');
+      } else {
+        // Navegacao direta, e nao window.open: o clique original ja foi
+        // consumido pelo preventDefault, entao um popup seria bloqueado.
+        window.location.href = destinoPendente;
+      }
     } catch (err) {
       erroLead.textContent = err.message;
       erroLead.hidden = false;
-      botao.disabled = false;
-      botao.textContent = 'CONTINUAR PARA O CHECKOUT';
+      botaoLead.disabled = false;
+      botaoLead.textContent = rotulo;
     }
   });
 }

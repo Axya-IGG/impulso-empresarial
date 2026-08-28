@@ -388,6 +388,9 @@
         <a href="https://chk.eduzz.com/80176KVQ07" data-checkout="ate3" class="btn btn-primary btn-lg ticket-cta" target="_blank" rel="noopener">
           APROVEITAR AGORA
         </a>
+        <!-- Só aparece enquanto as vendas não abriram: o JS mostra/esconde
+             junto com a troca do rótulo do botão. -->
+        <p class="nota-espera" data-nota-espera hidden></p>
       </div>
 
       <div class="ticket-block">
@@ -407,6 +410,9 @@
         <a href="https://chk.eduzz.com/797ZY8210E" data-checkout="4mais" class="btn btn-gold btn-lg ticket-cta" target="_blank" rel="noopener">
           GARANTIR MENOR PREÇO
         </a>
+        <!-- Só aparece enquanto as vendas não abriram: o JS mostra/esconde
+             junto com a troca do rótulo do botão. -->
+        <p class="nota-espera" data-nota-espera hidden></p>
       </div>
 
     </div>
@@ -687,6 +693,7 @@
           4 OU + INGRESSOS · R$ 87,00 CADA
         </a>
       </div>
+      <p class="nota-espera" data-nota-espera hidden></p>
       <p class="cta-final-note">10 de Outubro · Hotel Monreale Plus · São José dos Campos</p>
     </div>
   </div>
@@ -750,8 +757,20 @@
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
     </button>
 
+    <!-- Os textos abaixo valem com as vendas abertas. Antes de 09/09 o JS
+         troca os três pela copy de lista de espera vinda do
+         #countdown-config, e guarda estes como padrão para restaurar. -->
     <h3 id="lead-modal-titulo">Falta pouco para garantir sua vaga</h3>
-    <p class="lead-modal-sub">Preencha para continuar. Pedimos uma vez só — nas próximas vezes você vai direto para o checkout.</p>
+    <p class="lead-modal-sub" id="lead-modal-sub">Preencha para continuar. Pedimos uma vez só — nas próximas vezes você vai direto para o checkout.</p>
+
+    <!-- Confirmação da lista de espera: sem checkout para onde mandar a
+         pessoa, o modal precisa fechar o ciclo por conta própria. -->
+    <div class="lead-sucesso" id="lead-sucesso" hidden>
+      <span class="lead-sucesso-icone" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </span>
+      <p id="lead-sucesso-texto"></p>
+    </div>
 
     <form class="lead-form" id="lead-form" novalidate>
       <label>
@@ -798,7 +817,15 @@
   ],
   "encerrado": "O evento já começou",
   "vendas_abrem": "2026-09-09T00:00:00-03:00",
-  "aviso_bloqueado": "VENDAS A PARTIR DE 09/09"
+  "espera": {
+    "rotulo": "ENTRAR NA LISTA DE ESPERA",
+    "nota": "Vendas a partir de 09/09 — avisamos você primeiro.",
+    "titulo": "Entre na lista de espera",
+    "sub": "As vendas abrem no dia 09/09. Deixe seu contato e avisamos você antes de todo mundo.",
+    "botao": "QUERO SER AVISADO",
+    "sucesso": "Pronto, você está na lista! Avisamos você assim que as vendas abrirem, no dia 09/09.",
+    "ja_inscrito": "Você já está na lista de espera. Avisamos você no dia 09/09."
+  }
 }
 </script>
 
