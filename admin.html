@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Painel · Impulso Empresarial</title>
+  <!-- Painel interno: fora do índice de busca e sem prévia em link. -->
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+  <meta name="theme-color" content="#141c2f" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="admin.css?v=20260828a" />
+</head>
+<body>
+
+<!-- ============================== LOGIN ============================== -->
+<section class="login" id="tela-login" hidden>
+  <form class="login-caixa" id="form-login">
+    <h1>Impulso Empresarial</h1>
+    <p class="login-sub">Painel de leads e remarketing</p>
+
+    <label>
+      <span>Senha</span>
+      <input type="password" name="senha" autocomplete="current-password" required autofocus />
+    </label>
+
+    <p class="alerta alerta-erro" id="login-erro" role="alert" hidden></p>
+
+    <button type="submit" class="btn btn-primario">ENTRAR</button>
+  </form>
+</section>
+
+<!-- ============================== PAINEL ============================== -->
+<div class="painel" id="tela-painel" hidden>
+
+  <header class="topo">
+    <div class="topo-marca">
+      <strong>Impulso Empresarial</strong>
+      <span>Painel de leads</span>
+    </div>
+    <nav class="abas" id="abas">
+      <button class="aba ativa" data-aba="leads">Leads</button>
+      <button class="aba" data-aba="mensagens">Mensagens</button>
+      <button class="aba" data-aba="envios">Envios</button>
+    </nav>
+    <button class="btn btn-fantasma" id="btn-sair">Sair</button>
+  </header>
+
+  <main class="conteudo">
+
+    <!-- --------------------------- LEADS --------------------------- -->
+    <section class="painel-aba" data-painel="leads">
+      <div class="cards" id="cards-estat"></div>
+
+      <div class="barra">
+        <input type="search" id="busca-leads" placeholder="Buscar por nome, e-mail ou WhatsApp..." />
+        <a class="btn btn-secundario" href="/api/admin/leads?formato=csv">Exportar CSV</a>
+      </div>
+
+      <div class="tabela-wrap">
+        <table class="tabela">
+          <thead>
+            <tr>
+              <th>Nome</th><th>E-mail</th><th>WhatsApp</th>
+              <th>Origem</th><th>Cadastro</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="corpo-leads"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ------------------------- MENSAGENS ------------------------- -->
+    <section class="painel-aba" data-painel="mensagens" hidden>
+      <div class="barra">
+        <label class="check-inline">
+          <input type="checkbox" id="ver-arquivadas" />
+          <span>Ver arquivadas</span>
+        </label>
+        <button class="btn btn-primario" id="btn-nova">+ Nova mensagem</button>
+      </div>
+
+      <div id="lista-mensagens" class="lista-mensagens"></div>
+    </section>
+
+    <!-- --------------------------- ENVIOS --------------------------- -->
+    <section class="painel-aba" data-painel="envios" hidden>
+      <div class="tabela-wrap">
+        <table class="tabela">
+          <thead>
+            <tr><th>Quando</th><th>Lead</th><th>Mensagem</th><th>Status</th><th>Detalhe</th></tr>
+          </thead>
+          <tbody id="corpo-envios"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ===================== MODAL DE MENSAGEM ===================== -->
+<div class="modal" id="modal-mensagem" hidden>
+  <div class="modal-fundo" data-fechar></div>
+  <div class="modal-caixa" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
+    <button type="button" class="modal-fechar" data-fechar aria-label="Fechar">&times;</button>
+    <h2 id="modal-titulo">Nova mensagem</h2>
+
+    <form id="form-mensagem">
+      <input type="hidden" name="id" />
+
+      <label>
+        <span>Título (uso interno)</span>
+        <input type="text" name="titulo" required placeholder="Ex.: Boas-vindas" />
+      </label>
+
+      <label>
+        <span>Quando enviar</span>
+        <select name="tipo" id="campo-tipo">
+          <option value="atraso">Tempo após o cadastro do lead</option>
+          <option value="data">Data e hora fixas (para toda a base)</option>
+        </select>
+      </label>
+
+      <div id="bloco-atraso">
+        <label>
+          <span>Enviar depois de</span>
+          <div class="linha-atraso">
+            <input type="number" name="atraso_valor" min="0" step="1" value="10" />
+            <select name="atraso_unidade">
+              <option value="1">minutos</option>
+              <option value="60">horas</option>
+              <option value="1440">dias</option>
+            </select>
+          </div>
+        </label>
+      </div>
+
+      <div id="bloco-data" hidden>
+        <label>
+          <span>Enviar em (horário de Brasília)</span>
+          <input type="datetime-local" name="enviar_em" />
+        </label>
+      </div>
+
+      <label>
+        <span>Texto da mensagem</span>
+        <textarea name="texto" rows="7" required placeholder="Oi {{primeiro_nome}}! ..."></textarea>
+      </label>
+      <p class="dica">
+        Use <code>{{primeiro_nome}}</code> ou <code>{{nome}}</code> para personalizar.
+      </p>
+
+      <label class="check-inline">
+        <input type="checkbox" name="ativo" checked />
+        <span>Ativa (começa a enviar assim que salvar)</span>
+      </label>
+
+      <p class="alerta alerta-erro" id="msg-erro" role="alert" hidden></p>
+
+      <div class="modal-acoes">
+        <button type="button" class="btn btn-secundario" id="btn-testar">Enviar teste</button>
+        <button type="submit" class="btn btn-primario">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ===================== MODAL DE TESTE ===================== -->
+<div class="modal" id="modal-teste" hidden>
+  <div class="modal-fundo" data-fechar></div>
+  <div class="modal-caixa modal-estreito" role="dialog" aria-modal="true">
+    <button type="button" class="modal-fechar" data-fechar aria-label="Fechar">&times;</button>
+    <h2>Enviar teste</h2>
+    <p class="dica">A mensagem vai para o número abaixo e não é registrada no log de envios.</p>
+    <form id="form-teste">
+      <label>
+        <span>WhatsApp (com DDD)</span>
+        <input type="tel" name="whatsapp" required placeholder="(12) 99999-9999" />
+      </label>
+      <p class="alerta" id="teste-aviso" role="alert" hidden></p>
+      <div class="modal-acoes">
+        <button type="submit" class="btn btn-primario">Enviar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="aviso-flutuante" id="toast" hidden></div>
+
+<script src="admin.js?v=20260828a"></script>
+</body>
+</html>

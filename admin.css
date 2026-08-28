@@ -1,0 +1,341 @@
+/* ==========================================
+   IMPULSO EMPRESARIAL — Painel administrativo
+   Mesma paleta da landing; layout de ferramenta, não de página de vendas.
+   ========================================== */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --navy:        #141c2f;
+  --dark-2:      #1a2440;
+  --dark-3:      #1f2d4e;
+  --border:      rgba(163, 185, 198, 0.18);
+  --text:        #eff1f0;
+  --text-muted:  #a3b9c6;
+  --primary:     #77cbf5;
+  --primary-dark:#57b8e8;
+  --verde:       #4ade80;
+  --vermelho:    #ff8b8b;
+  --amarelo:     #fbbf24;
+  --radius:      10px;
+  --font:        'Sora', system-ui, sans-serif;
+}
+
+body {
+  font-family: var(--font);
+  background: var(--navy);
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+[hidden] { display: none !important; }
+
+/* ------------------------------------------------------------- botões */
+.btn {
+  font-family: var(--font);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  padding: 10px 18px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: filter 0.15s, background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.btn:hover { filter: brightness(1.1); }
+.btn:disabled { opacity: 0.55; cursor: wait; }
+
+.btn-primario  { background: var(--primary); color: var(--navy); }
+.btn-secundario{ background: var(--dark-3); color: var(--text); border-color: var(--border); }
+.btn-fantasma  { background: transparent; color: var(--text-muted); border-color: var(--border); }
+.btn-fantasma:hover { color: var(--text); }
+
+.btn-mini {
+  font-size: 0.72rem;
+  padding: 5px 10px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: var(--font);
+  transition: color 0.15s, border-color 0.15s;
+}
+.btn-mini:hover { color: var(--text); border-color: var(--primary); }
+.btn-mini.perigo:hover { color: var(--vermelho); border-color: var(--vermelho); }
+
+/* -------------------------------------------------------------- login */
+.login {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.login-caixa {
+  width: 100%;
+  max-width: 360px;
+  background: var(--dark-2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 36px 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.login-caixa h1 { font-size: 1.25rem; font-weight: 700; }
+.login-sub { color: var(--text-muted); font-size: 0.85rem; margin-top: -12px; }
+
+/* -------------------------------------------------------------- campos */
+label { display: flex; flex-direction: column; gap: 6px; }
+label > span {
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+input[type=text], input[type=password], input[type=tel], input[type=search],
+input[type=number], input[type=datetime-local], select, textarea {
+  font-family: var(--font);
+  font-size: 15px;   /* 16px-ish: evita o zoom automático do Safari no iPhone */
+  color: var(--text);
+  background: var(--navy);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  width: 100%;
+}
+textarea { resize: vertical; line-height: 1.55; }
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(119, 203, 245, 0.16);
+}
+
+.check-inline { flex-direction: row; align-items: center; gap: 8px; }
+.check-inline input { width: auto; }
+.check-inline span { text-transform: none; letter-spacing: 0; font-size: 0.85rem; font-weight: 400; }
+
+.dica { font-size: 0.78rem; color: var(--text-muted); }
+.dica code {
+  background: var(--navy);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 1px 5px;
+  font-size: 0.92em;
+}
+
+.alerta {
+  font-size: 0.83rem;
+  border-radius: var(--radius);
+  padding: 9px 12px;
+  border: 1px solid;
+}
+.alerta-erro  { color: var(--vermelho); background: rgba(220,80,80,0.12);  border-color: rgba(220,80,80,0.35); }
+.alerta-ok    { color: var(--verde);    background: rgba(74,222,128,0.12); border-color: rgba(74,222,128,0.35); }
+
+/* --------------------------------------------------------------- topo */
+.topo {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 14px 22px;
+  background: var(--dark-2);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  flex-wrap: wrap;
+}
+.topo-marca { display: flex; flex-direction: column; line-height: 1.25; }
+.topo-marca strong { font-size: 0.95rem; }
+.topo-marca span { font-size: 0.75rem; color: var(--text-muted); }
+
+.abas { display: flex; gap: 4px; margin-left: auto; }
+.aba {
+  font-family: var(--font);
+  font-size: 0.84rem;
+  font-weight: 500;
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.aba:hover { color: var(--text); }
+.aba.ativa { background: var(--dark-3); color: var(--primary); }
+
+.conteudo { padding: 24px 22px 60px; max-width: 1180px; margin: 0 auto; }
+
+/* -------------------------------------------------------------- cards */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 22px;
+}
+.card {
+  background: var(--dark-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+}
+.card b { display: block; font-size: 1.7rem; font-weight: 700; line-height: 1.1; }
+.card span { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+
+/* -------------------------------------------------------------- barra */
+.barra {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.barra input[type=search] { flex: 1; min-width: 220px; }
+
+/* ------------------------------------------------------------- tabela */
+/* A tabela rola dentro da própria caixa: sem isso, no telefone, a página
+   inteira ganharia rolagem horizontal. */
+.tabela-wrap {
+  overflow-x: auto;
+  background: var(--dark-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.tabela { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+.tabela th, .tabela td {
+  text-align: left;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.tabela th {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.tabela tr:last-child td { border-bottom: none; }
+.tabela tbody tr:hover { background: rgba(255,255,255,0.025); }
+.vazio { text-align: center; color: var(--text-muted); padding: 34px 14px; font-size: 0.88rem; }
+
+.selo {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  letter-spacing: 0.03em;
+}
+.selo-ok       { color: var(--verde);    background: rgba(74,222,128,0.14); }
+.selo-erro     { color: var(--vermelho); background: rgba(255,139,139,0.14); }
+.selo-andamento{ color: var(--amarelo);  background: rgba(251,191,36,0.14); }
+.selo-off      { color: var(--text-muted); background: rgba(163,185,198,0.12); }
+
+/* ----------------------------------------------------------- mensagens */
+.lista-mensagens { display: flex; flex-direction: column; gap: 12px; }
+
+.msg-card {
+  background: var(--dark-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.msg-card.inativa { opacity: 0.6; }
+.msg-info { flex: 1; min-width: 240px; }
+.msg-topo { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin-bottom: 5px; }
+.msg-topo h3 { font-size: 0.98rem; font-weight: 600; }
+.msg-quando { font-size: 0.76rem; color: var(--primary); }
+.msg-texto {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: 7px;
+  white-space: pre-wrap;
+  /* Mensagem longa não pode esticar o card: 3 linhas e corta. */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.msg-stats { font-size: 0.75rem; color: var(--text-muted); margin-top: 8px; }
+.msg-acoes { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* -------------------------------------------------------------- modal */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.modal-fundo { position: absolute; inset: 0; background: rgba(10,14,24,0.8); }
+.modal-caixa {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  background: var(--dark-2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px;
+}
+.modal-estreito { max-width: 400px; }
+.modal-caixa h2 { font-size: 1.1rem; margin-bottom: 18px; padding-right: 30px; }
+.modal-caixa form { display: flex; flex-direction: column; gap: 14px; }
+.modal-fechar {
+  position: absolute;
+  top: 10px; right: 14px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.7rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.modal-fechar:hover { color: var(--text); }
+.modal-acoes { display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px; }
+
+.linha-atraso { display: flex; gap: 8px; }
+.linha-atraso input { flex: 1; }
+.linha-atraso select { flex: 1; }
+
+/* --------------------------------------------------------------- toast */
+.aviso-flutuante {
+  position: fixed;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--dark-3);
+  border: 1px solid var(--primary);
+  color: var(--text);
+  padding: 11px 20px;
+  border-radius: 30px;
+  font-size: 0.85rem;
+  z-index: 200;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+}
+
+@media (max-width: 640px) {
+  .topo { gap: 12px; }
+  .abas { margin-left: 0; order: 3; width: 100%; }
+  .aba { flex: 1; }
+  .conteudo { padding: 18px 14px 50px; }
+}

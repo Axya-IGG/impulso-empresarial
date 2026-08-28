@@ -36,6 +36,7 @@ $WranglerCfg = Join-Path $env:USERPROFILE '.wrangler-axya'
 # assets/ e images/ continuam validos, o que nao aconteceria numa subpasta.
 $Files = @(
     'index.html', 'pre-venda.html', 'style.css', 'script.js',
+    'admin.html', 'admin.css', 'admin.js',
     '_headers', '_redirects',
     'favicon.ico', 'favicon-32.png', 'favicon-192.png', 'apple-touch-icon.png'
 )
@@ -44,20 +45,38 @@ $Files = @(
 $Dirs = @('assets', 'images')
 
 # --- monta o diretório de publicação -------------------------------------
-$Stage = Join-Path ([System.IO.Path]::GetTempPath()) ("impulso-deploy-" + (Get-Date -Format 'yyyyMMddHHmmss'))
-New-Item -ItemType Directory -Path $Stage | Out-Null
+# O stage reproduz o layout que o Pages espera quando o projeto tem API:
+#
+#   stage/wrangler.toml   (copia de wrangler.pages.toml, com os bindings)
+#   stage/public/         (os estáticos — é o pages_build_output_dir)
+#   stage/functions/      (as Pages Functions)
+#
+# As Functions ficam FORA de public/ porque tudo que está no diretório de
+# saída vira arquivo servido publicamente: dentro dele, o código da API
+# seria baixável em /functions/_lib.js.
+$Stage    = Join-Path ([System.IO.Path]::GetTempPath()) ("impulso-deploy-" + (Get-Date -Format 'yyyyMMddHHmmss'))
+$StagePub = Join-Path $Stage 'public'
+New-Item -ItemType Directory -Path $StagePub -Force | Out-Null
 
 $missing = @()
 foreach ($f in $Files) {
     $p = Join-Path $RepoRoot $f
-    if (Test-Path -LiteralPath $p) { Copy-Item -LiteralPath $p -Destination $Stage }
+    if (Test-Path -LiteralPath $p) { Copy-Item -LiteralPath $p -Destination $StagePub }
     else { $missing += $f }
 }
 foreach ($d in $Dirs) {
     $p = Join-Path $RepoRoot $d
-    if (Test-Path -LiteralPath $p) { Copy-Item -LiteralPath $p -Destination $Stage -Recurse }
+    if (Test-Path -LiteralPath $p) { Copy-Item -LiteralPath $p -Destination $StagePub -Recurse }
     else { $missing += "$d/" }
 }
+
+$fnOrigem = Join-Path $RepoRoot 'functions'
+if (Test-Path -LiteralPath $fnOrigem) { Copy-Item -LiteralPath $fnOrigem -Destination $Stage -Recurse }
+else { $missing += 'functions/' }
+
+$cfgOrigem = Join-Path $RepoRoot 'wrangler.pages.toml'
+if (Test-Path -LiteralPath $cfgOrigem) { Copy-Item -LiteralPath $cfgOrigem -Destination (Join-Path $Stage 'wrangler.toml') }
+else { $missing += 'wrangler.pages.toml' }
 
 if ($missing.Count -gt 0) {
     throw "Arquivos esperados não encontrados no repositório: $($missing -join ', ')"
@@ -115,7 +134,10 @@ Write-Host "Conta Cloudflare confirmada: $AccountId" -ForegroundColor DarkGray
 Write-Host "`nPublicando em '$ProjectName' (branch: $branch)..." -ForegroundColor Cyan
 Push-Location $Stage
 try {
-    Invoke-Wrangler pages deploy . "--project-name=$ProjectName" "--branch=$branch" --commit-dirty=true
+    # Sem o diretório na linha de comando: quem manda é o pages_build_output_dir
+    # do wrangler.toml. Passar "." aqui publicaria functions/ como arquivo
+    # estático e deixaria o código da API baixável.
+    Invoke-Wrangler pages deploy "--project-name=$ProjectName" "--branch=$branch" --commit-dirty=true
     if ($LASTEXITCODE -ne 0) { throw "wrangler retornou codigo $LASTEXITCODE" }
 }
 finally {

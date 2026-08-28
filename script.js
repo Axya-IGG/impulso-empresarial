@@ -71,6 +71,131 @@ if (countdownCfg) {
   setInterval(updateCountdown, 1000);
 }
 
+// === CHECKOUT: TRAVA ATE A ABERTURA DAS VENDAS ===
+// Antes de `vendas_abrem` os CTAs de compra ficam inertes, com o aviso no
+// lugar do rotulo. O estado e reavaliado a cada segundo junto do contador,
+// para que a pagina que ficou aberta a noite toda destrave sozinha na
+// virada, sem depender de alguem recarregar.
+const CTAS_CHECKOUT = document.querySelectorAll('[data-checkout]');
+const abremEm = countdownCfg?.vendas_abrem ? new Date(countdownCfg.vendas_abrem).getTime() : 0;
+const avisoBloqueio = countdownCfg?.aviso_bloqueado || 'EM BREVE';
+
+function pintarCheckout() {
+  const travado = abremEm && Date.now() < abremEm;
+
+  CTAS_CHECKOUT.forEach(a => {
+    // O rotulo original e guardado na primeira passada: e ele que volta
+    // quando as vendas abrem.
+    if (!a.dataset.rotulo) a.dataset.rotulo = a.textContent.trim();
+
+    if (travado) {
+      // Tirar o href e o que realmente desabilita: sem ele o link nao e
+      // clicavel nem por teclado, nem por "abrir em nova aba".
+      a.removeAttribute('href');
+      a.setAttribute('aria-disabled', 'true');
+      a.classList.add('btn-bloqueado');
+      a.textContent = avisoBloqueio;
+    } else if (a.getAttribute('aria-disabled')) {
+      a.href = a.dataset.destino;
+      a.removeAttribute('aria-disabled');
+      a.classList.remove('btn-bloqueado');
+      a.textContent = a.dataset.rotulo;
+    }
+  });
+}
+
+// O destino tem de ser guardado antes da primeira pintura, senao o
+// removeAttribute('href') apaga o unico lugar onde ele existia.
+CTAS_CHECKOUT.forEach(a => { a.dataset.destino = a.getAttribute('href') || ''; });
+pintarCheckout();
+setInterval(pintarCheckout, 1000);
+
+// === POPUP DE CAPTURA DE LEAD ===
+// Dispara no primeiro clique num CTA liberado. Quem ja preencheu vai direto
+// para o checkout: a marca fica no localStorage e, como ele se perde ao
+// limpar o navegador, o servidor tambem devolve um cookie de um ano e trata
+// o WhatsApp como chave unica.
+const JA_CADASTRADO = 'impulso_lead_ok';
+
+const modal      = document.getElementById('lead-modal');
+const formLead   = document.getElementById('lead-form');
+const erroLead   = document.getElementById('lead-erro');
+
+const jaCadastrou = () => {
+  try { return localStorage.getItem(JA_CADASTRADO) === '1'; }
+  catch { return document.cookie.includes('impulso_lead=1'); }
+};
+const marcarCadastrado = () => {
+  try { localStorage.setItem(JA_CADASTRADO, '1'); } catch { /* modo privado */ }
+};
+
+if (modal && formLead) {
+  let destinoPendente = '';
+  let origemPendente = '';
+  let ultimoFoco = null;
+
+  const abrirModal = (destino, origem) => {
+    destinoPendente = destino;
+    origemPendente = origem;
+    ultimoFoco = document.activeElement;
+    modal.hidden = false;
+    document.body.style.overflow = 'hidden';
+    modal.querySelector('input[name="nome"]')?.focus();
+  };
+
+  const fecharModal = () => {
+    modal.hidden = true;
+    document.body.style.overflow = '';
+    ultimoFoco?.focus();
+  };
+
+  modal.querySelectorAll('[data-fechar-modal]').forEach(el =>
+    el.addEventListener('click', fecharModal));
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !modal.hidden) fecharModal();
+  });
+
+  CTAS_CHECKOUT.forEach(a => {
+    a.addEventListener('click', e => {
+      if (a.getAttribute('aria-disabled')) { e.preventDefault(); return; }
+      if (jaCadastrou()) return;               // segue direto para a Eduzz
+      e.preventDefault();
+      abrirModal(a.dataset.destino, a.dataset.checkout);
+    });
+  });
+
+  formLead.addEventListener('submit', async e => {
+    e.preventDefault();
+    const botao = formLead.querySelector('button[type="submit"]');
+    const dados = Object.fromEntries(new FormData(formLead));
+    dados.origem = origemPendente;
+
+    erroLead.hidden = true;
+    botao.disabled = true;
+    botao.textContent = 'ENVIANDO...';
+
+    try {
+      const r = await fetch('/api/lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dados),
+      });
+      const corpo = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(corpo.erro || 'Não foi possível enviar.');
+
+      marcarCadastrado();
+      // Navegacao direta, e nao window.open: o clique original ja foi
+      // consumido pelo preventDefault, entao um popup seria bloqueado.
+      window.location.href = destinoPendente;
+    } catch (err) {
+      erroLead.textContent = err.message;
+      erroLead.hidden = false;
+      botao.disabled = false;
+      botao.textContent = 'CONTINUAR PARA O CHECKOUT';
+    }
+  });
+}
+
 // === VÍDEO DA AÇÃO SOCIAL ===
 // O play sobreposto some assim que a reprodução começa; daí em diante
 // quem manda são os controles nativos.

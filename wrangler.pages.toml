@@ -1,0 +1,46 @@
+# Configuracao do projeto Pages. Nao se chama wrangler.toml de proposito:
+# o `pages_build_output_dir` abaixo aponta para uma pasta que so existe no
+# diretorio temporario de publicacao, entao um wrangler.toml na raiz do
+# repositorio faria qualquer comando wrangler rodado aqui procurar por uma
+# pasta inexistente. O deploy.ps1 copia este arquivo para o stage ja com o
+# nome wrangler.toml.
+#
+# Layout que o stage monta e que este arquivo descreve:
+#   stage/wrangler.toml
+#   stage/public/      -> os arquivos estaticos do site
+#   stage/functions/   -> as Pages Functions (a API)
+
+name = "impulso-empresarial"
+compatibility_date = "2026-08-28"
+pages_build_output_dir = "public"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "impulso-db"
+database_id = "0685aff2-e875-432f-af5b-eeb848c42b73"
+
+[vars]
+EVOLUTION_URL = "https://zap.ardassessoria.com.br"
+EVOLUTION_INSTANCIA = "axya"
+
+# ADMIN_SENHA, SESSION_SECRET e EVOLUTION_APIKEY sao secrets e ficam fora
+# daqui — vars entram no repositorio e aparecem no painel da Cloudflare.
+# Definir uma vez com:
+#   npx wrangler pages secret put ADMIN_SENHA      --project-name=impulso-empresarial
+#   npx wrangler pages secret put SESSION_SECRET   --project-name=impulso-empresarial
+#   npx wrangler pages secret put EVOLUTION_APIKEY --project-name=impulso-empresarial
+
+# O preview compartilha o banco, mas NAO recebe os secrets: o
+# `wrangler pages secret put` nao aceita --environment e grava so em
+# producao. Na pratica o painel nao abre numa URL de preview, o que acaba
+# sendo bom — a URL de preview e publica e seria uma segunda porta para os
+# mesmos dados. Para testar a API, o caminho e producao mesmo.
+[env.preview]
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "impulso-db"
+database_id = "0685aff2-e875-432f-af5b-eeb848c42b73"
+
+[env.preview.vars]
+EVOLUTION_URL = "https://zap.ardassessoria.com.br"
+EVOLUTION_INSTANCIA = "axya"

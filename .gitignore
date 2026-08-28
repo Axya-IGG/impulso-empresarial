@@ -6,3 +6,7 @@ Thumbs.db
 # Arquivos-fonte de design (originais em alta). O site usa as versões
 # otimizadas em assets/ — geradas a partir desta pasta.
 impulso empresarial 2 edição/
+
+# Config gerada no diretório temporário de publicação pelo deploy.ps1.
+# A versionada é a wrangler.pages.toml.
+wrangler.toml

@@ -16,6 +16,21 @@
 /pre-venda.html
   Cache-Control: no-cache, must-revalidate
 
+# Painel interno: fora dos buscadores mesmo que alguem publique o link, e
+# sem cache para nao deixar dados de lead parados no navegador.
+/admin
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow
+
+/admin.html
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow
+
+# A API nunca pode ser cacheada na borda: /api/admin/leads devolveria a
+# resposta de uma sessao para a requisicao de outra.
+/api/*
+  Cache-Control: no-store
+
 /*.css
   Cache-Control: public, max-age=31536000, immutable
 

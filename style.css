@@ -1904,3 +1904,151 @@ a { color: inherit; text-decoration: none; }
   /* Seção header */
   .section-header { margin-bottom: 28px; }
 }
+
+/* === BOTÃO DE CHECKOUT BLOQUEADO (antes da abertura das vendas) === */
+/* Precisa parecer inerte à primeira vista: sem o gradiente da marca, sem
+   cursor de link e sem a elevação no hover que o .btn dá por padrão. */
+.btn-bloqueado,
+.btn-bloqueado:hover {
+  background: var(--dark-3);
+  background-image: none;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+  letter-spacing: 0.08em;
+}
+
+/* === POPUP DE CAPTURA DE LEAD === */
+.lead-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.lead-modal[hidden] { display: none; }
+
+.lead-modal-fundo {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 14, 24, 0.82);
+  backdrop-filter: blur(3px);
+}
+
+.lead-modal-caixa {
+  position: relative;
+  width: 100%;
+  max-width: 460px;
+  /* O modal pode passar da altura da tela em telefone pequeno com o teclado
+     aberto; sem isso o botão de enviar fica inalcançável. */
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  background: var(--dark-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 34px 30px 26px;
+  animation: leadEntra 0.22s ease;
+}
+
+@keyframes leadEntra {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lead-modal-caixa { animation: none; }
+}
+
+.lead-modal-fechar {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s;
+}
+.lead-modal-fechar:hover { color: var(--text); background: rgba(255,255,255,0.07); }
+
+.lead-modal-caixa h3 {
+  font-family: var(--font-heading);
+  font-size: 1.35rem;
+  line-height: 1.25;
+  color: var(--text);
+  margin-bottom: 8px;
+  padding-right: 28px;
+}
+
+.lead-modal-sub {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+  margin-bottom: 22px;
+}
+
+.lead-form { display: flex; flex-direction: column; gap: 14px; }
+
+.lead-form label { display: flex; flex-direction: column; gap: 6px; }
+
+.lead-form label span {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.lead-form input {
+  font-family: var(--font-body);
+  /* 16px é o mínimo que impede o Safari do iPhone de dar zoom ao focar. */
+  font-size: 16px;
+  color: var(--text);
+  background: var(--dark);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.lead-form input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(119, 203, 245, 0.18);
+}
+
+.lead-submit { width: 100%; margin-top: 4px; }
+.lead-submit:disabled { opacity: 0.65; cursor: wait; }
+
+.lead-erro {
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: #ffb4b4;
+  background: rgba(220, 80, 80, 0.12);
+  border: 1px solid rgba(220, 80, 80, 0.35);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+}
+.lead-erro[hidden] { display: none; }
+
+.lead-consent {
+  font-size: 0.74rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: 2px;
+}
+.lead-consent strong { color: var(--text-light); }
+
+@media (max-width: 480px) {
+  .lead-modal-caixa { padding: 30px 20px 22px; }
+  .lead-modal-caixa h3 { font-size: 1.2rem; }
+}
