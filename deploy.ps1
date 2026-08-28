@@ -82,6 +82,34 @@ if ($missing.Count -gt 0) {
     throw "Arquivos esperados não encontrados no repositório: $($missing -join ', ')"
 }
 
+# --- versiona os assets pelo conteúdo -------------------------------------
+# O `?v=` no HTML existe para furar o cache, mas só cumpre esse papel se
+# mudar quando o arquivo muda. Manter isso na mão não funciona: em 28/08 o
+# script.js e o style.css foram alterados sem bump; como o _headers marca
+# JS/CSS como `immutable` por um ano, a borda da Cloudflare e os navegadores
+# seguiram servindo a versão velha (cf-cache-status: HIT, Age: 60068) e as
+# mudanças simplesmente não apareceram no site publicado.
+#
+# Aqui o valor sai do hash do próprio conteúdo: muda sozinho quando o
+# arquivo muda, e continua igual quando não muda (preservando o cache).
+$semBom = New-Object System.Text.UTF8Encoding($false)
+$htmls  = @(Get-ChildItem -LiteralPath $StagePub -Filter *.html -File)
+
+foreach ($asset in @('style.css', 'script.js', 'admin.css', 'admin.js')) {
+    $caminho = Join-Path $StagePub $asset
+    if (-not (Test-Path -LiteralPath $caminho)) { continue }
+
+    $hash = (Get-FileHash -LiteralPath $caminho -Algorithm SHA256).Hash.Substring(0, 10).ToLower()
+    $padrao = [regex]::Escape($asset) + '\?v=[A-Za-z0-9._-]+'
+
+    foreach ($h in $htmls) {
+        $txt  = [System.IO.File]::ReadAllText($h.FullName)
+        $novo = [regex]::Replace($txt, $padrao, "${asset}?v=$hash")
+        if ($novo -ne $txt) { [System.IO.File]::WriteAllText($h.FullName, $novo, $semBom) }
+    }
+    Write-Host ("  versao: {0,-11} -> {1}" -f $asset, $hash) -ForegroundColor DarkGray
+}
+
 $staged = Get-ChildItem -LiteralPath $Stage -Recurse -File
 $totalKb = [math]::Round(($staged | Measure-Object Length -Sum).Sum / 1KB)
 Write-Host "Diretorio de publicacao: $($staged.Count) arquivos, $totalKb KB" -ForegroundColor Cyan
