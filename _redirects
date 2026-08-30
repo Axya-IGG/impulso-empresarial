@@ -1,2 +1,6 @@
 # Redirects para Cloudflare Pages
 # /pagina-antiga  /pagina-nova  301
+
+# A pagina de pre-venda saiu do ar com o fim da campanha (21/08). Quem ainda
+# tiver o link de alguma peca de divulgacao cai na home em vez de num 404.
+/pre-venda  /  301

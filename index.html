@@ -30,11 +30,15 @@
   <p>De R$ 147,00 por R$ 97,00 &nbsp;<a href="#ingressos">Garantir agora →</a></p>
 </div>
 
-<!-- ========== DOBRA 1 — HERO ========== -->
+<!-- ========== DOBRA 1 — HERO ==========
+     Desktop: duas colunas — texto alinhado à esquerda, foto em destaque à
+     direita, sobre uma foto de fundo da 1ª edição. Mobile: coluna única
+     centralizada, sem a foto de destaque. -->
 <section class="hero">
   <div class="hero-bg-overlay"></div>
   <div class="container hero-content">
 
+   <div class="hero-copy">
     <div class="hero-badge-row">
       <div class="event-theme-badge">"Não é só sobre RH. É sobre método, liderança e resultado."</div>
     </div>
@@ -68,7 +72,7 @@
           <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         </span>
         <div>
-          <strong>08h30 às 17h</strong>
+          <strong>08h30 às 17h30</strong>
           <span>Período integral</span>
         </div>
       </div>
@@ -116,6 +120,16 @@
       </a>
       <p class="hero-cta-note">Vagas limitadas · Menor preço disponível agora</p>
     </div>
+   </div>
+
+   <!-- Foto pendente: trocar o placeholder abaixo pela foto da Andressa,
+        Kathleen e Luciana juntas (assets/hero-realizadoras.jpg). -->
+   <figure class="hero-figure">
+     <div class="hero-figure-placeholder" role="img" aria-label="Foto das realizadoras do Impulso Empresarial">
+       <svg class="person-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+       <span>Foto das realizadoras</span>
+     </div>
+   </figure>
 
   </div>
   <div class="scroll-indicator"><span></span></div>
@@ -196,7 +210,7 @@
         </div>
         <div class="speaker-info">
           <h3 class="speaker-name">Kathleen Amaro Oliveira</h3>
-          <span class="speaker-role">Co-fundadora da axya | Especialista em Gestão de Pessoas</span>
+          <span class="speaker-role">Cofundadora da axya | Especialista em Estratégia Organizacional e Liderança</span>
           <p class="speaker-bio">Empresária, co-fundadora da axya — Inteligência em Gente e Gestão, co-criadora do Método de consultoria PPMF e uma das idealizadoras do Impulso Empresarial. Com mais de 10 anos de carreira, é formada em Gestão de RH, com MBA em Consultoria Empresarial e especializações em Gestão de Projetos e Gestão da Mudança. Passou por empresas familiares, multinacionais e startups, incluindo Quero Educação e Edições Globo Condé Nast, estruturando processos e desenvolvendo times em contextos de alta complexidade. No Impulso Empresarial 2026, conduz a abertura do evento conectando gestão da mudança à NR-1 e media painéis ao longo da programação.</p>
         </div>
       </div>
@@ -207,7 +221,7 @@
         </div>
         <div class="speaker-info">
           <h3 class="speaker-name">Luciana Splicigo</h3>
-          <span class="speaker-role">Co-fundadora da axya | Especialista em Liderança e Cultura</span>
+          <span class="speaker-role">Cofundadora da axya | Especialista em estruturação de RH e Liderança</span>
           <p class="speaker-bio">Mãe da Lívia e do Pedro, co-fundadora da axya e idealizadora do Impulso Empresarial, com mais de 20 anos de carreira em Recursos Humanos. Business Partner e Personal &amp; Professional Coach pela SBC (Sociedade Brasileira de Coaching). Construiu trajetória em empresas familiares, holdings e multinacionais, incluindo passagem pela DHL e Edições Globo Condé Nast. No Impulso Empresarial 2026, media painéis técnicos sobre SST e direito trabalhista, trazendo também o olhar para desenvolvimento de lideranças, e a experiência de quem já viveu o corporativo e o familiar por dentro.</p>
         </div>
       </div>
@@ -222,31 +236,65 @@
           <p class="speaker-bio">Mãe da Lara, fundadora da Bufunffa e idealizadora do Impulso Empresarial, gestora e educadora financeira há mais de 12 anos, com 11 anos de atuação como Coach de Finanças Pessoais e especialização em inteligência emocional e desenvolvimento pessoal. Já levou educação financeira corporativa para empresas como BASF, John Deere, Hyundai, Honda e TOTVS. No Impulso Empresarial 2026, apresenta a fluência financeira como habilidade estratégica do RH, conduz a conversa sobre inteligência emocional e identidade, e media painéis ao longo do evento.</p>
         </div>
       </div>
+
+      <!-- Foto pendente: substituir .speaker-photo-placeholder por <img class="speaker-photo" src="images/fabi-vieira.jpg" alt="Fabi Vieira" /> assim que a foto chegar. -->
+      <div class="speaker-card speaker-confirmed">
+        <div class="speaker-photo-wrap">
+          <div class="speaker-photo speaker-photo-placeholder" role="img" aria-label="Fabi Vieira">
+            <svg class="person-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+          </div>
+        </div>
+        <div class="speaker-info">
+          <h3 class="speaker-name">Fabi Vieira</h3>
+          <span class="speaker-role">Especialista em Comunicação Estratégica</span>
+          <p class="speaker-bio">É especialista em comunicação estratégica, assertiva e relacional, com mais de 20 anos de experiência em vendas, liderança e desenvolvimento de equipes. Fundadora do Instituto Fala Comigo e Diretora de Comunicação da ABRH-SP Vale, atua apoiando profissionais e empresas a se posicionarem com clareza, fortalecerem relações e potencializarem resultados através da estruturação da comunicação.</p>
+        </div>
+      </div>
+
+      <!-- Foto pendente: substituir .speaker-photo-placeholder por <img class="speaker-photo" src="images/dom-oliveira.jpg" alt="Dom Oliveira" /> assim que a foto chegar. -->
+      <div class="speaker-card speaker-confirmed">
+        <div class="speaker-photo-wrap">
+          <div class="speaker-photo speaker-photo-placeholder" role="img" aria-label="Dom Oliveira">
+            <svg class="person-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+          </div>
+        </div>
+        <div class="speaker-info">
+          <h3 class="speaker-name">Dom Oliveira</h3>
+          <span class="speaker-role">Especialista em Marketing e Vendas | Sócio da R&amp;D Assessoria</span>
+          <p class="speaker-bio">Especialista em marketing digital, vendas e processos comerciais, e sócio-fundador da AR&amp;D Assessoria, agência de Jacareí que atua com gestão de tráfego pago, produção de conteúdo, criação de sites e atendimento automatizado com inteligência artificial. Coordenou equipes com mais de 100 consultores ativos, é certificado em Meta Ads e Google Ads e já gerenciou mais de R$ 1,2 milhão em investimento publicitário, com resultado em mais de R$ 5 milhões em vendas. Atende empresas de diversos segmentos no Vale do Paraíba, São Paulo e Espanha.</p>
+        </div>
+      </div>
+
+      <!-- Foto pendente: substituir .speaker-photo-placeholder por <img class="speaker-photo" src="images/samuel-irmao.jpg" alt="Samuel Irmão" /> assim que a foto chegar. -->
+      <div class="speaker-card speaker-confirmed">
+        <div class="speaker-photo-wrap">
+          <div class="speaker-photo speaker-photo-placeholder" role="img" aria-label="Samuel Irmão">
+            <svg class="person-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+          </div>
+        </div>
+        <div class="speaker-info">
+          <h3 class="speaker-name">Samuel Irmão</h3>
+          <span class="speaker-role">Técnico em Saúde e Segurança do Trabalho | Proprietário da Support Segma</span>
+          <p class="speaker-bio">Samuel Irmão é Técnico de Segurança do Trabalho, Bombeiro Civil e Empresário há mais de 20 anos. Administrador de empresas e proprietário da Support Segma - Medicina e Segurança do Trabalho, empresa com mais de 22 anos de mercado que atua em diversas indústrias, como construção civil, empresas de prestação de serviços e comércio de vários segmentos de produtos e serviços em Jacareí e no Vale do Paraíba.</p>
+        </div>
+      </div>
+
+      <!-- Foto pendente: substituir .speaker-photo-placeholder por <img class="speaker-photo" src="images/israel-costa.jpg" alt="Israel Costa" /> assim que a foto chegar. -->
+      <div class="speaker-card speaker-confirmed">
+        <div class="speaker-photo-wrap">
+          <div class="speaker-photo speaker-photo-placeholder" role="img" aria-label="Israel Costa">
+            <svg class="person-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+          </div>
+        </div>
+        <div class="speaker-info">
+          <h3 class="speaker-name">Israel Costa</h3>
+          <span class="speaker-role">Empreendedor e Especialista em Gestão Tecnológica</span>
+          <p class="speaker-bio">CTO e empreendedor à frente da S8 Tech, especializado em Cloud AWS, infraestrutura, segurança e gestão de tecnologia. Ajuda empresas a reduzir custos, melhorar suas operações e transformar a tecnologia em estratégia para crescer.</p>
+        </div>
+      </div>
     </div>
 
     <div class="carousel-dots" id="speakers-dots" aria-hidden="true"></div>
-    <div class="speakers-soon-row">
-      <div class="speaker-soon-card">
-        <div class="speaker-soon-photo"><svg class="person-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></div>
-        <p>Em breve</p>
-      </div>
-      <div class="speaker-soon-card">
-        <div class="speaker-soon-photo"><svg class="person-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></div>
-        <p>Em breve</p>
-      </div>
-      <div class="speaker-soon-card">
-        <div class="speaker-soon-photo"><svg class="person-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></div>
-        <p>Em breve</p>
-      </div>
-      <div class="speaker-soon-card">
-        <div class="speaker-soon-photo"><svg class="person-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></div>
-        <p>Em breve</p>
-      </div>
-      <div class="speaker-soon-card">
-        <div class="speaker-soon-photo"><svg class="person-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></div>
-        <p>Em breve</p>
-      </div>
-    </div>
 
     <div class="section-cta-center" style="margin-top:40px;">
       <a href="#ingressos" class="btn btn-primary btn-lg">
@@ -273,7 +321,7 @@
         <div class="schedule-content">
           <h4>
             <span class="sched-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h1a4 4 0 0 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" y1="2" x2="6" y2="4"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="14" y1="2" x2="14" y2="4"/></svg></span>
-            Credenciamento e welcome coffee
+            Credenciamento e Welcome Coffee
           </h4>
         </div>
       </div>
@@ -283,44 +331,107 @@
         <div class="schedule-content">
           <h4>
             <span class="sched-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg></span>
-            Abertura oficial
-          </h4>
-        </div>
-      </div>
-
-      <div class="schedule-item schedule-break">
-        <div class="schedule-time">12h30</div>
-        <div class="schedule-content">
-          <h4>
-            <span class="sched-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg></span>
-            Almoço
+            Painel de Abertura
           </h4>
         </div>
       </div>
 
       <div class="schedule-item">
-        <div class="schedule-time">13h30</div>
+        <div class="schedule-time">9h10</div>
         <div class="schedule-content">
-          <h4>Retorno</h4>
+          <h4>Palestra | O lado invisível da NR-1: por que cumprir a norma não vai ser suficiente</h4>
+        </div>
+      </div>
+
+      <div class="schedule-item">
+        <div class="schedule-time">9h50</div>
+        <div class="schedule-content">
+          <h4>Palestra | NR-1 e Gestão: como transformar líderes despreparados nos maiores aliados do RH</h4>
+        </div>
+      </div>
+
+      <div class="schedule-item">
+        <div class="schedule-time">10h20</div>
+        <div class="schedule-content">
+          <h4>Painel | Risco psicossocial na prática: como identificar e gerir sem ser psicólogo, gerenciar crises e orientar as lideranças</h4>
+        </div>
+      </div>
+
+      <div class="schedule-item">
+        <div class="schedule-time">11h10</div>
+        <div class="schedule-content">
+          <h4>Painel | Do achismo aos dados: o uso seguro da IA e como a tecnologia leva o RH para a mesa de decisão</h4>
+        </div>
+      </div>
+
+      <div class="schedule-item">
+        <div class="schedule-time">12h00</div>
+        <div class="schedule-content">
+          <h4>Painel | Diante de tantas responsabilidades: a importância de parceiros estratégicos para o RH</h4>
         </div>
       </div>
 
       <div class="schedule-item schedule-break">
-        <div class="schedule-time">15h30</div>
+        <div class="schedule-time">12h10</div>
         <div class="schedule-content">
           <h4>
-            <span class="sched-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h1a4 4 0 0 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" y1="2" x2="6" y2="4"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="14" y1="2" x2="14" y2="4"/></svg></span>
-            Coffee break
+            <span class="sched-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg></span>
+            Pausa para almoço
           </h4>
         </div>
       </div>
 
+      <div class="schedule-item">
+        <div class="schedule-time">13h40</div>
+        <div class="schedule-content">
+          <h4>Hot Seat</h4>
+        </div>
+      </div>
+
+      <div class="schedule-item">
+        <div class="schedule-time">14h00</div>
+        <div class="schedule-content">
+          <h4>Palestra | Fluência Financeira Aplicada ao RH</h4>
+        </div>
+      </div>
+
+      <div class="schedule-item">
+        <div class="schedule-time">14h30</div>
+        <div class="schedule-content">
+          <h4>Painel | Como falar a língua do empresário: a competência que decide se o RH é ouvido ou ignorado</h4>
+        </div>
+      </div>
+
+      <div class="schedule-item">
+        <div class="schedule-time">15h20</div>
+        <div class="schedule-content">
+          <h4>Palestra | Fiz o mapeamento, e agora? Como garantir a eficiência em SST e a Gestão Contínua dos riscos psicossociais</h4>
+        </div>
+      </div>
+
+      <div class="schedule-item schedule-break">
+        <div class="schedule-time">15h40</div>
+        <div class="schedule-content">
+          <h4>
+            <span class="sched-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h1a4 4 0 0 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" y1="2" x2="6" y2="4"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="14" y1="2" x2="14" y2="4"/></svg></span>
+            Coffee Break
+          </h4>
+        </div>
+      </div>
+
+      <div class="schedule-item">
+        <div class="schedule-time">16h00</div>
+        <div class="schedule-content">
+          <h4>Painel interativo | Perguntas e Respostas: Saúde e Segurança do Trabalho e Direito Trabalhista</h4>
+        </div>
+      </div>
+
       <div class="schedule-item schedule-end">
-        <div class="schedule-time">17h00</div>
+        <div class="schedule-time">16h25</div>
         <div class="schedule-content">
           <h4>
             <span class="sched-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></span>
-            Encerramento
+            Painel de encerramento | O RH que adoece cuidando: identidade e equilíbrio pra sustentar a profissão
           </h4>
         </div>
       </div>
@@ -720,7 +831,7 @@
       </p>
       <p>
         <span class="footer-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
-        08h30 às 17h
+        08h30 às 17h30
       </p>
     </div>
     <div class="footer-contact">

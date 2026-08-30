@@ -31,11 +31,12 @@ $AccountId   = 'a052a251e6dabe597ed19b6d35829970'   # Ferramentasaxya@gmail.com
 $WranglerCfg = Join-Path $env:USERPROFILE '.wrangler-axya'
 
 # Arquivos e pastas que compõem o site publicado.
-# pre-venda.html fica na raiz de proposito: o Pages serve HTML sem a
-# extensao, entao ele responde em /pre-venda e os caminhos relativos de
-# assets/ e images/ continuam validos, o que nao aconteceria numa subpasta.
+# pre-venda.html NAO entra mais: a campanha de pre-venda encerrou em 21/08 e
+# a pagina ficou parada com horario e cronograma antigos. O arquivo segue no
+# repositorio como historico, mas fora desta lista ele deixa de ser publicado
+# e /pre-venda passa a responder 404.
 $Files = @(
-    'index.html', 'pre-venda.html', 'style.css', 'script.js',
+    'index.html', 'style.css', 'script.js',
     'admin.html', 'admin.css', 'admin.js',
     '_headers', '_redirects',
     'favicon.ico', 'favicon-32.png', 'favicon-192.png', 'apple-touch-icon.png'

@@ -1115,6 +1115,89 @@ a { color: inherit; text-decoration: none; }
 }
 .hero-text strong { color: var(--white); }
 
+/* === HERO — LAYOUT DESKTOP EM DUAS COLUNAS ===
+   No mobile o hero segue em coluna única centralizada (regras acima). A
+   partir de 769px o texto vai para a esquerda e a foto das realizadoras
+   ocupa a direita, sobre a foto de fundo da 1ª edição. */
+.hero-figure { display: none; }
+
+@media (min-width: 769px) {
+  .hero {
+    padding: 104px 0 72px;
+    /* A foto entra como camada de baixo; os gradientes por cima escurecem
+       o lado esquerdo para o texto continuar legível. Enquanto o arquivo
+       não existe, só os gradientes aparecem. */
+    background:
+      linear-gradient(100deg, #0e1523 0%, rgba(14,21,35,0.94) 40%, rgba(14,21,35,0.45) 100%),
+      radial-gradient(ellipse at 70% -8%, rgba(119,203,245,0.17) 0%, transparent 58%),
+      radial-gradient(ellipse at 8% 88%, rgba(87,184,232,0.09) 0%, transparent 55%),
+      url("assets/hero-bg.jpg") center/cover no-repeat,
+      linear-gradient(180deg, #0e1523 0%, var(--black) 60%);
+  }
+
+  .hero-content {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr);
+    gap: 44px;
+    align-items: center;
+    text-align: left;
+  }
+
+  .hero-copy .hero-badge-row { justify-content: flex-start; }
+  .hero-copy .hero-title-logo { margin-bottom: 20px; }
+  .hero-copy .hero-title-logo img { margin: 0; width: min(520px, 100%); }
+  .hero-copy .hero-text { margin-left: 0; margin-right: 0; max-width: none; }
+  /* Na coluna estreita os três itens não cabem numa linha só; sem os
+     divisores a quebra fica limpa, em vez de deixar um traço solto no fim. */
+  .hero-copy .event-info-row {
+    margin: 0 0 28px;
+    max-width: none;
+    justify-content: flex-start;
+    padding: 16px 24px;
+    gap: 14px 30px;
+  }
+  .hero-copy .event-info-divider { display: none; }
+  .hero-copy .countdown-wrapper { margin-bottom: 28px; }
+  .hero-copy .countdown { justify-content: flex-start; }
+  .hero-copy .countdown-label { text-align: left; }
+
+  .hero-figure {
+    display: block;
+    margin: 0;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.14);
+    box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+    animation: fadeInUp 0.7s ease 0.35s both;
+  }
+  .hero-figure img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+  }
+}
+
+/* Placeholder enquanto a foto das realizadoras não chega. */
+.hero-figure-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  aspect-ratio: 4 / 5;
+  background: var(--mid);
+}
+.hero-figure-placeholder .person-icon { width: 34%; height: 34%; }
+.hero-figure-placeholder span {
+  font-family: var(--font-heading);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
 /* === SPEAKERS (updated) === */
 .speakers-confirmed-grid {
   display: grid;
@@ -1122,10 +1205,25 @@ a { color: inherit; text-decoration: none; }
   gap: 24px;
   margin-bottom: 32px;
 }
+/* Sobrando um card sozinho na última linha, ele vai para a coluna do meio
+   em vez de ficar encostado à esquerda. */
+.speakers-confirmed-grid > :last-child:nth-child(3n + 1) { grid-column: 2; }
+
 .speaker-confirmed {
   display: flex;
   flex-direction: column;
 }
+
+/* Foto de palestrante ainda não recebida: herda o recorte 3/4 de
+   .speaker-photo e mostra o ícone genérico no lugar da imagem. */
+.speaker-photo-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--mid);
+  border-bottom: 2px dashed var(--border);
+}
+.speaker-photo-placeholder .person-icon { width: 30%; height: 30%; }
 .speaker-photo-wrap { width: 100%; }
 /* O recorte de .speaker-photo é definido lá em cima (3/4, topo centralizado).
    Não redeclarar aspect-ratio aqui: esta regra vem depois no arquivo e

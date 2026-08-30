@@ -10,12 +10,6 @@
 /index.html
   Cache-Control: no-cache, must-revalidate
 
-/pre-venda
-  Cache-Control: no-cache, must-revalidate
-
-/pre-venda.html
-  Cache-Control: no-cache, must-revalidate
-
 # Painel interno: fora dos buscadores mesmo que alguem publique o link, e
 # sem cache para nao deixar dados de lead parados no navegador.
 /admin
