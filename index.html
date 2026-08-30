@@ -24,11 +24,8 @@
 </head>
 <body>
 
-<!-- ========== ANNOUNCEMENT BAR ========== -->
-<div class="announcement-bar">
-  <p><strong>VAGAS LIMITADAS</strong></p>
-  <p>De R$ 147,00 por R$ 97,00 &nbsp;<a href="#ingressos">Garantir agora →</a></p>
-</div>
+<!-- Progresso de leitura: fica no topo, no lugar que era da tarja de preco. -->
+<div class="scroll-progress" id="scroll-progress" aria-hidden="true"></div>
 
 <!-- ========== DOBRA 1 — HERO ==========
      Desktop: duas colunas — texto alinhado à esquerda, foto em destaque à
@@ -796,7 +793,10 @@
           <span class="countdown-unit">seg</span>
         </div>
       </div>
-      <div class="cta-final-buttons">
+      <!-- data-espera-unico: na lista de espera os dois botoes viram o mesmo
+           "ENTRAR NA LISTA DE ESPERA". O JS esconde o segundo enquanto durar
+           a espera e devolve os dois quando as vendas abrem. -->
+      <div class="cta-final-buttons" data-espera-unico>
         <a href="https://chk.eduzz.com/80176KVQ07" data-checkout="ate3" class="btn btn-primary btn-xl" target="_blank" rel="noopener">
           ATÉ 3 INGRESSOS · R$ 97,00 CADA
         </a>

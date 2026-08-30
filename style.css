@@ -42,6 +42,20 @@
   --gradient-deep:    linear-gradient(140deg, var(--dark-2) 0%, var(--dark-3) 42%, var(--blend-deep) 100%);
   --gradient-bright:  linear-gradient(140deg, var(--primary-dark) 0%, var(--primary) 48%, var(--primary-light) 100%);
 
+  /* Prata — o --slate da paleta aberto em claro e escuro. As bandas
+     alternadas claro/escuro é o que dá a leitura de metal; um degradê de
+     duas paradas leria como cinza chapado. */
+  --silver:       #a3b9c6;
+  --silver-dark:  #7e97a7;
+  --silver-light: #f4f6f5;
+  --gradient-silver: linear-gradient(115deg,
+      var(--silver-light) 0%, var(--silver) 26%, var(--silver-light) 46%,
+      var(--silver-dark) 68%, var(--silver-light) 100%);
+  /* Fio de luz: separa seções sem o corte duro de um border sólido. */
+  --gradient-hairline: linear-gradient(90deg,
+      transparent, rgba(163,185,198,0.45) 22%, rgba(119,203,245,0.55) 50%,
+      rgba(163,185,198,0.45) 78%, transparent);
+
   --font-heading: 'Sora', sans-serif;
   --font-body:    'Sora', sans-serif;
   --radius:    12px;
@@ -1753,26 +1767,32 @@ a { color: inherit; text-decoration: none; }
   border-radius: var(--radius);
 }
 .js-carousel-track {
+  /* --per-view é escrito pelo JS conforme a largura da tela. O padding
+     vertical dá espaço para o card subir no hover sem ser cortado pelo
+     overflow:hidden do outer. */
+  --per-view: 1;
+  --carousel-gap: 24px;
   display: flex;
-  transition: transform 0.38s cubic-bezier(0.4, 0, 0.2, 1);
+  gap: var(--carousel-gap);
+  padding: 8px 2px 20px;
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform;
   align-items: stretch;
 }
 .js-carousel-track > * {
-  min-width: 100% !important;
-  max-width: 100% !important;
-  flex-shrink: 0 !important;
+  flex: 0 0 calc((100% - (var(--per-view) - 1) * var(--carousel-gap)) / var(--per-view));
+  min-width: 0;
   box-sizing: border-box;
 }
 .js-carousel-btn {
   position: absolute;
   top: 50%;
-  transform: translateY(-50%);
-  background: rgba(20, 28, 47, 0.92);
-  border: 1px solid var(--border);
+  background: rgba(20, 28, 47, 0.78);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(163,185,198,0.28);
   color: var(--primary);
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -1780,12 +1800,248 @@ a { color: inherit; text-decoration: none; }
   cursor: pointer;
   z-index: 10;
   padding: 0;
-  transition: background 0.2s;
+  box-shadow: 0 6px 22px rgba(0,0,0,0.42);
+  transform: translateY(-50%);
+  transition: background 0.25s, border-color 0.25s, box-shadow 0.25s, scale 0.25s;
 }
-.js-carousel-btn:hover { background: rgba(119, 203, 245, 0.18); }
-.js-carousel-btn:disabled { opacity: 0.18; pointer-events: none; }
-.js-carousel-btn-prev { left: 6px; }
-.js-carousel-btn-next { right: 6px; }
+.js-carousel-btn:hover {
+  background: rgba(119, 203, 245, 0.22);
+  border-color: rgba(119,203,245,0.55);
+  box-shadow: 0 8px 28px rgba(119,203,245,0.28);
+  scale: 1.08;
+}
+.js-carousel-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+.js-carousel-btn-prev { left: 8px; }
+.js-carousel-btn-next { right: 8px; }
+
+/* Os pontos ficam escondidos até o JS montar o carrossel — sem ele não há
+   slide nenhum para eles controlarem. */
+.carousel-dots.is-active { display: flex; }
+
+/* ==========================================
+   REFINAMENTO VISUAL
+   Camada de acabamento: prata metálico, luz ambiente e movimento. Fica no
+   fim do arquivo de propósito — são regras que qualificam o que já existe,
+   e precisam vencer as declarações originais sem depender de !important.
+   ========================================== */
+
+/* === BARRA DE PROGRESSO DE LEITURA ===
+   Ocupa o topo que era da tarja de preço. scaleX em vez de width: anima no
+   compositor, sem recalcular layout a cada scroll. */
+.scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  z-index: 200;
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  background: linear-gradient(90deg,
+    var(--primary-dark) 0%, var(--primary) 45%, var(--silver-light) 100%);
+  box-shadow: 0 0 14px rgba(119,203,245,0.55);
+  will-change: transform;
+  pointer-events: none;
+}
+
+/* === SEÇÕES: FIO DE LUZ E PROFUNDIDADE === */
+.section { position: relative; }
+.section > .container { position: relative; z-index: 2; }
+
+/* Substitui o corte duro entre seções por um fio que nasce e morre nas
+   bordas. O border-top sólido do .section-accent e do .section-social sai:
+   os dois passam a usar este mesmo fio. */
+.section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--gradient-hairline);
+  opacity: 0.7;
+}
+.section-accent,
+.section-social,
+.section-cta-final { border-top: none; }
+.section-accent { border-bottom: none; }
+
+/* === LUZ AMBIENTE ===
+   Só nas três seções que são "momento" da página — hero, ingressos e CTA
+   final. Aplicar em todas deixaria dez camadas animando ao mesmo tempo, o
+   que custa caro e vira ruído visual. */
+@keyframes auroraDrift {
+  0%   { transform: translate3d(-5%, -3%, 0) scale(1.08); }
+  50%  { transform: translate3d(5%, 3%, 0) scale(1.22); }
+  100% { transform: translate3d(-5%, -3%, 0) scale(1.08); }
+}
+
+.hero::after,
+.section-accent::after,
+.section-cta-final::after {
+  content: '';
+  position: absolute;
+  inset: -20%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(38% 44% at 22% 28%, rgba(119,203,245,0.16) 0%, transparent 70%),
+    radial-gradient(34% 40% at 78% 72%, rgba(163,185,198,0.13) 0%, transparent 72%);
+  animation: auroraDrift 26s ease-in-out infinite;
+  will-change: transform;
+}
+/* O conteúdo do hero e do CTA final não é .container direto em todos os
+   casos; garante que a luz fique atrás. */
+.hero-content, .cta-final-content { position: relative; z-index: 2; }
+
+/* === TÍTULOS EM PRATA ESCOVADA ===
+   O brilho atravessa devagar, uma vez a cada 9s. O background-size maior que
+   o texto é o que dá espaço para a faixa clara passar. */
+@keyframes silverSheen {
+  0%, 70%, 100% { background-position: 0% 50%; }
+  35%           { background-position: 100% 50%; }
+}
+
+/* Degradê próprio, mais claro que o --gradient-silver das bordas: em texto,
+   as bandas escuras do prata cheio derrubam o contraste e o título lê como
+   cinza. Aqui os realces ficam acima do --offwhite e o prata entra só como
+   banda, o que dá o metal sem escurecer a leitura. */
+.section-title,
+.cta-final-content h2 {
+  background: linear-gradient(115deg,
+    var(--offwhite) 0%, #ffffff 16%, var(--silver) 34%,
+    #ffffff 52%, var(--offwhite) 70%, var(--silver) 86%, #ffffff 100%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: silverSheen 10s ease-in-out infinite;
+}
+/* O .highlight tem gradiente azul próprio e precisa continuar vencendo o
+   prata do pai: repõe o recorte no próprio span. */
+.section-title .highlight {
+  background: linear-gradient(100deg, var(--primary-light), var(--primary) 55%, var(--primary-dark));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.section-tag {
+  background: linear-gradient(135deg, rgba(119,203,245,0.16), rgba(163,185,198,0.08));
+  border-color: rgba(119,203,245,0.3);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+/* === MOLDURA DE PRATA NOS CARDS ===
+   O truque do mask duplo desenha só a borda: a máscara de content-box é
+   subtraída da máscara cheia, sobrando o anel de 1px do padding. Entra no
+   hover para não competir com a leitura em repouso. */
+.speaker-card,
+.brand-main-card,
+.checklist-item { position: relative; }
+
+.speaker-card::after,
+.brand-main-card::after,
+.checklist-item::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--gradient-silver);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+  z-index: 3;
+}
+.speaker-card:hover::after,
+.brand-main-card:hover::after,
+.checklist-item:hover::after { opacity: 0.9; }
+
+.speaker-card {
+  background: linear-gradient(165deg, var(--dark-2) 0%, var(--dark-3) 100%);
+  transition: transform 0.35s cubic-bezier(0.22,1,0.36,1), box-shadow 0.35s ease;
+}
+.speaker-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 18px 44px rgba(0,0,0,0.5);
+}
+/* Escurece o pé da foto para o nome não encostar num trecho claro dela. */
+.speaker-photo-wrap { position: relative; }
+.speaker-photo-wrap::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 38%;
+  background: linear-gradient(to top, var(--dark-2), transparent);
+  pointer-events: none;
+}
+
+/* === BOTÕES: VARREDURA DE LUZ === */
+.btn-primary, .btn-gold {
+  position: relative;
+  overflow: hidden;
+}
+.btn-primary::before, .btn-gold::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg,
+    transparent 38%, rgba(255,255,255,0.42) 50%, transparent 62%);
+  transform: translateX(-130%);
+  transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+.btn-primary:hover::before, .btn-gold:hover::before { transform: translateX(130%); }
+
+.btn-primary:hover {
+  box-shadow: 0 8px 30px rgba(119,203,245,0.45), 0 0 0 1px rgba(150,215,247,0.4);
+}
+
+/* === CONTADOR EM VIDRO === */
+.countdown-item {
+  background: linear-gradient(160deg, rgba(255,255,255,0.10), rgba(255,255,255,0.025));
+  border-color: rgba(163,185,198,0.24);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.14),
+    0 8px 24px rgba(0,0,0,0.3);
+  backdrop-filter: blur(6px);
+}
+.countdown-num {
+  background: linear-gradient(150deg, var(--primary-light), var(--primary) 55%, var(--primary-dark));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* === CRONOGRAMA: TRILHO EM DEGRADÊ === */
+.schedule-wrapper::before {
+  background: linear-gradient(180deg,
+    transparent, rgba(119,203,245,0.5) 12%, rgba(163,185,198,0.35) 88%, transparent);
+}
+.schedule-content { transition: transform 0.3s ease, border-color 0.3s ease; }
+.schedule-item:hover .schedule-content {
+  transform: translateX(4px);
+  border-color: rgba(119,203,245,0.4);
+}
+
+/* === QUEM RESPEITA MOVIMENTO REDUZIDO NÃO VÊ NADA DISSO === */
+@media (prefers-reduced-motion: reduce) {
+  .hero::after,
+  .section-accent::after,
+  .section-cta-final::after,
+  .section-title,
+  .cta-final-content h2 { animation: none; }
+  .btn-primary::before, .btn-gold::before { display: none; }
+  .js-carousel-track { transition: none; }
+}
 
 /* === RESPONSIVE === */
 

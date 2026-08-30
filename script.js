@@ -115,6 +115,14 @@ function pintarCheckout() {
     }
   });
 
+  // Blocos marcados com data-espera-unico tem mais de um CTA porque cada um
+  // leva a um lote de preco diferente. Na lista de espera todos viram o mesmo
+  // rotulo, entao repetir o botao so polui: fica o primeiro.
+  document.querySelectorAll('[data-espera-unico]').forEach(bloco => {
+    const ctas = bloco.querySelectorAll('[data-checkout]');
+    ctas.forEach((a, i) => { a.hidden = espera && i > 0; });
+  });
+
   NOTAS_ESPERA.forEach(n => {
     if (espera && cfgEspera.nota) { n.textContent = cfgEspera.nota; n.hidden = false; }
     else n.hidden = true;
@@ -309,6 +317,8 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
 });
 
 // === SCROLL REVEAL ===
+// A regra de opacidade e injetada daqui, e nao no style.css, de proposito:
+// sem JS nada recebe .revealed e o conteudo ficaria invisivel para sempre.
 const revealObserver = new IntersectionObserver((entries) => {
   entries.forEach(entry => {
     if (entry.isIntersecting) {
@@ -318,11 +328,19 @@ const revealObserver = new IntersectionObserver((entries) => {
   });
 }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
 
+// .speaker-card fica de fora: os cards vivem num carrossel, e os que estao
+// fora da janela do slide nunca chegam a intersectar — ficariam em opacity 0
+// ate o autoplay passar por eles, deixando buracos na fileira. O movimento
+// do proprio carrossel ja cumpre o papel da entrada.
 document.querySelectorAll(
-  '.card, .module-card, .speaker-card, .testimonial-card, .ticket-card, ' +
+  '.card, .module-card, .testimonial-card, .ticket-card, ' +
   '.schedule-item, .faq-item, .checklist-item, .brand-main-card, .sponsor-card'
 ).forEach(el => {
   el.classList.add('reveal-on-scroll');
+  // Itens de uma mesma lista entram em cascata, e nao todos de uma vez. O
+  // teto de 5 evita que o fim de uma lista longa demore a aparecer.
+  const ordem = Math.min([...el.parentElement.children].indexOf(el), 5);
+  el.style.setProperty('--reveal-atraso', `${ordem * 70}ms`);
   revealObserver.observe(el);
 });
 
@@ -330,15 +348,37 @@ const revealStyle = document.createElement('style');
 revealStyle.textContent = `
   .reveal-on-scroll {
     opacity: 0;
-    transform: translateY(20px);
-    transition: opacity 0.5s ease, transform 0.5s ease;
+    transform: translateY(24px) scale(0.985);
+    transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-atraso, 0ms),
+                transform 0.6s cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-atraso, 0ms);
   }
   .reveal-on-scroll.revealed {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal-on-scroll { opacity: 1; transform: none; transition: none; }
   }
 `;
 document.head.appendChild(revealStyle);
+
+// === BARRA DE PROGRESSO DE LEITURA ===
+// Escala em X em vez de mudar a largura: fica no compositor, sem relayout a
+// cada scroll.
+const barraProgresso = document.getElementById('scroll-progress');
+if (barraProgresso) {
+  let agendado = false;
+  const pintarProgresso = () => {
+    const rolavel = document.documentElement.scrollHeight - window.innerHeight;
+    const razao = rolavel > 0 ? Math.min(1, window.scrollY / rolavel) : 0;
+    barraProgresso.style.transform = `scaleX(${razao})`;
+    agendado = false;
+  };
+  window.addEventListener('scroll', () => {
+    if (!agendado) { agendado = true; requestAnimationFrame(pintarProgresso); }
+  }, { passive: true });
+  pintarProgresso();
+}
 
 // === HEADER SHADOW ON SCROLL ===
 const header = document.querySelector('.header');
@@ -371,9 +411,14 @@ if (hamburger && mainNav) {
   });
 }
 
-// === CARROSSÉIS (somente mobile) ===
+// === CARROSSÉIS ===
+// Roda em qualquer largura. Quantos cards aparecem por vez vem de `perView`,
+// que e reavaliado no resize; o deslocamento e medido em pixels a partir do
+// proprio item, e nao em porcentagem, para o `gap` do flex nao desalinhar a
+// conta. O autoplay da a volta e pausa enquanto o ponteiro (ou o foco do
+// teclado) estiver dentro do carrossel, voltando sozinho na saida.
 function buildCarousel(containerId, dotsContainerId, options = {}) {
-  const { autoplayMs = 0 } = options;
+  const { autoplayMs = 0, perView = () => 1 } = options;
   const el = document.getElementById(containerId);
   const dotsEl = dotsContainerId ? document.getElementById(dotsContainerId) : null;
   if (!el) return;
@@ -411,76 +456,113 @@ function buildCarousel(containerId, dotsContainerId, options = {}) {
   outer.appendChild(prevBtn);
   outer.appendChild(nextBtn);
 
-  // Pontos
+  let idx = 0;
+  // Comeca em 0, e nao em 1, para a primeira chamada de aplicaPerView() nunca
+  // bater com o valor atual: no celular perView() devolve 1 e o retorno
+  // antecipado pularia a montagem dos pontos.
+  let visiveis = 0;
   let dots = [];
-  if (dotsEl) {
+
+  // Ultimo indice util: alem dele sobraria espaco vazio no fim do trilho.
+  const maxIdx = () => Math.max(0, items.length - visiveis);
+
+  function montaDots() {
+    if (!dotsEl) return;
     dotsEl.innerHTML = '';
-    dots = items.map((_, i) => {
+    dotsEl.classList.add('is-active');
+    dots = Array.from({ length: maxIdx() + 1 }, (_, i) => {
       const dot = document.createElement('button');
-      dot.className = 'carousel-dot' + (i === 0 ? ' active' : '');
-      dot.setAttribute('aria-label', `Slide ${i + 1}`);
-      dot.addEventListener('click', () => goTo(i));
+      dot.type = 'button';
+      dot.className = 'carousel-dot';
+      dot.setAttribute('aria-label', `Ir para o slide ${i + 1}`);
+      dot.addEventListener('click', () => { goTo(i); reiniciaAutoplay(); });
       dotsEl.appendChild(dot);
       return dot;
     });
   }
 
-  let idx = 0;
+  function aplicaPerView() {
+    const novo = Math.max(1, Math.min(perView(), items.length));
+    if (novo === visiveis) return false;
+    visiveis = novo;
+    track.style.setProperty('--per-view', visiveis);
+    montaDots();
+    return true;
+  }
 
   function goTo(n) {
-    idx = Math.max(0, Math.min(n, items.length - 1));
-    track.style.transform = `translateX(${-idx * 100}%)`;
+    const ultimo = maxIdx();
+    // Da a volta nas duas pontas: o autoplay nunca fica preso no fim.
+    idx = n < 0 ? ultimo : n > ultimo ? 0 : n;
+    const desloc = items[idx].offsetLeft - items[0].offsetLeft;
+    track.style.transform = `translateX(${-desloc}px)`;
     dots.forEach((d, i) => d.classList.toggle('active', i === idx));
-    prevBtn.disabled = idx === 0;
-    nextBtn.disabled = idx === items.length - 1;
   }
 
   // === AUTOPLAY ===
-  // Avança sozinho e dá a volta ao chegar no último. Para de vez assim que
-  // a pessoa assume o controle: retomar depois atrapalharia a leitura.
+  // Avanca sozinho e da a volta no fim. Pausa enquanto o ponteiro estiver em
+  // cima ou o foco do teclado estiver dentro, e volta a girar na saida.
   let timer = null;
-  let assumiuControle = false;
+  let pausas = 0;
   const prefereMenosMovimento =
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const podeGirar = () => autoplayMs && !prefereMenosMovimento && pausas === 0;
 
   function iniciaAutoplay() {
-    if (!autoplayMs || prefereMenosMovimento || assumiuControle) return;
     paraAutoplay();
-    timer = setInterval(() => goTo((idx + 1) % items.length), autoplayMs);
+    if (!podeGirar()) return;
+    timer = setInterval(() => goTo(idx + 1), autoplayMs);
   }
   function paraAutoplay() {
     if (timer) { clearInterval(timer); timer = null; }
   }
-  function cedeControle() {
-    assumiuControle = true;
-    paraAutoplay();
-  }
+  // Contador em vez de booleano: hover e foco podem se sobrepor, e sair de um
+  // deles nao pode religar o giro enquanto o outro ainda vale.
+  const pausa = () => { pausas++; paraAutoplay(); };
+  const retoma = () => { pausas = Math.max(0, pausas - 1); iniciaAutoplay(); };
+  const reiniciaAutoplay = () => iniciaAutoplay();
 
-  prevBtn.addEventListener('click', () => { cedeControle(); goTo(idx - 1); });
-  nextBtn.addEventListener('click', () => { cedeControle(); goTo(idx + 1); });
-  dots.forEach(d => d.addEventListener('click', cedeControle));
+  outer.addEventListener('mouseenter', pausa);
+  outer.addEventListener('mouseleave', retoma);
+  outer.addEventListener('focusin', pausa);
+  outer.addEventListener('focusout', retoma);
+
+  prevBtn.addEventListener('click', () => { goTo(idx - 1); reiniciaAutoplay(); });
+  nextBtn.addEventListener('click', () => { goTo(idx + 1); reiniciaAutoplay(); });
 
   // Suporte a swipe
   let tx = 0;
   outer.addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, { passive: true });
   outer.addEventListener('touchend', e => {
     const dx = tx - e.changedTouches[0].clientX;
-    if (Math.abs(dx) > 40) { cedeControle(); dx > 0 ? goTo(idx + 1) : goTo(idx - 1); }
+    if (Math.abs(dx) > 40) { goTo(dx > 0 ? idx + 1 : idx - 1); reiniciaAutoplay(); }
   }, { passive: true });
 
-  // Não gira em aba oculta: gastaria bateria e a pessoa voltaria num slide
-  // aleatório.
+  // Nao gira em aba oculta: gastaria bateria e a pessoa voltaria num slide
+  // aleatorio.
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) paraAutoplay();
     else iniciaAutoplay();
   });
 
-  window.addEventListener('resize', () => goTo(idx), { passive: true });
+  window.addEventListener('resize', () => {
+    // Com menos cards por vez o indice atual pode passar do fim do trilho.
+    if (aplicaPerView()) idx = Math.min(idx, maxIdx());
+    goTo(idx);
+  }, { passive: true });
 
+  aplicaPerView();
   goTo(0);
   iniciaAutoplay();
 }
 
-if (window.innerWidth <= 768) {
-  buildCarousel('speakers-carousel', 'speakers-dots', { autoplayMs: 2000 });
-}
+// 3 cards no desktop, 2 no tablet, 1 no celular.
+const cardsPorVez = () => {
+  const w = window.innerWidth;
+  return w > 900 ? 3 : w > 600 ? 2 : 1;
+};
+
+buildCarousel('speakers-carousel', 'speakers-dots', {
+  autoplayMs: 2000,
+  perView: cardsPorVez,
+});
