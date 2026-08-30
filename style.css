@@ -1879,6 +1879,15 @@ a { color: inherit; text-decoration: none; }
   100% { transform: translate3d(-5%, -3%, 0) scale(1.08); }
 }
 
+/* O recorte é obrigatório: a camada de luz é maior que a seção (inset -20%,
+   e a animação ainda a escala até 1.22) para o degradê poder derivar sem
+   mostrar a própria borda. Sem overflow:hidden ela transborda para a seção
+   vizinha e desenha um blob claro de contorno visível no fundo dela — foi o
+   que aconteceu com o cronograma, logo acima dos ingressos. O .hero já
+   recortava, e por isso nunca vazou. */
+.section-accent,
+.section-cta-final { overflow: hidden; }
+
 .hero::after,
 .section-accent::after,
 .section-cta-final::after {
