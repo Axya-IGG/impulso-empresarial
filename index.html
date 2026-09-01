@@ -119,13 +119,14 @@
     </div>
    </div>
 
-   <!-- Foto pendente: trocar o placeholder abaixo pela foto da Andressa,
-        Kathleen e Luciana juntas (assets/hero-realizadoras.jpg). -->
+   <!-- O arquivo já vem recortado em 4/5, a mesma proporção que o CSS aplica
+        no object-fit: assim o navegador não baixa faixa que seria descartada.
+        Sem lazy: está na primeira dobra e o carregamento tardio faria a foto
+        aparecer depois que a pessoa já leu o hero. -->
    <figure class="hero-figure">
-     <div class="hero-figure-placeholder" role="img" aria-label="Foto das realizadoras do Impulso Empresarial">
-       <svg class="person-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-       <span>Foto das realizadoras</span>
-     </div>
+     <img src="assets/hero-realizadoras.jpg"
+          alt="As três realizadoras do Impulso Empresarial — Andressa Costa, Kathleen Amaro e Luciana Splicigo"
+          width="900" height="1125" fetchpriority="high" />
    </figure>
 
   </div>
@@ -234,12 +235,9 @@
         </div>
       </div>
 
-      <!-- Foto pendente: substituir .speaker-photo-placeholder por <img class="speaker-photo" src="images/fabi-vieira.jpg" alt="Fabi Vieira" /> assim que a foto chegar. -->
       <div class="speaker-card speaker-confirmed">
         <div class="speaker-photo-wrap">
-          <div class="speaker-photo speaker-photo-placeholder" role="img" aria-label="Fabi Vieira">
-            <svg class="person-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-          </div>
+          <img class="speaker-photo" src="images/fabi-vieira.jpg" alt="Fabi Vieira" />
         </div>
         <div class="speaker-info">
           <h3 class="speaker-name">Fabi Vieira</h3>
@@ -248,12 +246,9 @@
         </div>
       </div>
 
-      <!-- Foto pendente: substituir .speaker-photo-placeholder por <img class="speaker-photo" src="images/dom-oliveira.jpg" alt="Dom Oliveira" /> assim que a foto chegar. -->
       <div class="speaker-card speaker-confirmed">
         <div class="speaker-photo-wrap">
-          <div class="speaker-photo speaker-photo-placeholder" role="img" aria-label="Dom Oliveira">
-            <svg class="person-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-          </div>
+          <img class="speaker-photo" src="images/dom-oliveira.jpg" alt="Dom Oliveira" />
         </div>
         <div class="speaker-info">
           <h3 class="speaker-name">Dom Oliveira</h3>
@@ -262,12 +257,9 @@
         </div>
       </div>
 
-      <!-- Foto pendente: substituir .speaker-photo-placeholder por <img class="speaker-photo" src="images/samuel-irmao.jpg" alt="Samuel Irmão" /> assim que a foto chegar. -->
       <div class="speaker-card speaker-confirmed">
         <div class="speaker-photo-wrap">
-          <div class="speaker-photo speaker-photo-placeholder" role="img" aria-label="Samuel Irmão">
-            <svg class="person-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-          </div>
+          <img class="speaker-photo" src="images/samuel-irmao.jpg" alt="Samuel Irmão" />
         </div>
         <div class="speaker-info">
           <h3 class="speaker-name">Samuel Irmão</h3>
@@ -276,12 +268,9 @@
         </div>
       </div>
 
-      <!-- Foto pendente: substituir .speaker-photo-placeholder por <img class="speaker-photo" src="images/israel-costa.jpg" alt="Israel Costa" /> assim que a foto chegar. -->
       <div class="speaker-card speaker-confirmed">
         <div class="speaker-photo-wrap">
-          <div class="speaker-photo speaker-photo-placeholder" role="img" aria-label="Israel Costa">
-            <svg class="person-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-          </div>
+          <img class="speaker-photo" src="images/israel-costa.jpg" alt="Israel Costa" />
         </div>
         <div class="speaker-info">
           <h3 class="speaker-name">Israel Costa</h3>

@@ -1187,30 +1187,17 @@ a { color: inherit; text-decoration: none; }
   .hero-figure img {
     display: block;
     width: 100%;
+    /* Sem `height: auto` a aspect-ratio é ignorada: o atributo height do
+       <img> entra como dica de estilo do navegador e, por não ser `auto`,
+       ganha da proporção — a foto renderizava com os 1125px inteiros. Os
+       atributos ficam no HTML porque evitam o salto de layout enquanto o
+       arquivo carrega. */
+    height: auto;
     aspect-ratio: 4 / 5;
     object-fit: cover;
   }
 }
 
-/* Placeholder enquanto a foto das realizadoras não chega. */
-.hero-figure-placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  aspect-ratio: 4 / 5;
-  background: var(--mid);
-}
-.hero-figure-placeholder .person-icon { width: 34%; height: 34%; }
-.hero-figure-placeholder span {
-  font-family: var(--font-heading);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
 
 /* === SPEAKERS (updated) === */
 .speakers-confirmed-grid {

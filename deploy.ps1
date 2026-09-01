@@ -153,7 +153,17 @@ function Invoke-Wrangler {
 
 # Confere em qual conta o wrangler esta logado ANTES de publicar: publicar na
 # conta errada criaria um projeto Pages novo e publico fora do controle da Axya.
-$whoami = Invoke-Wrangler whoami 2>&1 | Out-String
+#
+# O `2>&1` fica dentro de um bloco com ErrorActionPreference proprio porque no
+# PowerShell 5.1 redirecionar a stderr de um executavel nativo embrulha cada
+# linha num ErrorRecord (NativeCommandError). Com o 'Stop' do topo do script,
+# QUALQUER escrita em stderr vira erro terminante — e em 01/09 o deploy abortou
+# so porque o npx avisou "wrangler@4.128.0 will be installed" ao atualizar de
+# versao. O aviso nao tem nada a ver com a conta logada.
+$whoami = & {
+    $ErrorActionPreference = 'Continue'
+    Invoke-Wrangler whoami 2>&1 | Out-String
+}
 if ($whoami -notmatch [regex]::Escape($AccountId)) {
     Write-Host $whoami
     throw "wrangler nao esta logado na conta da Axya ($AccountId). Rode 'wrangler login' com ferramentasaxya@gmail.com."
