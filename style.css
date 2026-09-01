@@ -1138,14 +1138,15 @@ a { color: inherit; text-decoration: none; }
 @media (min-width: 769px) {
   .hero {
     padding: 104px 0 72px;
-    /* A foto entra como camada de baixo; os gradientes por cima escurecem
-       o lado esquerdo para o texto continuar legível. Enquanto o arquivo
-       não existe, só os gradientes aparecem. */
+    /* Só gradientes: a ideia da foto de fundo da 1ª edição foi abandonada
+       em 01/09. A camada `url("assets/hero-bg.jpg")` saiu daqui porque no
+       Cloudflare Pages um arquivo inexistente NÃO dá 404 — a borda devolve
+       o index.html com status 200. O navegador baixava a página inteira a
+       cada visita tentando usá-la como imagem, sem nada aparecer. */
     background:
       linear-gradient(100deg, #0e1523 0%, rgba(14,21,35,0.94) 40%, rgba(14,21,35,0.45) 100%),
       radial-gradient(ellipse at 70% -8%, rgba(119,203,245,0.17) 0%, transparent 58%),
       radial-gradient(ellipse at 8% 88%, rgba(87,184,232,0.09) 0%, transparent 55%),
-      url("assets/hero-bg.jpg") center/cover no-repeat,
       linear-gradient(180deg, #0e1523 0%, var(--black) 60%);
   }
 
