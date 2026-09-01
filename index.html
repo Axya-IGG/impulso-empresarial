@@ -32,6 +32,19 @@
      direita, sobre uma foto de fundo da 1ª edição. Mobile: coluna única
      centralizada, sem a foto de destaque. -->
 <section class="hero">
+  <!-- Vídeo de fundo da 1ª edição.
+       O caminho fica em data-src, e não em <source>: assim o arquivo só é
+       baixado depois que o JS confirma que é desktop e que a pessoa não pediu
+       menos animação no sistema. Confiar no `display: none` do CSS não
+       bastaria — o navegador pode baixar um vídeo oculto mesmo assim, e no
+       celular isso seriam 1,7 MB de dados gastos à toa.
+       muted + playsinline são obrigatórios: sem eles o autoplay é bloqueado,
+       e no iPhone o vídeo abriria em tela cheia. aria-hidden porque é
+       decoração — não há nada nele para um leitor de tela anunciar. -->
+  <video class="hero-video" id="hero-video"
+         data-src="assets/hero-video.mp4"
+         poster="assets/hero-video-poster.jpg"
+         preload="none" muted loop playsinline aria-hidden="true" tabindex="-1"></video>
   <div class="hero-bg-overlay"></div>
   <div class="container hero-content">
 

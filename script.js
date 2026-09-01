@@ -276,6 +276,40 @@ if (modal && formLead) {
   });
 }
 
+// === VÍDEO DE FUNDO DO HERO ===
+// O arquivo só é baixado quando faz sentido tocar. Duas condições:
+//
+//   1. Desktop. No celular o vídeo nem aparece (o CSS o esconde), então
+//      baixá-lo seria gastar 1,7 MB do plano de dados de quem chegou pelo
+//      Instagram sem nada em troca.
+//   2. Sem `prefers-reduced-motion`. Quem configurou o sistema pedindo menos
+//      animação não deve receber vídeo em loop atrás do texto.
+//
+// Fora dessas condições o <video> fica sem fonte e o poster nem carrega —
+// o hero cai nos gradientes, que é como ele era antes.
+const heroVideo = document.getElementById('hero-video');
+
+if (heroVideo) {
+  const podeTocar =
+    window.matchMedia('(min-width: 769px)').matches &&
+    !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (podeTocar) {
+    heroVideo.src = heroVideo.dataset.src;
+    // O play() é explícito porque o autoplay foi tirado do HTML junto com a
+    // fonte; sem ele o vídeo carregaria e ficaria parado no primeiro frame.
+    // A promessa é ignorada de proposito: se o navegador recusar, fica o
+    // poster, que ja e uma imagem valida do evento.
+    heroVideo.play().catch(() => {});
+
+    // Aba oculta não precisa decodificar vídeo: gasta bateria à toa.
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) heroVideo.pause();
+      else heroVideo.play().catch(() => {});
+    });
+  }
+}
+
 // === VÍDEO DA AÇÃO SOCIAL ===
 // O play sobreposto some assim que a reprodução começa; daí em diante
 // quem manda são os controles nativos.

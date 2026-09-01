@@ -2434,3 +2434,40 @@ a { color: inherit; text-decoration: none; }
   line-height: 1.55;
   color: var(--text-light);
 }
+
+/* === VÍDEO DE FUNDO DO HERO === */
+/* Escondido por padrão: no celular ficam só os gradientes do .hero, como já
+   acontece com a foto das realizadoras. O JS também não baixa o arquivo lá. */
+.hero-video { display: none; }
+
+@media (min-width: 769px) {
+  .hero-video {
+    display: block;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 0;
+  }
+
+  /* A máscara escura. Vai no ::before do overlay porque o ::after do .hero já
+     é a luz ambiente, e o próprio background do overlay é a textura.
+
+     O degradê é direcional de propósito: mais fechado à esquerda, onde ficam
+     o logo, o texto e o contador, e mais aberto à direita, onde o vídeo pode
+     respirar ao redor da foto. Precisa ser forte porque o vídeo tem uma cena
+     de fundo branco (a palestrante ao microfone) — calibrada só pelas cenas
+     escuras, a máscara deixaria o texto ilegível naquele trecho. */
+  .hero-bg-overlay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      100deg,
+      rgba(14, 21, 35, 0.94) 0%,
+      rgba(14, 21, 35, 0.90) 42%,
+      rgba(14, 21, 35, 0.78) 100%
+    );
+  }
+}
