@@ -9,8 +9,10 @@ import { json, erro, agora, normalizarWhatsapp } from '../../_lib.js';
  * `data` traz `buyer` (quem comprou — usamos este; `student` também existe
  * no payload mas é para produtos de curso/assinatura e não faz sentido
  * para ingresso de evento), `items[]` (produtos da fatura), `price.paid`,
- * e `id` (o id da fatura, estável entre 'paid' e 'refunded' do mesmo
- * pedido — é a chave de idempotência em compras.transacao_id).
+ * `utm` (a origem que veio anexada no link do checkout — ver script.js,
+ * função `comUtm`) e `id` (o id da fatura, estável entre 'paid' e
+ * 'refunded' do mesmo pedido — é a chave de idempotência em
+ * compras.transacao_id).
  */
 
 const enc = new TextEncoder();
@@ -35,16 +37,87 @@ async function assinaturaValida(corpoBruto, recebida, segredo) {
   return diff === 0;
 }
 
-// Só os dois confirmados por teste real. 'invoice_canceled' é um palpite
-// pela convenção dos outros dois nomes — ainda não apareceu num evento de
-// verdade. Evento fora deste mapa não dá erro, só é ignorado (200 mesmo
-// assim, para a Eduzz não ficar reentregando) e logado para conferir depois.
+async function sha256Hex(texto) {
+  const buf = await crypto.subtle.digest('SHA-256', enc.encode(texto));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Confirmados por teste real: 'myeduzz.invoice_paid', 'myeduzz.invoice_refunded'
+// e um dos dois nomes de cancelamento abaixo (confirmado indiretamente em
+// 03/09 — o log de "evento ignorado" não disparou nesse teste, mas o
+// payload em si não foi capturado; por isso os dois seguem mapeados).
+// Evento fora deste mapa não dá erro, só é ignorado (200 mesmo assim, para
+// a Eduzz não ficar reentregando) e logado para conferir depois.
 const MAPA_STATUS = {
   'myeduzz.invoice_paid': 'aprovada',
   'myeduzz.invoice_refunded': 'reembolsada',
   'myeduzz.invoice_canceled': 'cancelada',
   'myeduzz.invoice_cancelled': 'cancelada',
 };
+
+/**
+ * Evento de servidor pro Meta (Conversions API), disparado no instante em
+ * que a Eduzz confirma a compra — é a única forma de mandar esse evento
+ * pro Meta, já que o checkout roda no domínio da Eduzz e nunca carrega o
+ * Pixel do nosso site.
+ *
+ * Match quality depende de quantos identificadores o evento carrega: email
+ * e telefone (com hash, exigido pelo Meta) vêm do próprio comprador; fbp/fbc
+ * (sem hash — já são IDs opacos do Meta, não dado pessoal) vêm de
+ * `leads.atribuicao`, gravados no navegador da pessoa no momento em que ela
+ * preencheu o popup do site (script.js, `dadosDeAtribuicaoAtuais`) — por
+ * isso só existem quando o comprador passou pelo nosso formulário antes de
+ * ir pro checkout; ip/user_agent vêm do mesmo cadastro.
+ *
+ * Nunca lança: uma falha aqui não pode derrubar o processamento da compra
+ * em si (que já está gravada em `compras` quando isto é chamado).
+ */
+async function enviarCompraParaMeta(env, { lead, d, valor, produto, transacaoId }) {
+  if (!env.META_CAPI_TOKEN || !env.META_PIXEL_ID) {
+    console.log('[meta-capi] nao configurado (falta token ou pixel id)');
+    return;
+  }
+
+  let atribuicao = {};
+  try { atribuicao = JSON.parse(lead?.atribuicao || '{}'); } catch { /* fica vazio */ }
+
+  const userData = {};
+  if (lead?.email) userData.em = [await sha256Hex(lead.email.trim().toLowerCase())];
+  // whatsapp ja' esta em E.164 sem '+' (normalizarWhatsapp) — exatamente o
+  // formato que o Meta espera antes do hash.
+  if (lead?.whatsapp) userData.ph = [await sha256Hex(lead.whatsapp)];
+  if (atribuicao.fbp) userData.fbp = atribuicao.fbp;
+  if (atribuicao.fbc) userData.fbc = atribuicao.fbc;
+  if (lead?.ip) userData.client_ip_address = lead.ip;
+  if (lead?.user_agent) userData.client_user_agent = lead.user_agent;
+
+  const evento = {
+    event_name: 'Purchase',
+    event_time: Math.floor((!isNaN(new Date(d.paidAt)) ? new Date(d.paidAt).getTime() : Date.now()) / 1000),
+    event_id: `eduzz-${transacaoId}`,
+    action_source: 'website',
+    event_source_url: 'https://oimpulsoempresarial.com.br/',
+    user_data: userData,
+    custom_data: {
+      currency: d.price?.paid?.currency || d.price?.currency || 'BRL',
+      value: valor,
+      content_name: produto || undefined,
+      content_type: 'product',
+      order_id: transacaoId,
+    },
+  };
+
+  try {
+    const r = await fetch(
+      `https://graph.facebook.com/v21.0/${env.META_PIXEL_ID}/events?access_token=${env.META_CAPI_TOKEN}`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: [evento] }) }
+    );
+    const corpo = await r.text();
+    console.log('[meta-capi]', r.status, corpo.slice(0, 500));
+  } catch (e) {
+    console.log('[meta-capi] erro de rede', String(e));
+  }
+}
 
 export async function onRequestGet() {
   return json({ ok: true, info: 'Webhook da Eduzz — pronto para receber POST.' });
@@ -53,11 +126,6 @@ export async function onRequestGet() {
 export async function onRequestPost({ request, env }) {
   const bruto = await request.text();
 
-  // Sem o secret configurado ainda, o endpoint aceita sem validar — fase de
-  // transição, até a Axya localizar a chave no Órbita e eu gravar o secret.
-  // TODO(eduzz): assim que EDUZZ_WEBHOOK_SECRET existir, isto passa a
-  // recusar (401) qualquer requisição sem assinatura válida — não alterar
-  // esta condição, só falta o secret ser gravado.
   if (env.EDUZZ_WEBHOOK_SECRET) {
     const ok = await assinaturaValida(bruto, request.headers.get('x-signature'), env.EDUZZ_WEBHOOK_SECRET);
     if (!ok) return erro('Assinatura invalida.', 401);
@@ -78,7 +146,8 @@ export async function onRequestPost({ request, env }) {
 
   // Cancelamento/reembolso so' atualiza uma compra que ja existe (criada
   // no evento 'paid' correspondente) — nunca cria linha nova a partir de
-  // um evento que nao seja de aprovacao.
+  // um evento que nao seja de aprovacao, e nunca manda evento pro Meta
+  // (so' Purchase interessa pra Ads; estorno nao tem evento padrao aqui).
   if (status !== 'aprovada') {
     await env.DB.prepare('UPDATE compras SET status = ? WHERE transacao_id = ?')
       .bind(status, transacaoId).run();
@@ -117,14 +186,24 @@ export async function onRequestPost({ request, env }) {
   // "agora" para a ancora de atraso do worker, que soma minutos a esta data.
   const quando = !isNaN(new Date(d.paidAt)) ? new Date(d.paidAt).toISOString() : agora();
 
+  let compraNova = false;
   try {
     await env.DB.prepare(`
       INSERT INTO compras (lead_id, produto, valor, status, transacao_id, origem, criado_em)
       VALUES (?, ?, ?, 'aprovada', ?, 'eduzz', ?)
     `).bind(leadId, produto, valor, transacaoId, quando).run();
+    compraNova = true;
   } catch {
-    // UNIQUE(transacao_id): a Eduzz reentregou o mesmo evento. Ja processado,
-    // nada a fazer — responder 200 do mesmo jeito.
+    // UNIQUE(transacao_id): a Eduzz reentregou o mesmo evento. Ja processado
+    // — inclusive o disparo pro Meta, que so' acontece abaixo quando
+    // compraNova fica true. Responde 200 do mesmo jeito.
+  }
+
+  if (compraNova) {
+    const leadCompleto = await env.DB.prepare(
+      'SELECT email, whatsapp, ip, user_agent, atribuicao FROM leads WHERE id = ?'
+    ).bind(leadId).first();
+    await enviarCompraParaMeta(env, { lead: leadCompleto, d, valor, produto, transacaoId });
   }
 
   return json({ ok: true, lead_id: leadId });

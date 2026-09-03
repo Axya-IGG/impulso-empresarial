@@ -13,6 +13,9 @@
 -- e e nele que esta o UNIQUE. Guardamos normalizado em E.164 sem o '+'
 -- (5512997205261) para que "(12) 99720-5261" e "+55 12 99720-5261" nao
 -- virem dois leads e duas sequencias de mensagem para a mesma pessoa.
+-- atribuicao: JSON com utm_* e fbp/fbc do momento do cadastro, usado para
+-- disparar o evento de Compra pra Conversions API do Meta quando a Eduzz
+-- confirmar a venda (ver migrations/003_atribuicao.sql).
 CREATE TABLE IF NOT EXISTS leads (
   id            TEXT PRIMARY KEY,
   nome          TEXT NOT NULL,
@@ -23,7 +26,8 @@ CREATE TABLE IF NOT EXISTS leads (
   user_agent    TEXT,
   criado_em     TEXT NOT NULL,
   optout        INTEGER NOT NULL DEFAULT 0,
-  optout_em     TEXT
+  optout_em     TEXT,
+  atribuicao    TEXT
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_leads_whatsapp ON leads(whatsapp);
 CREATE INDEX IF NOT EXISTS idx_leads_criado ON leads(criado_em);

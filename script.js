@@ -71,6 +71,59 @@ if (countdownCfg) {
   setInterval(updateCountdown, 1000);
 }
 
+// === ATRIBUIÇÃO (UTM + Meta Pixel) ===
+// Captura no primeiro carregamento e guarda até o cadastro (que pode
+// acontecer minutos ou páginas depois) e até o clique de checkout, que
+// carrega os mesmos parâmetros pro link da Eduzz — ela devolve o que
+// mandamos em `data.utm` no webhook (confirmado em 03/09 com payload real).
+const ATRIBUICAO_KEY = 'impulso_atribuicao';
+const CAMPOS_UTM = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
+
+function lerAtribuicaoSalva() {
+  try { return JSON.parse(localStorage.getItem(ATRIBUICAO_KEY) || '{}'); }
+  catch { return {}; }
+}
+
+// Só sobrescreve o que já estava salvo se a URL atual realmente trouxe UTM
+// novo — assim quem chegou por um anúncio e depois navega o site sem UTM
+// (ex.: voltou pela home) não perde a origem original (first-touch).
+function capturarAtribuicao() {
+  const params = new URLSearchParams(window.location.search);
+  const daUrl = {};
+  let temAlgumUtm = false;
+  CAMPOS_UTM.forEach(c => {
+    const v = params.get(c);
+    if (v) { daUrl[c] = v; temAlgumUtm = true; }
+  });
+
+  if (!temAlgumUtm) return lerAtribuicaoSalva();
+  try { localStorage.setItem(ATRIBUICAO_KEY, JSON.stringify(daUrl)); } catch { /* navegação privada */ }
+  return daUrl;
+}
+
+const lerCookie = (nome) => {
+  const m = document.cookie.match(new RegExp('(?:^|; )' + nome + '=([^;]*)'));
+  return m ? decodeURIComponent(m[1]) : '';
+};
+
+// fbp/fbc são lidos na hora (não guardados à parte): o próprio Pixel os
+// mantém no cookie e os renova sozinho a cada visita, então ler direto do
+// cookie no momento do cadastro é sempre mais atual do que uma cópia salva.
+function dadosDeAtribuicaoAtuais() {
+  return { ...capturarAtribuicao(), fbp: lerCookie('_fbp'), fbc: lerCookie('_fbc') };
+}
+
+// Anexa os UTMs salvos num link de checkout, preservando o que já houver
+// na URL. Usada uma vez, na montagem do destino de cada CTA (abaixo).
+function comUtm(url) {
+  if (!url) return url;
+  const utms = lerAtribuicaoSalva();
+  const qs = new URLSearchParams();
+  CAMPOS_UTM.forEach(k => { if (utms[k]) qs.set(k, utms[k]); });
+  const query = qs.toString();
+  return query ? url + (url.includes('?') ? '&' : '?') + query : url;
+}
+
 // === CHECKOUT E LISTA DE ESPERA ===
 // Antes de `vendas_abrem` os CTAs de compra nao levam ao checkout: viram
 // entrada para a lista de espera, com o aviso da data logo abaixo. Assim os
@@ -85,8 +138,10 @@ const abremEm       = countdownCfg?.vendas_abrem ? new Date(countdownCfg.vendas_
 const emEspera = () => Boolean(abremEm) && Date.now() < abremEm;
 
 // O destino tem de ser guardado antes da primeira pintura: o
-// removeAttribute('href') apagaria o unico lugar onde ele existe.
-CTAS_CHECKOUT.forEach(a => { a.dataset.destino = a.getAttribute('href') || ''; });
+// removeAttribute('href') apagaria o unico lugar onde ele existe. Já sai
+// com os UTMs anexados, então tanto o clique direto (quem já se cadastrou
+// antes) quanto o redirecionamento pós-popup carregam a mesma origem.
+CTAS_CHECKOUT.forEach(a => { a.dataset.destino = comUtm(a.getAttribute('href') || ''); });
 
 function pintarCheckout() {
   const espera = emEspera();
@@ -226,6 +281,7 @@ if (modal && formLead) {
       abrirModal({ origem: 'espera-' + a.dataset.checkout, modo: 'espera', jaNaLista: jaCadastrou() });
       return;
     }
+    if (typeof fbq === 'function') fbq('track', 'InitiateCheckout');
     if (jaCadastrou()) return;          // segue direto para a Eduzz
     e.preventDefault();
     abrirModal({ destino: a.dataset.destino, origem: a.dataset.checkout });
@@ -243,6 +299,7 @@ if (modal && formLead) {
     e.preventDefault();
     const dados = Object.fromEntries(new FormData(formLead));
     dados.origem = origemPendente;
+    dados.atribuicao = JSON.stringify(dadosDeAtribuicaoAtuais());
 
     erroLead.hidden = true;
     botaoLead.disabled = true;
@@ -259,6 +316,7 @@ if (modal && formLead) {
       if (!r.ok) throw new Error(corpo.erro || 'Não foi possível enviar.');
 
       marcarCadastrado();
+      if (typeof fbq === 'function') fbq('track', 'Lead');
 
       if (modoPendente === 'espera') {
         mostrarSucesso(cfgEspera.sucesso || 'Pronto, você está na lista!');

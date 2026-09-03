@@ -1,0 +1,12 @@
+-- Migracao 003 — guarda os dados de atribuicao (UTM + identificadores do
+-- Pixel do Meta) capturados no momento em que o lead preenche o formulario,
+-- para poder disparar o evento de Compra pra Conversions API quando a
+-- Eduzz confirmar a venda (o webhook so' tem e-mail/telefone/produto — nao
+-- tem fbp/fbc, que so existem no navegador de quem visitou o site).
+-- Aplicar com: .\db.ps1 -Arquivo migrations\003_atribuicao.sql
+--
+-- Um unico TEXT com JSON em vez de colunas separadas (utm_source,
+-- utm_medium, fbp, fbc, ...): esse dado e' sempre escrito e lido inteiro,
+-- nunca filtrado por campo individual em SQL — nao ha' ganho em normalizar,
+-- so' colunas a mais quando o Meta mudar o que aceita.
+ALTER TABLE leads ADD COLUMN atribuicao TEXT;

@@ -6,6 +6,24 @@ import {
 const LIMITE_POR_IP = 20;      // por hora — trava de flood, nao de uso normal
 const COOKIE_LEAD = 'impulso_lead';
 
+// So os campos que o Conversions API usa sobrevivem — nunca confie no JSON
+// que chega do navegador sem filtrar antes de gravar.
+const CAMPOS_ATRIBUICAO = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'fbp', 'fbc'];
+
+function normalizarAtribuicao(bruto) {
+  if (!bruto) return null;
+  let obj;
+  try { obj = JSON.parse(bruto); } catch { return null; }
+  if (!obj || typeof obj !== 'object') return null;
+
+  const limpo = {};
+  for (const c of CAMPOS_ATRIBUICAO) {
+    const v = obj[c];
+    if (typeof v === 'string' && v && v.length <= 300) limpo[c] = v;
+  }
+  return Object.keys(limpo).length ? JSON.stringify(limpo) : null;
+}
+
 /**
  * Captura do lead no primeiro clique do CTA.
  *
@@ -46,19 +64,23 @@ export async function onRequestPost({ request, env }) {
 
   const ua = (request.headers.get('User-Agent') || '').slice(0, 300);
   const quando = agora();
+  const atribuicao = normalizarAtribuicao(corpo?.atribuicao);
 
   // ON CONFLICT: quem volta com o mesmo numero atualiza os dados e mantem
   // o criado_em original — se ele fosse reescrito, a sequencia de mensagens
-  // por atraso recomecaria do zero a cada visita.
+  // por atraso recomecaria do zero a cada visita. atribuicao so' sobrescreve
+  // se a visita atual realmente trouxe alguma coisa — sem isso, uma volta
+  // sem UTM (ex.: digitou o dominio direto) apagaria a origem original.
   const id = crypto.randomUUID();
   await env.DB.prepare(`
-    INSERT INTO leads (id, nome, email, whatsapp, origem, ip, user_agent, criado_em)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO leads (id, nome, email, whatsapp, origem, ip, user_agent, criado_em, atribuicao)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(whatsapp) DO UPDATE SET
       nome = excluded.nome,
       email = excluded.email,
-      origem = excluded.origem
-  `).bind(id, nome, email, whatsapp, origem, ip, ua, quando).run();
+      origem = excluded.origem,
+      atribuicao = COALESCE(excluded.atribuicao, leads.atribuicao)
+  `).bind(id, nome, email, whatsapp, origem, ip, ua, quando, atribuicao).run();
 
   const lead = await env.DB.prepare('SELECT id FROM leads WHERE whatsapp = ?')
     .bind(whatsapp).first();
