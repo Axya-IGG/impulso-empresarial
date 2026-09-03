@@ -23,12 +23,16 @@ database_id = "0685aff2-e875-432f-af5b-eeb848c42b73"
 EVOLUTION_URL = "https://zap.ardassessoria.com.br"
 EVOLUTION_INSTANCIA = "axya"
 
-# ADMIN_SENHA, SESSION_SECRET e EVOLUTION_APIKEY sao secrets e ficam fora
-# daqui — vars entram no repositorio e aparecem no painel da Cloudflare.
-# Definir uma vez com:
-#   npx wrangler pages secret put ADMIN_SENHA      --project-name=impulso-empresarial
-#   npx wrangler pages secret put SESSION_SECRET   --project-name=impulso-empresarial
-#   npx wrangler pages secret put EVOLUTION_APIKEY --project-name=impulso-empresarial
+# ADMIN_SENHA, SESSION_SECRET, EVOLUTION_APIKEY e EDUZZ_WEBHOOK_SECRET sao
+# secrets e ficam fora daqui — vars entram no repositorio e aparecem no
+# painel da Cloudflare. Definir uma vez com (bash, nunca PowerShell — o
+# pipe do PowerShell corrompe o valor gravado):
+#   printf '%s' "$valor" | npx wrangler pages secret put ADMIN_SENHA          --project-name=impulso-empresarial
+#   printf '%s' "$valor" | npx wrangler pages secret put SESSION_SECRET       --project-name=impulso-empresarial
+#   printf '%s' "$valor" | npx wrangler pages secret put EVOLUTION_APIKEY     --project-name=impulso-empresarial
+#   printf '%s' "$valor" | npx wrangler pages secret put EDUZZ_WEBHOOK_SECRET --project-name=impulso-empresarial
+# EDUZZ_WEBHOOK_SECRET valida o header x-signature em functions/api/webhook/eduzz.js
+# (hmac-sha256, ver developers.eduzz.com/docs/webhook/security).
 
 # O preview compartilha o banco, mas NAO recebe os secrets: o
 # `wrangler pages secret put` nao aceita --environment e grava so em
