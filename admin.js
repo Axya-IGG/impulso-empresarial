@@ -157,6 +157,44 @@ $('#corpo-leads').addEventListener('click', async e => {
   }
 });
 
+// ------------------------------------------------------- modal novo lead
+const modalLead = $('#modal-lead');
+const formLeadManual = $('#form-lead-manual');
+
+$('#btn-novo-lead').addEventListener('click', () => {
+  formLeadManual.reset();
+  $('#lead-manual-erro').hidden = true;
+  modalLead.hidden = false;
+});
+
+formLeadManual.addEventListener('submit', async e => {
+  e.preventDefault();
+  const erro = $('#lead-manual-erro');
+  const botao = e.target.querySelector('button');
+  erro.hidden = true;
+  botao.disabled = true;
+
+  try {
+    await api('/api/admin/leads', {
+      method: 'POST',
+      body: JSON.stringify({
+        nome: formLeadManual.nome.value,
+        email: formLeadManual.email.value,
+        whatsapp: formLeadManual.whatsapp.value,
+        origem: formLeadManual.origem.value,
+      }),
+    });
+    fecharModais();
+    toast('Lead adicionado.');
+    carregarLeads();
+  } catch (err) {
+    erro.textContent = err.message;
+    erro.hidden = false;
+  } finally {
+    botao.disabled = false;
+  }
+});
+
 // ----------------------------------------------------------- mensagens
 $('#ver-arquivadas').addEventListener('change', carregarMensagens);
 

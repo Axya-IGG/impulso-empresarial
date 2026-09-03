@@ -1,4 +1,4 @@
-import { json } from '../../_lib.js';
+import { json, erro, agora, normalizarWhatsapp, emailValido } from '../../_lib.js';
 
 const csvCampo = (v) => {
   const s = String(v ?? '');
@@ -52,4 +52,36 @@ export async function onRequestGet({ request, env }) {
   `).first();
 
   return json({ leads: results || [], estat });
+}
+
+// Cadastro manual pelo operador do painel — cliente que comprou por fora
+// (telefone, presencial) e precisa entrar na régua de remarketing mesmo
+// sem ter passado pelo formulário público.
+export async function onRequestPost({ request, env }) {
+  let corpo;
+  try { corpo = await request.json(); } catch { return erro('Corpo invalido.'); }
+
+  const nome = String(corpo?.nome || '').trim().replace(/\s+/g, ' ');
+  const email = String(corpo?.email || '').trim().toLowerCase();
+  const origem = String(corpo?.origem || '').trim().slice(0, 40) || 'manual';
+  const whatsapp = normalizarWhatsapp(corpo?.whatsapp);
+
+  if (nome.length < 2)     return erro('Informe o nome.');
+  if (!emailValido(email)) return erro('E-mail invalido.');
+  if (!whatsapp)           return erro('WhatsApp invalido. Use DDD + numero.');
+
+  const existente = await env.DB.prepare('SELECT id FROM leads WHERE whatsapp = ?')
+    .bind(whatsapp).first();
+  // Erro explícito em vez de sobrescrever: um cadastro manual normalmente
+  // corrige um dado (nome, e-mail) e um ON CONFLICT silencioso esconderia
+  // do operador que ele estava editando um lead existente, não criando um novo.
+  if (existente) return erro('Já existe um lead com esse WhatsApp.', 409);
+
+  const id = crypto.randomUUID();
+  await env.DB.prepare(`
+    INSERT INTO leads (id, nome, email, whatsapp, origem, criado_em)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).bind(id, nome, email, whatsapp, origem, agora()).run();
+
+  return json({ ok: true, id }, 201);
 }

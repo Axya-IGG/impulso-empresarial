@@ -57,6 +57,7 @@
 
       <div class="barra">
         <input type="search" id="busca-leads" placeholder="Buscar por nome, e-mail ou WhatsApp..." />
+        <button type="button" class="btn btn-primario" id="btn-novo-lead">+ Adicionar lead</button>
         <a class="btn btn-secundario" href="/api/admin/leads?formato=csv">Exportar CSV</a>
       </div>
 
@@ -163,6 +164,43 @@
       <div class="modal-acoes">
         <button type="button" class="btn btn-secundario" id="btn-testar">Enviar teste</button>
         <button type="submit" class="btn btn-primario">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ===================== MODAL DE NOVO LEAD ===================== -->
+<div class="modal" id="modal-lead" hidden>
+  <div class="modal-fundo" data-fechar></div>
+  <div class="modal-caixa modal-estreito" role="dialog" aria-modal="true" aria-labelledby="lead-modal-titulo">
+    <button type="button" class="modal-fechar" data-fechar aria-label="Fechar">&times;</button>
+    <h2 id="lead-modal-titulo">Adicionar lead</h2>
+
+    <form id="form-lead-manual">
+      <label>
+        <span>Nome</span>
+        <input type="text" name="nome" required autocomplete="off" />
+      </label>
+
+      <label>
+        <span>E-mail</span>
+        <input type="email" name="email" required autocomplete="off" />
+      </label>
+
+      <label>
+        <span>WhatsApp (com DDD)</span>
+        <input type="tel" name="whatsapp" required placeholder="(12) 99999-9999" autocomplete="off" />
+      </label>
+
+      <label>
+        <span>Origem <small>(opcional)</small></span>
+        <input type="text" name="origem" placeholder="Ex.: telefone, presencial..." autocomplete="off" />
+      </label>
+
+      <p class="alerta alerta-erro" id="lead-manual-erro" role="alert" hidden></p>
+
+      <div class="modal-acoes">
+        <button type="submit" class="btn btn-primario">Adicionar</button>
       </div>
     </form>
   </div>

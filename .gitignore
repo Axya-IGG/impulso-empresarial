@@ -10,3 +10,9 @@ impulso empresarial 2 edição/
 # Config gerada no diretório temporário de publicação pelo deploy.ps1.
 # A versionada é a wrangler.pages.toml.
 wrangler.toml
+
+# Vars locais para `wrangler pages dev` (senha/segredo de teste, nunca os reais).
+.dev.vars
+
+# Cache/estado do wrangler dev local (build temporário, banco D1 sqlite local).
+.wrangler/
