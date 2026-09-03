@@ -674,6 +674,195 @@ a { color: inherit; text-decoration: none; }
 }
 .schedule-end .schedule-content h4 { color: var(--primary); }
 
+/* === CRONOGRAMA EM ROLO (seletor de hora do despertador do iPhone) ===
+   Tudo aqui depende do .is-wheel, que só o script.js coloca. Sem JS — ou com
+   movimento reduzido — a lista com trilho e cards acima continua valendo
+   inteira: o rolo é enfeite, não é o único jeito de ler a programação. */
+.schedule-band,
+.schedule-rail,
+.schedule-hint { display: none; }
+
+.schedule-track.is-wheel {
+  --roda-h: min(46svh, 420px);
+  --roda-item-h: 78px;
+}
+
+/* O palco gruda na tela logo abaixo do header e o trilho alto (altura vem do
+   JS) é o que sobra de scroll para girar o rolo. */
+.schedule-track.is-wheel .schedule-stage {
+  position: sticky;
+  top: var(--sched-topo, 0px);
+  height: calc(100svh - var(--sched-topo, 0px));
+  display: flex;
+  align-items: center;
+}
+.schedule-track.is-wheel .schedule-stage > .container {
+  width: 100%;
+  position: relative;
+  z-index: 2;
+}
+.schedule-track.is-wheel .section-header { margin-bottom: 22px; }
+
+.schedule-track.is-wheel .schedule-wrapper {
+  position: relative;
+  height: var(--roda-h);
+  overflow: hidden;
+  perspective: 900px;
+  perspective-origin: 50% 50%;
+  cursor: grab;
+  /* As pontas somem em vez de cortar reto — é o que dá a impressão de que o
+     rolo continua girando para dentro do aparelho. */
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 13%, #000 87%, transparent);
+          mask-image: linear-gradient(180deg, transparent, #000 13%, #000 87%, transparent);
+}
+.schedule-track.is-wheel .schedule-wrapper.is-dragging { cursor: grabbing; }
+.schedule-track.is-wheel .schedule-wrapper::before { display: none; }
+
+/* A faixa clara parada no centro, igual à do seletor do iPhone. */
+.schedule-track.is-wheel .schedule-band {
+  display: block;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: var(--roda-item-h);
+  margin-top: calc(var(--roda-item-h) / -2);
+  border-radius: var(--radius);
+  background: rgba(255,255,255,0.055);
+  border: 1px solid rgba(119,203,245,0.22);
+  pointer-events: none;
+}
+
+.schedule-track.is-wheel .schedule-wheel {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+}
+
+/* Todos os tópicos ficam empilhados no centro; o que os separa é só o
+   rotateX + translateZ que o JS escreve em cada um. */
+.schedule-track.is-wheel .schedule-item {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: var(--roda-item-h);
+  margin: 0;
+  margin-top: calc(var(--roda-item-h) / -2);
+  padding: 0 18px;
+  gap: 16px;
+  flex-direction: row;
+  align-items: center;
+  border-top: 0;
+  transform-origin: 50% 50%;
+  backface-visibility: hidden;
+  /* Mata a transição do scroll-reveal: com ela a opacidade que o JS escreve
+     a cada quadro chegaria meio segundo atrasada e o rolo ficaria borrado. */
+  transition: none;
+  will-change: transform, opacity;
+}
+
+.schedule-track.is-wheel .schedule-time {
+  min-width: 52px;
+  text-align: right;
+  padding-top: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+  transition: color 0.25s ease;
+}
+.schedule-track.is-wheel .schedule-content {
+  background: none;
+  border: 0;
+  border-radius: 0;
+  margin-left: 0;
+  padding: 0;
+  min-width: 0;
+  transform: none;
+}
+.schedule-track.is-wheel .schedule-content::before { display: none; }
+.schedule-track.is-wheel .schedule-content h4 {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.32;
+  color: var(--slate);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  transition: color 0.25s ease;
+}
+
+.schedule-track.is-wheel .schedule-item.is-center .schedule-time { color: var(--primary); }
+.schedule-track.is-wheel .schedule-item.is-center .schedule-content h4 { color: var(--white); }
+.schedule-track.is-wheel .schedule-end.is-center .schedule-content h4 { color: var(--primary); }
+.schedule-track.is-wheel .schedule-break .schedule-content h4 { font-weight: 600; }
+
+/* Mostra quanto do dia já passou — e, de quebra, avisa que a seção solta a
+   página quando encher. */
+.schedule-track.is-wheel .schedule-rail {
+  display: block;
+  max-width: 740px;
+  height: 3px;
+  margin: 22px auto 0;
+  border-radius: 3px;
+  background: rgba(163,185,198,0.15);
+  overflow: hidden;
+}
+.schedule-track.is-wheel .schedule-rail > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--gradient-primary);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+}
+
+.schedule-track.is-wheel .schedule-hint {
+  display: block;
+  margin-top: 12px;
+  text-align: center;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  transition: opacity 0.4s ease;
+}
+.schedule-track.is-wheel.ja-rolou .schedule-hint { opacity: 0; }
+
+@media (max-width: 768px) {
+  .schedule-track.is-wheel {
+    --roda-h: min(44svh, 340px);
+    --roda-item-h: 92px;
+  }
+  .schedule-track.is-wheel .schedule-item { padding: 0 12px; gap: 12px; }
+  .schedule-track.is-wheel .schedule-time { min-width: 42px; font-size: 11.5px; }
+  .schedule-track.is-wheel .schedule-content h4 {
+    font-size: 12.5px;
+    -webkit-line-clamp: 4;
+  }
+  .schedule-track.is-wheel .section-header { margin-bottom: 16px; }
+}
+
+/* Tela baixa (celular deitado, sobretudo): o palco preso tem a altura da
+   janela, entao cabecalho + rolo tem que caber nela. Aqui o rolo encolhe e o
+   que e' acessorio sai — sem isso o fim do rolo fica embaixo da dobra e a
+   pessoa rola a seção inteira sem nunca ver o item central. */
+@media (max-height: 560px) {
+  .schedule-track.is-wheel {
+    --roda-h: min(52svh, 210px);
+    --roda-item-h: 62px;
+  }
+  .schedule-track.is-wheel .section-header { margin-bottom: 10px; }
+  .schedule-track.is-wheel .section-title { font-size: 22px; }
+  .schedule-track.is-wheel .section-subtitle,
+  .schedule-track.is-wheel .schedule-hint { display: none; }
+  .schedule-track.is-wheel .schedule-content h4 {
+    font-size: 13px;
+    -webkit-line-clamp: 3;
+  }
+  .schedule-track.is-wheel .schedule-rail { margin-top: 14px; }
+}
+
 /* === TICKETS === */
 .ticket-features {
   list-style: none;

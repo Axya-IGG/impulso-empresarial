@@ -412,6 +412,128 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
   });
 });
 
+// === CRONOGRAMA EM ROLO ===
+// A seção prende na tela e o scroll gasto ali gira os tópicos como o seletor
+// de hora do despertador do iPhone.
+//
+// Por que dirigir pelo scroll da página em vez de capturar wheel/touch: no
+// celular "arrastar a tela" JA e' rolar, entao um mecanismo so' atende os
+// dois casos que o pedido cita, rolar para tras volta o rolo de graça, e nada
+// disso quebra teclado, barra de espaço, Home/End ou a busca do navegador —
+// que e' exatamente o que um sequestro de wheel quebraria. O rolo nao gira
+// infinito: comeca no primeiro topico centralizado e trava no ultimo.
+(function cronogramaEmRolo() {
+  const trilho = document.getElementById('schedule-track');
+  const roda   = document.getElementById('schedule-wheel');
+  const janela = document.getElementById('schedule-wrapper');
+  const barra  = document.getElementById('schedule-rail-fill');
+  const palco  = trilho?.querySelector('.schedule-stage');
+  if (!trilho || !roda || !janela || !palco) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  const itens = [...roda.querySelectorAll('.schedule-item')];
+  if (itens.length < 3) return;
+
+  const PASSO_GRAUS = 20;              // ângulo entre um tópico e o vizinho
+  const RAD = Math.PI / 180;
+  const ehMobile = () => window.innerWidth <= 768;
+
+  let raio = 0, rolagemUtil = 1, topoPx = 0, pos = -1;
+
+  function medir() {
+    // A home nao tem header fixo (so' a pre-venda tinha), mas se um dia
+    // ganhar um, o palco tem que grudar abaixo dele — nao atras.
+    const cabecalho = document.querySelector('.header');
+    const preso = cabecalho && ['sticky', 'fixed'].includes(getComputedStyle(cabecalho).position);
+    topoPx = preso ? cabecalho.offsetHeight : 0;
+    trilho.style.setProperty('--sched-topo', `${topoPx}px`);
+
+    const alturaItem = parseFloat(getComputedStyle(trilho).getPropertyValue('--roda-item-h')) || 78;
+    // Raio do cilindro em que dois vizinhos ficam exatamente encostados:
+    // metade da altura do item sobre a tangente de meio passo.
+    raio = (alturaItem / 2) / Math.tan((PASSO_GRAUS / 2) * RAD);
+
+    // Recua o cilindro inteiro pelo proprio raio: sem isso o item do centro
+    // fica a `raio` px do olho e a perspectiva o amplia ~33%, empurrando a
+    // coluna de horario para fora da janela (que tem overflow:hidden). Com o
+    // recuo o centro cai em z=0 — tamanho natural — e os vizinhos afundam,
+    // que e' exatamente o que o seletor do iPhone faz.
+    roda.style.transform = `translateZ(${-raio}px)`;
+
+    // Quanto de scroll cada tópico consome. Mais curto no celular, onde o
+    // mesmo gesto cobre menos pixels de página.
+    rolagemUtil = (itens.length - 1) * (ehMobile() ? 74 : 88);
+    trilho.style.height = `${palco.offsetHeight + rolagemUtil}px`;
+  }
+
+  function desenhar() {
+    // Enquanto o palco não grudou, trilho.top > topoPx e o progresso fica
+    // negativo → clampa em 0 (primeiro tópico no centro). Passado o trilho
+    // inteiro, clampa em 1 (último tópico no centro). Nunca dá a volta.
+    const andado = topoPx - trilho.getBoundingClientRect().top;
+    const p = Math.min(1, Math.max(0, andado / rolagemUtil));
+    const alvo = p * (itens.length - 1);
+    if (Math.abs(alvo - pos) < 0.0005) return;
+    pos = alvo;
+
+    for (let i = 0; i < itens.length; i++) {
+      const graus = (i - pos) * PASSO_GRAUS;
+      const el = itens[i];
+      el.style.transform = `rotateX(${-graus}deg) translateZ(${raio}px)`;
+      // cos elevado escurece rápido nas pontas, como no seletor do iPhone.
+      // Passados 90° o item está de costas — o backface-visibility do CSS
+      // esconde, e o max(0) evita opacidade negativa.
+      el.style.opacity = Math.max(0, Math.cos(graus * RAD) ** 2.4).toFixed(3);
+      el.classList.toggle('is-center', Math.abs(graus) < PASSO_GRAUS / 2);
+    }
+
+    if (barra) barra.style.transform = `scaleX(${p})`;
+    trilho.classList.toggle('ja-rolou', p > 0.02);
+  }
+
+  let pedido = 0;
+  const agendar = () => {
+    if (pedido) return;
+    pedido = requestAnimationFrame(() => { pedido = 0; desenhar(); });
+  };
+
+  // Arrastar o rolo com o mouse, como se pegasse no cilindro. Só mouse: no
+  // toque, arrastar já rola a página, e roubar o gesto deixaria o dedo preso
+  // na seção. Empurra o scroll da própria página para o estado continuar
+  // sendo um só — daí o 'instant', senão o scroll-behavior:smooth do CSS
+  // animaria cada quadro e o arrasto ficaria borrachudo.
+  let arrastando = false, ultimoY = 0;
+  janela.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    arrastando = true;
+    ultimoY = e.clientY;
+    janela.setPointerCapture(e.pointerId);
+    janela.classList.add('is-dragging');
+    e.preventDefault();
+  });
+  janela.addEventListener('pointermove', (e) => {
+    if (!arrastando) return;
+    const dy = e.clientY - ultimoY;
+    ultimoY = e.clientY;
+    window.scrollBy({ top: -dy * 1.8, behavior: 'instant' });
+  });
+  const soltar = (e) => {
+    if (!arrastando) return;
+    arrastando = false;
+    janela.classList.remove('is-dragging');
+    try { janela.releasePointerCapture(e.pointerId); } catch { /* ponteiro já foi */ }
+  };
+  janela.addEventListener('pointerup', soltar);
+  janela.addEventListener('pointercancel', soltar);
+
+  trilho.classList.add('is-wheel');
+  medir();
+  desenhar();
+
+  window.addEventListener('scroll', agendar, { passive: true });
+  window.addEventListener('resize', () => { medir(); pos = -1; desenhar(); }, { passive: true });
+})();
+
 // === SCROLL REVEAL ===
 // A regra de opacidade e injetada daqui, e nao no style.css, de proposito:
 // sem JS nada recebe .revealed e o conteudo ficaria invisivel para sempre.
