@@ -1,4 +1,4 @@
-import { json, erro, agora, normalizarWhatsapp } from '../../_lib.js';
+import { json, erro, agora, normalizarWhatsapp, montarUserData, enviarEventoMeta } from '../../_lib.js';
 
 /**
  * Webhook da Eduzz (Órbita, formato v3). Payload real capturado em 03/09
@@ -9,10 +9,16 @@ import { json, erro, agora, normalizarWhatsapp } from '../../_lib.js';
  * `data` traz `buyer` (quem comprou — usamos este; `student` também existe
  * no payload mas é para produtos de curso/assinatura e não faz sentido
  * para ingresso de evento), `items[]` (produtos da fatura), `price.paid`,
- * `utm` (a origem que veio anexada no link do checkout — ver script.js,
- * função `comUtm`) e `id` (o id da fatura, estável entre 'paid' e
- * 'refunded' do mesmo pedido — é a chave de idempotência em
- * compras.transacao_id).
+ * `utm` (a origem que veio anexada no link do checkout), `tracker.code1`
+ * (o `trk` que functions/_middleware.js anexou no link — casamento exato
+ * com o lead, não depende de bater e-mail/telefone) e `id` (o id da
+ * fatura, estável entre 'paid' e 'refunded' do mesmo pedido — é a chave de
+ * idempotência em compras.transacao_id).
+ *
+ * IMPORTANTE: o botão "Testar eventos" do Órbita manda um payload fixo que
+ * NUNCA inclui tracker.code1 (confirmado — não é bug daqui). Testar o
+ * casamento por trk de verdade exige uma compra real (ou com cupom de
+ * 100%) passando pelo link decorado, não o botão de teste.
  */
 
 const enc = new TextEncoder();
@@ -37,11 +43,6 @@ async function assinaturaValida(corpoBruto, recebida, segredo) {
   return diff === 0;
 }
 
-async function sha256Hex(texto) {
-  const buf = await crypto.subtle.digest('SHA-256', enc.encode(texto));
-  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
 // Confirmados por teste real: 'myeduzz.invoice_paid', 'myeduzz.invoice_refunded'
 // e um dos dois nomes de cancelamento abaixo (confirmado indiretamente em
 // 03/09 — o log de "evento ignorado" não disparou nesse teste, mas o
@@ -54,77 +55,6 @@ const MAPA_STATUS = {
   'myeduzz.invoice_canceled': 'cancelada',
   'myeduzz.invoice_cancelled': 'cancelada',
 };
-
-/**
- * Evento de servidor pro Meta (Conversions API), disparado no instante em
- * que a Eduzz confirma a compra — é a única forma de mandar esse evento
- * pro Meta, já que o checkout roda no domínio da Eduzz e nunca carrega o
- * Pixel do nosso site.
- *
- * Match quality depende de quantos identificadores o evento carrega: email
- * e telefone (com hash, exigido pelo Meta) vêm do próprio comprador; fbp/fbc
- * (sem hash — já são IDs opacos do Meta, não dado pessoal) vêm de
- * `leads.atribuicao`, gravados no navegador da pessoa no momento em que ela
- * preencheu o popup do site (script.js, `dadosDeAtribuicaoAtuais`) — por
- * isso só existem quando o comprador passou pelo nosso formulário antes de
- * ir pro checkout; ip/user_agent vêm do mesmo cadastro.
- *
- * Nunca lança: uma falha aqui não pode derrubar o processamento da compra
- * em si (que já está gravada em `compras` quando isto é chamado).
- */
-async function enviarCompraParaMeta(env, { lead, d, valor, produto, transacaoId }) {
-  if (!env.META_CAPI_TOKEN || !env.META_PIXEL_ID) {
-    console.log('[meta-capi] nao configurado (falta token ou pixel id)');
-    return;
-  }
-
-  let atribuicao = {};
-  try { atribuicao = JSON.parse(lead?.atribuicao || '{}'); } catch { /* fica vazio */ }
-
-  const userData = {};
-  if (lead?.email) userData.em = [await sha256Hex(lead.email.trim().toLowerCase())];
-  // whatsapp ja' esta em E.164 sem '+' (normalizarWhatsapp) — exatamente o
-  // formato que o Meta espera antes do hash.
-  if (lead?.whatsapp) userData.ph = [await sha256Hex(lead.whatsapp)];
-  if (atribuicao.fbp) userData.fbp = atribuicao.fbp;
-  if (atribuicao.fbc) userData.fbc = atribuicao.fbc;
-  if (lead?.ip) userData.client_ip_address = lead.ip;
-  if (lead?.user_agent) userData.client_user_agent = lead.user_agent;
-
-  const evento = {
-    event_name: 'Purchase',
-    event_time: Math.floor((!isNaN(new Date(d.paidAt)) ? new Date(d.paidAt).getTime() : Date.now()) / 1000),
-    event_id: `eduzz-${transacaoId}`,
-    action_source: 'website',
-    event_source_url: 'https://oimpulsoempresarial.com.br/',
-    user_data: userData,
-    custom_data: {
-      currency: d.price?.paid?.currency || d.price?.currency || 'BRL',
-      value: valor,
-      content_name: produto || undefined,
-      content_type: 'product',
-      order_id: transacaoId,
-    },
-  };
-
-  // META_TEST_EVENT_CODE so' existe enquanto alguem estiver testando pelo
-  // "Testar Eventos" do Gerenciador — com ela presente, o evento marca como
-  // teste e nunca entra na otimizacao real das campanhas. Nao configurada
-  // em uso normal: precisa ficar assim, ou toda compra real vira teste.
-  const corpoEnvio = { data: [evento] };
-  if (env.META_TEST_EVENT_CODE) corpoEnvio.test_event_code = env.META_TEST_EVENT_CODE;
-
-  try {
-    const r = await fetch(
-      `https://graph.facebook.com/v21.0/${env.META_PIXEL_ID}/events?access_token=${env.META_CAPI_TOKEN}`,
-      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpoEnvio) }
-    );
-    const corpo = await r.text();
-    console.log('[meta-capi]', r.status, corpo.slice(0, 500));
-  } catch (e) {
-    console.log('[meta-capi] erro de rede', String(e));
-  }
-}
 
 export async function onRequestGet() {
   return json({ ok: true, info: 'Webhook da Eduzz — pronto para receber POST.' });
@@ -164,27 +94,39 @@ export async function onRequestPost({ request, env }) {
   const nome = String(d.buyer?.name || '').trim() || 'Comprador Eduzz';
   const email = String(d.buyer?.email || '').trim().toLowerCase();
   const whatsapp = normalizarWhatsapp(d.buyer?.cellphone || d.buyer?.phone);
+  const trk = String(d.tracker?.code1 || '') || null;
 
-  // Casa por WhatsApp primeiro (mesma chave que o resto do sistema usa),
-  // cai para e-mail se nao bater. Sem nenhum dos dois nao da' para mandar
-  // remarketing de qualquer forma, entao nao ha' o que criar.
-  let lead = whatsapp
-    ? await env.DB.prepare('SELECT id FROM leads WHERE whatsapp = ?').bind(whatsapp).first()
+  // Casamento em ordem de confianca: trk primeiro (exato — a mesma sessao
+  // que preencheu o popup e' a que foi pro checkout), whatsapp depois
+  // (mesma chave que o resto do sistema usa), e-mail por ultimo. Sem
+  // nenhum dos tres da' para mandar remarketing de qualquer forma, entao
+  // nao ha' o que casar nem criar.
+  let lead = trk
+    ? await env.DB.prepare('SELECT * FROM leads WHERE trk = ?').bind(trk).first()
     : null;
+  if (!lead && whatsapp) {
+    lead = await env.DB.prepare('SELECT * FROM leads WHERE whatsapp = ?').bind(whatsapp).first();
+  }
   if (!lead && email) {
-    lead = await env.DB.prepare('SELECT id FROM leads WHERE email = ?').bind(email).first();
+    lead = await env.DB.prepare('SELECT * FROM leads WHERE email = ?').bind(email).first();
   }
 
   let leadId;
   if (lead) {
     leadId = lead.id;
+    // Se achou por whatsapp/e-mail mas o lead ainda nao tinha trk (cadastro
+    // anterior a esta migracao, ou cookie bloqueado no cadastro), grava
+    // agora — proximas compras da mesma pessoa passam a casar direto.
+    if (trk && !lead.trk) {
+      await env.DB.prepare('UPDATE leads SET trk = ? WHERE id = ?').bind(trk, leadId).run();
+    }
   } else {
     if (!whatsapp) return erro('Comprador sem WhatsApp valido e sem lead correspondente.', 422);
     leadId = crypto.randomUUID();
     await env.DB.prepare(`
-      INSERT INTO leads (id, nome, email, whatsapp, origem, criado_em)
-      VALUES (?, ?, ?, ?, 'compra-eduzz', ?)
-    `).bind(leadId, nome, email || null, whatsapp, agora()).run();
+      INSERT INTO leads (id, nome, email, whatsapp, origem, criado_em, trk)
+      VALUES (?, ?, ?, ?, 'compra-eduzz', ?, ?)
+    `).bind(leadId, nome, email || null, whatsapp, agora(), trk).run();
   }
 
   const produto = (d.items || []).map(i => i?.name).filter(Boolean).join(', ') || null;
@@ -207,10 +149,28 @@ export async function onRequestPost({ request, env }) {
   }
 
   if (compraNova) {
-    const leadCompleto = await env.DB.prepare(
-      'SELECT email, whatsapp, ip, user_agent, atribuicao FROM leads WHERE id = ?'
-    ).bind(leadId).first();
-    await enviarCompraParaMeta(env, { lead: leadCompleto, d, valor, produto, transacaoId });
+    try {
+      const leadCompleto = await env.DB.prepare('SELECT * FROM leads WHERE id = ?').bind(leadId).first();
+      const sessao = trk ? await env.DB.prepare('SELECT * FROM sessoes WHERE trk = ?').bind(trk).first() : null;
+      const userData = await montarUserData({ lead: leadCompleto, sessao });
+
+      await enviarEventoMeta(env, {
+        eventName: 'Purchase',
+        eventId: `eduzz-${transacaoId}`,
+        eventTime: Math.floor(new Date(quando).getTime() / 1000),
+        eventSourceUrl: 'https://oimpulsoempresarial.com.br/',
+        userData,
+        customData: {
+          currency: d.price?.paid?.currency || d.price?.currency || 'BRL',
+          value: valor,
+          content_name: produto || undefined,
+          content_type: 'product',
+          order_id: transacaoId,
+        },
+      });
+    } catch (e) {
+      console.log('[eduzz-webhook] erro ao montar/enviar evento Meta', String(e));
+    }
   }
 
   return json({ ok: true, lead_id: leadId });

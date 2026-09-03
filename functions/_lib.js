@@ -154,3 +154,115 @@ export function renderizar(texto, lead) {
     .replaceAll('{{nome}}', lead.nome || '')
     .replaceAll('{{primeiro_nome}}', primeiro);
 }
+
+// -------------------------------------------------------- Meta Conversions API
+// Compartilhado por functions/api/lead.js (evento Lead) e
+// functions/api/webhook/eduzz.js (evento Purchase) — os dois precisam do
+// mesmo hash, do mesmo envio pro Graph API, e do mesmo user_data enriquecido
+// por lead + sessão. Ver a skill `meta-capi-tracking` (Skill tool) para o
+// desenho completo e como replicar isto em outro projeto.
+
+export async function sha256Hex(texto) {
+  const buf = await crypto.subtle.digest('SHA-256', enc.encode(texto));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * fn/ln: o Meta quer nome e sobrenome separados, e o formulário só pede um
+ * campo "nome". Heurística padrão de mercado — primeira palavra é o nome,
+ * o resto é o sobrenome; imperfeita pra nome composto, mas é o que a
+ * maioria das integrações faz (inclusive a Meta não documenta nada melhor).
+ */
+export function separarNome(nomeCompleto) {
+  const partes = String(nomeCompleto || '').trim().split(/\s+/).filter(Boolean);
+  return { fn: partes[0] || '', ln: partes.slice(1).join(' ') };
+}
+
+/**
+ * Normalização best-effort pra ct/st/zp/country, seguindo a orientação geral
+ * do Meta (minúsculo, sem espaço, sem pontuação) — a doc oficial não detalha
+ * regra própria pra cada país. Se um dia notar que cidade/estado não está
+ * ajudando a qualidade de correspondência, esta é a função a revisar
+ * primeiro contra o guia de hash mais atual do Meta.
+ */
+export function normalizarTextoMeta(v) {
+  return String(v || '')
+    .toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '') // tira acento (ã -> a~ -> a)
+    .replace(/[^a-z0-9]/g, '');
+}
+
+/**
+ * Monta o user_data do Meta CAPI a partir de uma linha de `leads` e (se
+ * achada) a `sessoes` correspondente pelo `trk`. `sessao` tem prioridade
+ * pros campos que ela cobre (fbp/fbc/ip/user_agent/geo) — foi capturada na
+ * borda (functions/_middleware.js), mais confiável do que o que o
+ * navegador reportou no corpo de um POST.
+ */
+export async function montarUserData({ lead, sessao }) {
+  const userData = {};
+
+  if (lead?.email) userData.em = [await sha256Hex(String(lead.email).trim().toLowerCase())];
+  if (lead?.whatsapp) userData.ph = [await sha256Hex(lead.whatsapp)]; // ja' E.164 sem '+'
+
+  const { fn, ln } = separarNome(lead?.nome);
+  if (fn) userData.fn = [await sha256Hex(normalizarTextoMeta(fn))];
+  if (ln) userData.ln = [await sha256Hex(normalizarTextoMeta(ln))];
+
+  const trk = lead?.trk || sessao?.trk;
+  if (trk) userData.external_id = [await sha256Hex(trk)];
+
+  if (sessao?.fbp) userData.fbp = sessao.fbp;
+  if (sessao?.fbc) userData.fbc = sessao.fbc;
+
+  const ip = sessao?.ip || lead?.ip;
+  const ua = sessao?.user_agent || lead?.user_agent;
+  if (ip) userData.client_ip_address = ip;
+  if (ua) userData.client_user_agent = ua;
+
+  if (sessao?.cidade) userData.ct = [await sha256Hex(normalizarTextoMeta(sessao.cidade))];
+  if (sessao?.estado) userData.st = [await sha256Hex(normalizarTextoMeta(sessao.estado))];
+  if (sessao?.cep)    userData.zp = [await sha256Hex(normalizarTextoMeta(sessao.cep))];
+  if (sessao?.pais)   userData.country = [await sha256Hex(normalizarTextoMeta(sessao.pais))];
+
+  return userData;
+}
+
+/**
+ * Dispara um evento pro Meta Conversions API. Nunca lança — uma falha aqui
+ * não pode derrubar o fluxo que a chamou (cadastro do lead, registro da
+ * compra). test_event_code (env.META_TEST_EVENT_CODE) só deve existir
+ * enquanto alguém estiver testando pelo "Testar Eventos" do Gerenciador —
+ * se ficar setada em uso normal, todo evento real vira teste pra sempre e
+ * some da otimização das campanhas.
+ */
+export async function enviarEventoMeta(env, { eventName, eventId, eventTime, eventSourceUrl, userData, customData, actionSource = 'website' }) {
+  if (!env.META_CAPI_TOKEN || !env.META_PIXEL_ID) {
+    console.log(`[meta-capi] ${eventName} nao configurado (falta token ou pixel id)`);
+    return;
+  }
+
+  const evento = {
+    event_name: eventName,
+    event_time: eventTime ?? Math.floor(Date.now() / 1000),
+    event_id: eventId,
+    action_source: actionSource,
+    event_source_url: eventSourceUrl,
+    user_data: userData,
+    custom_data: customData,
+  };
+
+  const corpoEnvio = { data: [evento] };
+  if (env.META_TEST_EVENT_CODE) corpoEnvio.test_event_code = env.META_TEST_EVENT_CODE;
+
+  try {
+    const r = await fetch(
+      `https://graph.facebook.com/v21.0/${env.META_PIXEL_ID}/events?access_token=${env.META_CAPI_TOKEN}`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpoEnvio) }
+    );
+    const corpo = await r.text();
+    console.log(`[meta-capi] ${eventName}`, r.status, corpo.slice(0, 500));
+  } catch (e) {
+    console.log(`[meta-capi] ${eventName} erro de rede`, String(e));
+  }
+}

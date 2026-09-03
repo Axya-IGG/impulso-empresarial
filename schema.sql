@@ -13,9 +13,10 @@
 -- e e nele que esta o UNIQUE. Guardamos normalizado em E.164 sem o '+'
 -- (5512997205261) para que "(12) 99720-5261" e "+55 12 99720-5261" nao
 -- virem dois leads e duas sequencias de mensagem para a mesma pessoa.
--- atribuicao: JSON com utm_* e fbp/fbc do momento do cadastro, usado para
--- disparar o evento de Compra pra Conversions API do Meta quando a Eduzz
--- confirmar a venda (ver migrations/003_atribuicao.sql).
+-- atribuicao: JSON com utm_* e fbp/fbc do momento do cadastro — caminho de
+-- reserva, usado só quando não há sessão em `sessoes` (cookie bloqueado ou
+-- lead anterior à migration 004). trk: aponta pra sessoes.trk; é o que
+-- deixa o webhook da Eduzz casar a compra com o lead sem ambiguidade.
 CREATE TABLE IF NOT EXISTS leads (
   id            TEXT PRIMARY KEY,
   nome          TEXT NOT NULL,
@@ -27,10 +28,35 @@ CREATE TABLE IF NOT EXISTS leads (
   criado_em     TEXT NOT NULL,
   optout        INTEGER NOT NULL DEFAULT 0,
   optout_em     TEXT,
-  atribuicao    TEXT
+  atribuicao    TEXT,
+  trk           TEXT
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_leads_whatsapp ON leads(whatsapp);
 CREATE INDEX IF NOT EXISTS idx_leads_criado ON leads(criado_em);
+
+-- ---------------------------------------------------------------- sessoes
+-- Uma linha por sessão de navegador (cookie `trk`, 400 dias) — sobrevive
+-- ao Safari (ITP apaga localStorage após alguns dias, sem aviso nenhum).
+-- Geolocalização vem de `request.cf`, que o Cloudflare já calcula em toda
+-- requisição, sem precisar perguntar nada pro visitante.
+CREATE TABLE IF NOT EXISTS sessoes (
+  trk           TEXT PRIMARY KEY,
+  fbp           TEXT,
+  fbc           TEXT,
+  ip            TEXT,
+  user_agent    TEXT,
+  cidade        TEXT,
+  estado        TEXT,
+  cep           TEXT,
+  pais          TEXT,
+  utm_source    TEXT,
+  utm_medium    TEXT,
+  utm_campaign  TEXT,
+  utm_content   TEXT,
+  utm_term      TEXT,
+  criado_em     TEXT NOT NULL,
+  atualizado_em TEXT NOT NULL
+);
 
 -- ------------------------------------------------------------ mensagens
 -- Dois tipos, porque os disparos tem naturezas diferentes:

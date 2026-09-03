@@ -71,11 +71,13 @@ if (countdownCfg) {
   setInterval(updateCountdown, 1000);
 }
 
-// === ATRIBUIÇÃO (UTM + Meta Pixel) ===
-// Captura no primeiro carregamento e guarda até o cadastro (que pode
-// acontecer minutos ou páginas depois) e até o clique de checkout, que
-// carrega os mesmos parâmetros pro link da Eduzz — ela devolve o que
-// mandamos em `data.utm` no webhook (confirmado em 03/09 com payload real).
+// === ATRIBUIÇÃO (UTM + Meta Pixel) — CAMINHO DE RESERVA ===
+// Desde a migration 004, quem faz a captura de verdade é a borda
+// (functions/_middleware.js): cookie de 400 dias, sobrevive ao Safari
+// (ITP apaga localStorage depois de alguns dias sem visita, sem avisar em
+// lugar nenhum) e decora o link de checkout direto no HTML de saída — não
+// depende de este script rodar a tempo. O que sobra aqui só serve de
+// reforço no corpo do POST /api/lead, pro caso raro de cookie bloqueado.
 const ATRIBUICAO_KEY = 'impulso_atribuicao';
 const CAMPOS_UTM = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
 
@@ -101,11 +103,9 @@ function capturarAtribuicao() {
   return daUrl;
 }
 
-// Roda uma vez, no carregamento da página: é o que de fato grava um UTM
-// novo no localStorage. Sem isto, `comUtm()` (usada logo abaixo, na
-// montagem do destino de cada CTA) leria um localStorage que ninguém
-// nunca escreveu — a função só existiria, nunca seria efetivamente
-// chamada a tempo de decorar o primeiro clique.
+// Roda uma vez, no carregamento da página, só para manter o localStorage
+// atualizado como reserva — o link de checkout já chega decorado pela
+// borda, não depende mais deste valor.
 capturarAtribuicao();
 
 const lerCookie = (nome) => {
@@ -118,17 +118,6 @@ const lerCookie = (nome) => {
 // cookie no momento do cadastro é sempre mais atual do que uma cópia salva.
 function dadosDeAtribuicaoAtuais() {
   return { ...capturarAtribuicao(), fbp: lerCookie('_fbp'), fbc: lerCookie('_fbc') };
-}
-
-// Anexa os UTMs salvos num link de checkout, preservando o que já houver
-// na URL. Usada uma vez, na montagem do destino de cada CTA (abaixo).
-function comUtm(url) {
-  if (!url) return url;
-  const utms = lerAtribuicaoSalva();
-  const qs = new URLSearchParams();
-  CAMPOS_UTM.forEach(k => { if (utms[k]) qs.set(k, utms[k]); });
-  const query = qs.toString();
-  return query ? url + (url.includes('?') ? '&' : '?') + query : url;
 }
 
 // === CHECKOUT E LISTA DE ESPERA ===
@@ -145,10 +134,13 @@ const abremEm       = countdownCfg?.vendas_abrem ? new Date(countdownCfg.vendas_
 const emEspera = () => Boolean(abremEm) && Date.now() < abremEm;
 
 // O destino tem de ser guardado antes da primeira pintura: o
-// removeAttribute('href') apagaria o unico lugar onde ele existe. Já sai
-// com os UTMs anexados, então tanto o clique direto (quem já se cadastrou
-// antes) quanto o redirecionamento pós-popup carregam a mesma origem.
-CTAS_CHECKOUT.forEach(a => { a.dataset.destino = comUtm(a.getAttribute('href') || ''); });
+// removeAttribute('href') apagaria o unico lugar onde ele existe. Já chega
+// decorado com ?trk=...&utm_*=... — quem faz isso é a borda
+// (functions/_middleware.js, via HTMLRewriter), não este script. Assim
+// tanto o clique direto (quem já se cadastrou antes) quanto o
+// redirecionamento pós-popup carregam a mesma origem, e não depende de JS
+// ter rodado a tempo (foi exatamente isso que já deu bug uma vez aqui).
+CTAS_CHECKOUT.forEach(a => { a.dataset.destino = a.getAttribute('href') || ''; });
 
 function pintarCheckout() {
   const espera = emEspera();
@@ -307,6 +299,11 @@ if (modal && formLead) {
     const dados = Object.fromEntries(new FormData(formLead));
     dados.origem = origemPendente;
     dados.atribuicao = JSON.stringify(dadosDeAtribuicaoAtuais());
+    // Mesmo event_id no Pixel (abaixo) e no evento de servidor que
+    // /api/lead dispara — é assim que o Meta sabe que as duas fontes são
+    // o mesmo Lead e conta uma vez só, em vez de duas.
+    dados.event_id = crypto.randomUUID();
+    dados.event_source_url = window.location.href;
 
     erroLead.hidden = true;
     botaoLead.disabled = true;
@@ -323,7 +320,7 @@ if (modal && formLead) {
       if (!r.ok) throw new Error(corpo.erro || 'Não foi possível enviar.');
 
       marcarCadastrado();
-      if (typeof fbq === 'function') fbq('track', 'Lead');
+      if (typeof fbq === 'function') fbq('track', 'Lead', {}, { eventID: dados.event_id });
 
       if (modoPendente === 'espera') {
         mostrarSucesso(cfgEspera.sucesso || 'Pronto, você está na lista!');
