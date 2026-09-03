@@ -107,10 +107,17 @@ async function enviarCompraParaMeta(env, { lead, d, valor, produto, transacaoId 
     },
   };
 
+  // META_TEST_EVENT_CODE so' existe enquanto alguem estiver testando pelo
+  // "Testar Eventos" do Gerenciador — com ela presente, o evento marca como
+  // teste e nunca entra na otimizacao real das campanhas. Nao configurada
+  // em uso normal: precisa ficar assim, ou toda compra real vira teste.
+  const corpoEnvio = { data: [evento] };
+  if (env.META_TEST_EVENT_CODE) corpoEnvio.test_event_code = env.META_TEST_EVENT_CODE;
+
   try {
     const r = await fetch(
       `https://graph.facebook.com/v21.0/${env.META_PIXEL_ID}/events?access_token=${env.META_CAPI_TOKEN}`,
-      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: [evento] }) }
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpoEnvio) }
     );
     const corpo = await r.text();
     console.log('[meta-capi]', r.status, corpo.slice(0, 500));
