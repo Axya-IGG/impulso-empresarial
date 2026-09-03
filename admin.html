@@ -57,6 +57,11 @@
 
       <div class="barra">
         <input type="search" id="busca-leads" placeholder="Buscar por nome, e-mail ou WhatsApp..." />
+        <select id="filtro-comprou">
+          <option value="">Todos</option>
+          <option value="1">Só compradores</option>
+          <option value="0">Só não-compradores</option>
+        </select>
         <button type="button" class="btn btn-primario" id="btn-novo-lead">+ Adicionar lead</button>
         <a class="btn btn-secundario" href="/api/admin/leads?formato=csv">Exportar CSV</a>
       </div>
@@ -66,7 +71,7 @@
           <thead>
             <tr>
               <th>Nome</th><th>E-mail</th><th>WhatsApp</th>
-              <th>Origem</th><th>Cadastro</th><th></th>
+              <th>Origem</th><th>Cadastro</th><th>Comprou</th><th></th>
             </tr>
           </thead>
           <tbody id="corpo-leads"></tbody>
@@ -118,9 +123,18 @@
       </label>
 
       <label>
+        <span>Público</span>
+        <select name="publico" id="campo-publico">
+          <option value="todos">Todos os leads</option>
+          <option value="compradores">Só quem já comprou</option>
+          <option value="nao_compradores">Só quem ainda não comprou</option>
+        </select>
+      </label>
+
+      <label>
         <span>Quando enviar</span>
         <select name="tipo" id="campo-tipo">
-          <option value="atraso">Tempo após o cadastro do lead</option>
+          <option value="atraso" id="opcao-atraso-cadastro">Tempo após o cadastro do lead</option>
           <option value="data">Data e hora fixas (para toda a base)</option>
         </select>
       </label>
@@ -152,6 +166,10 @@
       </label>
       <p class="dica">
         Use <code>{{primeiro_nome}}</code> ou <code>{{nome}}</code> para personalizar.
+        Para variar o texto entre os envios (recomendado — texto idêntico em
+        massa é um dos sinais que levam o número a cair), separe versões
+        alternativas com uma linha só de <code>---</code>; uma é sorteada a
+        cada disparo.
       </p>
 
       <label class="check-inline">
@@ -195,6 +213,11 @@
       <label>
         <span>Origem <small>(opcional)</small></span>
         <input type="text" name="origem" placeholder="Ex.: telefone, presencial..." autocomplete="off" />
+      </label>
+
+      <label class="check-inline">
+        <input type="checkbox" name="comprou" />
+        <span>Já comprou o ingresso</span>
       </label>
 
       <p class="alerta alerta-erro" id="lead-manual-erro" role="alert" hidden></p>

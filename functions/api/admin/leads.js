@@ -12,14 +12,16 @@ export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
 
   if (url.searchParams.get('formato') === 'csv') {
-    const { results } = await env.DB.prepare(
-      `SELECT nome, email, whatsapp, origem, criado_em, optout
-         FROM leads ORDER BY criado_em DESC`
-    ).all();
+    const { results } = await env.DB.prepare(`
+      SELECT l.nome, l.email, l.whatsapp, l.origem, l.criado_em, l.optout,
+        EXISTS(SELECT 1 FROM compras c WHERE c.lead_id = l.id AND c.status = 'aprovada') AS comprou
+      FROM leads l ORDER BY l.criado_em DESC
+    `).all();
 
-    const cab = ['Nome', 'E-mail', 'WhatsApp', 'Origem', 'Cadastro', 'Descadastrado'];
+    const cab = ['Nome', 'E-mail', 'WhatsApp', 'Origem', 'Cadastro', 'Descadastrado', 'Comprou'];
     const linhas = (results || []).map(l => [
       l.nome, l.email, l.whatsapp, l.origem || '', l.criado_em, l.optout ? 'sim' : 'nao',
+      l.comprou ? 'sim' : 'nao',
     ].map(csvCampo).join(','));
 
     // BOM: sem ele o Excel no Windows abre o arquivo em ANSI e quebra os acentos.
@@ -34,19 +36,32 @@ export async function onRequestGet({ request, env }) {
   const busca = (url.searchParams.get('busca') || '').trim();
   const like = `%${busca}%`;
 
-  const { results } = busca
-    ? await env.DB.prepare(
-        `SELECT * FROM leads
-          WHERE nome LIKE ? OR email LIKE ? OR whatsapp LIKE ?
-          ORDER BY criado_em DESC LIMIT 500`
-      ).bind(like, like, like).all()
-    : await env.DB.prepare('SELECT * FROM leads ORDER BY criado_em DESC LIMIT 500').all();
+  // 'comprou' filtra a lista por quem tem (ou nao tem) alguma compra
+  // aprovada — a mesma logica de "publico" que as mensagens usam pra mirar
+  // o disparo, exposta aqui pra dar pra olhar a lista antes de disparar
+  // qualquer coisa.
+  const filtroComprou = url.searchParams.get('comprou');
+  const condComprou =
+    filtroComprou === '1' ? "AND EXISTS(SELECT 1 FROM compras c WHERE c.lead_id = l.id AND c.status = 'aprovada')" :
+    filtroComprou === '0' ? "AND NOT EXISTS(SELECT 1 FROM compras c WHERE c.lead_id = l.id AND c.status = 'aprovada')" :
+    '';
+
+  const sql = `
+    SELECT l.*,
+      EXISTS(SELECT 1 FROM compras c WHERE c.lead_id = l.id AND c.status = 'aprovada') AS comprou
+    FROM leads l
+    WHERE (l.nome LIKE ? OR l.email LIKE ? OR l.whatsapp LIKE ?)
+    ${condComprou}
+    ORDER BY l.criado_em DESC LIMIT 500
+  `;
+  const { results } = await env.DB.prepare(sql).bind(like, like, like).all();
 
   const estat = await env.DB.prepare(`
     SELECT
       (SELECT COUNT(*) FROM leads) AS total,
       (SELECT COUNT(*) FROM leads WHERE optout = 1) AS descadastrados,
       (SELECT COUNT(*) FROM leads WHERE criado_em > datetime('now','-1 day')) AS ultimas24h,
+      (SELECT COUNT(DISTINCT lead_id) FROM compras WHERE status = 'aprovada') AS compradores,
       (SELECT COUNT(*) FROM envios WHERE status = 'enviado') AS enviados,
       (SELECT COUNT(*) FROM envios WHERE status = 'erro') AS erros
   `).first();
@@ -78,10 +93,17 @@ export async function onRequestPost({ request, env }) {
   if (existente) return erro('Já existe um lead com esse WhatsApp.', 409);
 
   const id = crypto.randomUUID();
+  const quando = agora();
   await env.DB.prepare(`
     INSERT INTO leads (id, nome, email, whatsapp, origem, criado_em)
     VALUES (?, ?, ?, ?, ?, ?)
-  `).bind(id, nome, email, whatsapp, origem, agora()).run();
+  `).bind(id, nome, email, whatsapp, origem, quando).run();
+
+  if (corpo?.comprou) {
+    await env.DB.prepare(`
+      INSERT INTO compras (lead_id, status, origem, criado_em) VALUES (?, 'aprovada', 'manual', ?)
+    `).bind(id, quando).run();
+  }
 
   return json({ ok: true, id }, 201);
 }

@@ -40,11 +40,15 @@ export function validar(corpo) {
     enviarEm = d.toISOString();
   }
 
+  const publicosValidos = ['todos', 'compradores', 'nao_compradores'];
+  const publico = publicosValidos.includes(corpo?.publico) ? corpo.publico : 'todos';
+
   return [{
     titulo, texto, tipo,
     atraso_minutos: atraso,
     enviar_em: enviarEm,
     ativo: corpo?.ativo === false ? 0 : 1,
+    publico,
   }, null];
 }
 
@@ -57,9 +61,9 @@ export async function onRequestPost({ request, env }) {
 
   const quando = agora();
   const r = await env.DB.prepare(`
-    INSERT INTO mensagens (titulo, texto, tipo, atraso_minutos, enviar_em, ativo, criado_em, atualizado_em)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `).bind(d.titulo, d.texto, d.tipo, d.atraso_minutos, d.enviar_em, d.ativo, quando, quando).run();
+    INSERT INTO mensagens (titulo, texto, tipo, atraso_minutos, enviar_em, ativo, publico, criado_em, atualizado_em)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).bind(d.titulo, d.texto, d.tipo, d.atraso_minutos, d.enviar_em, d.ativo, d.publico, quando, quando).run();
 
   return json({ ok: true, id: r.meta.last_row_id });
 }

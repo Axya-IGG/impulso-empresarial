@@ -1,4 +1,4 @@
-import { json, erro, normalizarWhatsapp, enviarWhatsapp, renderizar } from '../../_lib.js';
+import { json, erro, normalizarWhatsapp, enviarWhatsapp, renderizar, escolherVariante } from '../../_lib.js';
 
 /**
  * Dispara uma mensagem avulsa para um numero escolhido, sem gravar em
@@ -16,7 +16,7 @@ export async function onRequestPost({ request, env }) {
   if (!texto) return erro('Escreva o texto da mensagem.');
 
   const nome = String(corpo?.nome || 'Teste').trim();
-  const r = await enviarWhatsapp(env, numero, renderizar(texto, { nome }));
+  const r = await enviarWhatsapp(env, numero, renderizar(escolherVariante(texto), { nome }));
 
   // 422 e nao 502: a Cloudflare substitui respostas 502 vindas de uma
   // Function pela propria pagina de erro dela, e a mensagem da Evolution

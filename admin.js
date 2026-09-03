@@ -105,13 +105,18 @@ $('#busca-leads').addEventListener('input', () => {
   clearTimeout(buscaTimer);
   buscaTimer = setTimeout(carregarLeads, 300);
 });
+$('#filtro-comprou').addEventListener('change', carregarLeads);
 
 async function carregarLeads() {
   const busca = $('#busca-leads').value.trim();
-  const { leads, estat } = await api(`/api/admin/leads?busca=${encodeURIComponent(busca)}`);
+  const comprou = $('#filtro-comprou').value;
+  const qs = new URLSearchParams({ busca });
+  if (comprou) qs.set('comprou', comprou);
+  const { leads, estat } = await api(`/api/admin/leads?${qs}`);
 
   $('#cards-estat').innerHTML = [
     ['Leads', estat.total],
+    ['Compradores', estat.compradores],
     ['Últimas 24h', estat.ultimas24h],
     ['Mensagens enviadas', estat.enviados],
     ['Falhas de envio', estat.erros],
@@ -126,24 +131,38 @@ async function carregarLeads() {
           <td>${esc(telBR(l.whatsapp))}</td>
           <td>${esc(l.origem || '—')}</td>
           <td>${esc(dataBR(l.criado_em))}</td>
+          <td>${l.comprou ? '<span class="selo selo-ok">comprou</span>' : '—'}</td>
           <td>
+            <button class="btn-mini" data-comprou="${esc(l.id)}" data-valor="${l.comprou ? 0 : 1}">
+              ${l.comprou ? 'Desmarcar compra' : 'Marcar como comprador'}
+            </button>
             <button class="btn-mini" data-optout="${esc(l.id)}" data-valor="${l.optout ? 0 : 1}">
               ${l.optout ? 'Reativar' : 'Descadastrar'}
             </button>
             <button class="btn-mini perigo" data-excluir-lead="${esc(l.id)}">Excluir</button>
           </td>
         </tr>`).join('')
-    : '<tr><td colspan="6" class="vazio">Nenhum lead ainda.</td></tr>';
+    : '<tr><td colspan="7" class="vazio">Nenhum lead ainda.</td></tr>';
 }
 
 $('#corpo-leads').addEventListener('click', async e => {
   const btOptout = e.target.closest('[data-optout]');
+  const btComprou = e.target.closest('[data-comprou]');
   const btExcluir = e.target.closest('[data-excluir-lead]');
 
   if (btOptout) {
     await api(`/api/admin/leads/${btOptout.dataset.optout}`, {
       method: 'PATCH',
       body: JSON.stringify({ optout: btOptout.dataset.valor === '1' }),
+    });
+    toast('Lead atualizado.');
+    carregarLeads();
+  }
+
+  if (btComprou) {
+    await api(`/api/admin/leads/${btComprou.dataset.comprou}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ comprou: btComprou.dataset.valor === '1' }),
     });
     toast('Lead atualizado.');
     carregarLeads();
@@ -182,6 +201,7 @@ formLeadManual.addEventListener('submit', async e => {
         email: formLeadManual.email.value,
         whatsapp: formLeadManual.whatsapp.value,
         origem: formLeadManual.origem.value,
+        comprou: formLeadManual.comprou.checked,
       }),
     });
     fecharModais();
@@ -198,13 +218,22 @@ formLeadManual.addEventListener('submit', async e => {
 // ----------------------------------------------------------- mensagens
 $('#ver-arquivadas').addEventListener('change', carregarMensagens);
 
+const PUBLICOS = {
+  todos: 'Todos os leads',
+  compradores: 'Só quem comprou',
+  nao_compradores: 'Só quem não comprou',
+};
+
 function descreverQuando(m) {
   if (m.tipo === 'data') return `Em ${dataBR(m.enviar_em)}`;
+  // Mensagem de comprador conta o prazo a partir da compra, não do
+  // cadastro — mesma regra do worker (montarFila), só descrita em texto.
+  const ancora = m.publico === 'compradores' ? 'a compra' : 'o cadastro';
   const min = m.atraso_minutos;
-  if (min === 0) return 'Imediatamente após o cadastro';
-  if (min % 1440 === 0) return `${min / 1440} dia(s) após o cadastro`;
-  if (min % 60 === 0) return `${min / 60} hora(s) após o cadastro`;
-  return `${min} minuto(s) após o cadastro`;
+  if (min === 0) return `Imediatamente após ${ancora}`;
+  if (min % 1440 === 0) return `${min / 1440} dia(s) após ${ancora}`;
+  if (min % 60 === 0) return `${min / 60} hora(s) após ${ancora}`;
+  return `${min} minuto(s) após ${ancora}`;
 }
 
 async function carregarMensagens() {
@@ -219,7 +248,9 @@ async function carregarMensagens() {
               <h3>${esc(m.titulo)}</h3>
               <span class="selo ${m.ativo ? 'selo-ok' : 'selo-off'}">${m.ativo ? 'ativa' : 'pausada'}</span>
             </div>
-            <div class="msg-quando">${esc(descreverQuando(m))}</div>
+            <div class="msg-quando">
+              ${esc(descreverQuando(m))} · ${esc(PUBLICOS[m.publico] || PUBLICOS.todos)}
+            </div>
             <div class="msg-texto">${esc(m.texto)}</div>
             <div class="msg-stats">${m.enviados || 0} enviadas · ${m.erros || 0} falhas</div>
           </div>
@@ -276,6 +307,15 @@ $('#campo-tipo').addEventListener('change', e => {
   $('#bloco-data').hidden = e.target.value !== 'data';
 });
 
+// O rótulo do "atraso" muda com o público: para quem já comprou, o prazo
+// conta a partir da compra, não do cadastro (é assim que o worker calcula
+// — ver montarFila em worker-remarketing/src/index.js). Sem isso o painel
+// diria uma coisa e o envio real faria outra.
+$('#campo-publico').addEventListener('change', e => {
+  $('#opcao-atraso-cadastro').textContent =
+    e.target.value === 'compradores' ? 'Tempo após a compra' : 'Tempo após o cadastro do lead';
+});
+
 /** Divide os minutos na maior unidade inteira, para o formulário reabrir
  *  mostrando "2 dias" em vez de "2880 minutos". */
 function decompor(min) {
@@ -293,7 +333,9 @@ function abrirModalMensagem(m) {
   formMsg.titulo.value = m?.titulo || '';
   formMsg.texto.value = m?.texto || '';
   formMsg.tipo.value = m?.tipo || 'atraso';
+  formMsg.publico.value = m?.publico || 'todos';
   formMsg.ativo.checked = m ? !!m.ativo : true;
+  $('#campo-publico').dispatchEvent(new Event('change'));
 
   const [valor, unidade] = decompor(m?.atraso_minutos);
   formMsg.atraso_valor.value = m?.tipo === 'data' ? 10 : valor;
@@ -324,6 +366,7 @@ formMsg.addEventListener('submit', async e => {
     titulo: formMsg.titulo.value,
     texto: formMsg.texto.value,
     tipo: formMsg.tipo.value,
+    publico: formMsg.publico.value,
     ativo: formMsg.ativo.checked,
   };
 

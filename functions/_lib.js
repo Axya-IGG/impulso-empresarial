@@ -131,6 +131,19 @@ export async function enviarWhatsapp(env, numero, texto) {
 }
 
 /**
+ * Mensagens podem trazer variações de texto separadas por uma linha só com
+ * "---", para não mandar o mesmo texto idêntico pra todo mundo — texto
+ * idêntico em massa é um dos sinais que fazem o WhatsApp suspeitar de
+ * automação numa API não-oficial. Sorteia uma variação por envio; sem
+ * separador, o texto inteiro é a única variação (comportamento de sempre).
+ */
+export function escolherVariante(texto) {
+  const partes = String(texto || '').split(/\r?\n-{3,}\r?\n/).map(p => p.trim()).filter(Boolean);
+  if (partes.length <= 1) return String(texto || '');
+  return partes[Math.floor(Math.random() * partes.length)];
+}
+
+/**
  * Troca {{nome}} e {{primeiro_nome}} pelos dados do lead.
  * Sem isso as mensagens ficam impessoais e o WhatsApp trata melhor
  * conversas que parecem escritas para a pessoa.

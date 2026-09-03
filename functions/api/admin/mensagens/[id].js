@@ -40,9 +40,9 @@ export async function onRequestPatch({ params, request, env }) {
   const r = await env.DB.prepare(`
     UPDATE mensagens
        SET titulo = ?, texto = ?, tipo = ?, atraso_minutos = ?, enviar_em = ?,
-           ativo = ?, atualizado_em = ?
+           ativo = ?, publico = ?, atualizado_em = ?
      WHERE id = ?
-  `).bind(d.titulo, d.texto, d.tipo, d.atraso_minutos, d.enviar_em, d.ativo, agora(), params.id).run();
+  `).bind(d.titulo, d.texto, d.tipo, d.atraso_minutos, d.enviar_em, d.ativo, d.publico, agora(), params.id).run();
 
   if (!r.meta.changes) return erro('Mensagem nao encontrada.', 404);
   return json({ ok: true });
