@@ -104,7 +104,7 @@ label > span {
 }
 
 input[type=text], input[type=password], input[type=tel], input[type=search],
-input[type=number], input[type=datetime-local], select, textarea {
+input[type=email], input[type=number], input[type=datetime-local], select, textarea {
   font-family: var(--font);
   font-size: 15px;   /* 16px-ish: evita o zoom automático do Safari no iPhone */
   color: var(--text);
