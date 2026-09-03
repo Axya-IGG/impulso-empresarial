@@ -93,10 +93,19 @@ if ($missing.Count -gt 0) {
 #
 # Aqui o valor sai do hash do próprio conteúdo: muda sozinho quando o
 # arquivo muda, e continua igual quando não muda (preservando o cache).
+#
+# Mesma dor bateu em 03/09 numa imagem: assets/ tem cache de 7 dias
+# (`_headers`, sem "immutable" porque em geral são substituídas no lugar
+# sem hash), mas nada re-versionava a URL, então a borda seguiu servindo a
+# foto velha depois do deploy. Imagem que já trocou uma vez tende a trocar
+# de novo — por isso entram aqui também, não só CSS/JS. Para incluir uma
+# nova, é preciso os dois lados: `?v=algumacoisa` já presente no `src` do
+# HTML (o regex abaixo só troca um `?v=` que já existe, não cria um do
+# zero) e o caminho relativo a `public/` na lista abaixo.
 $semBom = New-Object System.Text.UTF8Encoding($false)
 $htmls  = @(Get-ChildItem -LiteralPath $StagePub -Filter *.html -File)
 
-foreach ($asset in @('style.css', 'script.js', 'admin.css', 'admin.js')) {
+foreach ($asset in @('style.css', 'script.js', 'admin.css', 'admin.js', 'assets/hero-realizadoras.jpg')) {
     $caminho = Join-Path $StagePub $asset
     if (-not (Test-Path -LiteralPath $caminho)) { continue }
 
