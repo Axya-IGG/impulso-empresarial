@@ -440,6 +440,25 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
 
   let raio = 0, rolagemUtil = 1, topoPx = 0, pos = -1;
 
+  // Um marco invisível por tópico, na altura de scroll em que aquele tópico
+  // fica centrado. Com o scroll-snap do CSS ligado no <html>, o navegador
+  // encosta a rolagem no marco mais próximo quando ela para — é o que faz o
+  // rolo parar SEMPRE com um tópico dentro da faixa, em vez de descansar no
+  // vão entre dois, como o seletor do iPhone faz quando o dedo solta.
+  // Deixo isso com o navegador em vez de reposicionar o scroll no braço:
+  // assim o encaixe espera a inércia do dedo acabar em vez de brigar com ela.
+  const marcos = itens.map(() => {
+    const m = document.createElement('div');
+    m.className = 'schedule-snap';
+    trilho.appendChild(m);
+    return m;
+  });
+
+  // O snap fica no <html> (o elemento que rola de verdade) e em modo
+  // 'proximity', que só age perto de um marco — fora do cronograma, onde não
+  // há marco nenhum, a página rola como sempre.
+  const encaixe = (ligado) => document.documentElement.classList.toggle('rolo-encaixa', ligado);
+
   function medir() {
     // A home nao tem header fixo (so' a pre-venda tinha), mas se um dia
     // ganhar um, o palco tem que grudar abaixo dele — nao atras.
@@ -462,8 +481,15 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
 
     // Quanto de scroll cada tópico consome. Mais curto no celular, onde o
     // mesmo gesto cobre menos pixels de página.
-    rolagemUtil = (itens.length - 1) * (ehMobile() ? 74 : 88);
+    const porItem = ehMobile() ? 74 : 88;
+    rolagemUtil = (itens.length - 1) * porItem;
     trilho.style.height = `${palco.offsetHeight + rolagemUtil}px`;
+
+    // O item i fica centrado quando `andado` vale i*porItem, ou seja quando o
+    // topo do trilho está em topoPx - i*porItem. Como o snap encosta o marco
+    // no topo da janela, o marco tem que morar em i*porItem - topoPx.
+    marcos.forEach((m, i) => { m.style.top = `${i * porItem - topoPx}px`; });
+    encaixe(true);
   }
 
   function desenhar() {
@@ -509,6 +535,9 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     ultimoY = e.clientY;
     janela.setPointerCapture(e.pointerId);
     janela.classList.add('is-dragging');
+    // Sem isso o snap tentaria encostar a cada empurrãozinho de scroll do
+    // arrasto e o rolo ficaria travando de tópico em tópico.
+    encaixe(false);
     e.preventDefault();
   });
   janela.addEventListener('pointermove', (e) => {
@@ -522,6 +551,10 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     arrastando = false;
     janela.classList.remove('is-dragging');
     try { janela.releasePointerCapture(e.pointerId); } catch { /* ponteiro já foi */ }
+    // Devolve o snap e dá um empurrão de 0px só para o navegador reavaliar:
+    // sem uma nova rolagem ele deixaria o rolo parado onde o arrasto soltou.
+    encaixe(true);
+    window.scrollBy({ top: 0, behavior: 'smooth' });
   };
   janela.addEventListener('pointerup', soltar);
   janela.addEventListener('pointercancel', soltar);
