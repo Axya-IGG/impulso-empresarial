@@ -101,6 +101,13 @@ function capturarAtribuicao() {
   return daUrl;
 }
 
+// Roda uma vez, no carregamento da página: é o que de fato grava um UTM
+// novo no localStorage. Sem isto, `comUtm()` (usada logo abaixo, na
+// montagem do destino de cada CTA) leria um localStorage que ninguém
+// nunca escreveu — a função só existiria, nunca seria efetivamente
+// chamada a tempo de decorar o primeiro clique.
+capturarAtribuicao();
+
 const lerCookie = (nome) => {
   const m = document.cookie.match(new RegExp('(?:^|; )' + nome + '=([^;]*)'));
   return m ? decodeURIComponent(m[1]) : '';
