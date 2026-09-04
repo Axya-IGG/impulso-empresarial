@@ -687,23 +687,11 @@ a { color: inherit; text-decoration: none; }
   --roda-item-h: 78px;
 }
 
-/* Encaixe do rolo — a classe da raiz é o JS que liga (e desliga durante o
-   arrasto com o mouse). 'proximity' e não 'mandatory' de propósito: mandatory
-   na raiz prenderia a rolagem da página inteira. Os marcos invisíveis ficam
-   dentro do trilho, um por tópico, posicionados pelo JS. */
-html.rolo-encaixa { scroll-snap-type: y proximity; }
-/* Os marcos medem a partir do topo do trilho, não da seção: sem este
-   position:relative eles cairiam na .section e o encaixe erraria pelos 80px
-   de padding dela. */
-.schedule-track.is-wheel { position: relative; }
-.schedule-snap {
-  position: absolute;
-  left: 0;
-  width: 1px;
-  height: 1px;
-  pointer-events: none;
-  scroll-snap-align: start;
-}
+/* O encaixe no tópico mais próximo (equivalente ao scroll-snap) é feito no
+   script.js, não em CSS: o scroll-snap-stop:always não segura um giro de
+   roda rápido no Chromium (testado — pulava o marco mais próximo e caía no
+   seguinte), então quem decide o destino final é o JS, a partir da posição
+   contínua real do scroll. */
 
 /* O palco gruda na tela logo abaixo do header e o trilho alto (altura vem do
    JS) é o que sobra de scroll para girar o rolo. */

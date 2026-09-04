@@ -416,12 +416,15 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
 // A seção prende na tela e o scroll gasto ali gira os tópicos como o seletor
 // de hora do despertador do iPhone.
 //
-// Por que dirigir pelo scroll da página em vez de capturar wheel/touch: no
+// A base é a posição do scroll da página, não wheel/touch capturados: no
 // celular "arrastar a tela" JA e' rolar, entao um mecanismo so' atende os
 // dois casos que o pedido cita, rolar para tras volta o rolo de graça, e nada
-// disso quebra teclado, barra de espaço, Home/End ou a busca do navegador —
-// que e' exatamente o que um sequestro de wheel quebraria. O rolo nao gira
-// infinito: comeca no primeiro topico centralizado e trava no ultimo.
+// disso quebra teclado, barra de espaço, Home/End ou a busca do navegador.
+// A unica excecao e' a roda do mouse, que ganha um tratamento a parte mais
+// abaixo (sem tocar em teclado nem em toque): sem ele, um giro comum de roda
+// manda mais pixel do que separa dois topicos e a rolagem pousava no topico
+// ERRADO. O rolo nao gira infinito: comeca no primeiro topico centralizado e
+// trava no ultimo.
 (function cronogramaEmRolo() {
   const trilho = document.getElementById('schedule-track');
   const roda   = document.getElementById('schedule-wheel');
@@ -438,26 +441,7 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
   const RAD = Math.PI / 180;
   const ehMobile = () => window.innerWidth <= 768;
 
-  let raio = 0, rolagemUtil = 1, topoPx = 0, pos = -1;
-
-  // Um marco invisível por tópico, na altura de scroll em que aquele tópico
-  // fica centrado. Com o scroll-snap do CSS ligado no <html>, o navegador
-  // encosta a rolagem no marco mais próximo quando ela para — é o que faz o
-  // rolo parar SEMPRE com um tópico dentro da faixa, em vez de descansar no
-  // vão entre dois, como o seletor do iPhone faz quando o dedo solta.
-  // Deixo isso com o navegador em vez de reposicionar o scroll no braço:
-  // assim o encaixe espera a inércia do dedo acabar em vez de brigar com ela.
-  const marcos = itens.map(() => {
-    const m = document.createElement('div');
-    m.className = 'schedule-snap';
-    trilho.appendChild(m);
-    return m;
-  });
-
-  // O snap fica no <html> (o elemento que rola de verdade) e em modo
-  // 'proximity', que só age perto de um marco — fora do cronograma, onde não
-  // há marco nenhum, a página rola como sempre.
-  const encaixe = (ligado) => document.documentElement.classList.toggle('rolo-encaixa', ligado);
+  let raio = 0, rolagemUtil = 1, topoPx = 0, pos = -1, porItemAtual = 88;
 
   function medir() {
     // A home nao tem header fixo (so' a pre-venda tinha), mas se um dia
@@ -481,15 +465,9 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
 
     // Quanto de scroll cada tópico consome. Mais curto no celular, onde o
     // mesmo gesto cobre menos pixels de página.
-    const porItem = ehMobile() ? 74 : 88;
-    rolagemUtil = (itens.length - 1) * porItem;
+    porItemAtual = ehMobile() ? 74 : 88;
+    rolagemUtil = (itens.length - 1) * porItemAtual;
     trilho.style.height = `${palco.offsetHeight + rolagemUtil}px`;
-
-    // O item i fica centrado quando `andado` vale i*porItem, ou seja quando o
-    // topo do trilho está em topoPx - i*porItem. Como o snap encosta o marco
-    // no topo da janela, o marco tem que morar em i*porItem - topoPx.
-    marcos.forEach((m, i) => { m.style.top = `${i * porItem - topoPx}px`; });
-    encaixe(true);
   }
 
   function desenhar() {
@@ -515,6 +493,7 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
 
     if (barra) barra.style.transform = `scaleX(${p})`;
     trilho.classList.toggle('ja-rolou', p > 0.02);
+    agendarEncaixe();
   }
 
   let pedido = 0;
@@ -522,6 +501,30 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     if (pedido) return;
     pedido = requestAnimationFrame(() => { pedido = 0; desenhar(); });
   };
+
+  // Encaixa no tópico mais próximo depois que a rolagem para de verdade.
+  // Tentei primeiro com scroll-snap-stop:always do CSS, mas o Chromium nao
+  // honra a promessa quando o delta de um giro de roda passa de meio passo —
+  // testado: um giro de 150px (comum num giro rapido) pulava direto pro
+  // SEGUNDO marco, ignorando o primeiro. Daqui em diante quem decide o
+  // destino sou eu: `pos` e' continuo e reflete o scroll de verdade, entao
+  // Math.round(pos) nunca erra por mais de meio item — nao importa o quao
+  // rapido ou longo foi o gesto que trouxe a rolagem ate' aqui.
+  let temporizadorEncaixe = null;
+  function agendarEncaixe() {
+    clearTimeout(temporizadorEncaixe);
+    temporizadorEncaixe = setTimeout(encaixarNoCentro, 140);
+  }
+  function encaixarNoCentro() {
+    if (arrastando) return; // dedo/mouse ainda preso: o soltar cuida disso
+    if (pos <= 0 || pos >= itens.length - 1) return; // pontas ja' sao exatas
+    const alvo = Math.round(pos);
+    const diferenca = alvo - pos;
+    if (Math.abs(diferenca) < 0.01) return;
+    // scrollBy, nao scrollTo: preserva a mesma logica de "quanto de pagina
+    // equivale a um topico" que desenhar() usa pra ler a posicao de volta.
+    window.scrollBy({ top: diferenca * porItemAtual, behavior: 'smooth' });
+  }
 
   // Arrastar o rolo com o mouse, como se pegasse no cilindro. Só mouse: no
   // toque, arrastar já rola a página, e roubar o gesto deixaria o dedo preso
@@ -535,9 +538,7 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     ultimoY = e.clientY;
     janela.setPointerCapture(e.pointerId);
     janela.classList.add('is-dragging');
-    // Sem isso o snap tentaria encostar a cada empurrãozinho de scroll do
-    // arrasto e o rolo ficaria travando de tópico em tópico.
-    encaixe(false);
+    clearTimeout(temporizadorEncaixe); // nao encaixa no meio do arrasto
     e.preventDefault();
   });
   janela.addEventListener('pointermove', (e) => {
@@ -551,13 +552,38 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     arrastando = false;
     janela.classList.remove('is-dragging');
     try { janela.releasePointerCapture(e.pointerId); } catch { /* ponteiro já foi */ }
-    // Devolve o snap e dá um empurrão de 0px só para o navegador reavaliar:
-    // sem uma nova rolagem ele deixaria o rolo parado onde o arrasto soltou.
-    encaixe(true);
-    window.scrollBy({ top: 0, behavior: 'smooth' });
+    encaixarNoCentro();
   };
   janela.addEventListener('pointerup', soltar);
   janela.addEventListener('pointercancel', soltar);
+
+  // === RODA DE MOUSE: um giro, um tópico — nunca dois ===
+  // Antes a roda só empurrava o scroll da página (como qualquer outra rolagem)
+  // e o encaixe corrigia pro tópico mais próximo de onde ela parasse. Isso é
+  // matematicamente correto, mas um giro comum de roda no Windows manda mais
+  // pixel do que os ~88px que separam dois tópicos — testado: um unico giro
+  // de 120 a 200px (nada fora do normal) já cai mais perto do SEGUNDO tópico
+  // que do primeiro, e o encaixe, corretamente, pousa aí. O resultado
+  // percebido é "pulou um".
+  //
+  // Pra roda especificamente, então, cada evento avança exatamente um tópico
+  // — não o tanto de pixel que o sistema mandou — e fica em cooldown até a
+  // rolagem programada assentar, pra um giro rápido (vários eventos em
+  // sequência) também avançar de um em um, nunca de dois. Só roda: arrastar
+  // com o mouse já tem o próprio tratamento acima, e no toque isso nem
+  // dispara (arrastar a tela já é rolar, do jeito que sempre foi).
+  let travadoAte = 0;
+  palco.addEventListener('wheel', (e) => {
+    const indiceAtual = Math.round(pos);
+    const indoParaFrente = e.deltaY > 0;
+    const podeAvancar = indoParaFrente ? indiceAtual < itens.length - 1 : indiceAtual > 0;
+    if (!podeAvancar) return; // nas pontas, deixa a pagina rolar pra fora da secao
+    e.preventDefault();
+    if (performance.now() < travadoAte) return;
+    travadoAte = performance.now() + 320;
+    clearTimeout(temporizadorEncaixe);
+    window.scrollBy({ top: (indoParaFrente ? 1 : -1) * porItemAtual, behavior: 'smooth' });
+  }, { passive: false });
 
   trilho.classList.add('is-wheel');
   medir();
