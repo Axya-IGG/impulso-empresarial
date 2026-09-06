@@ -397,6 +397,78 @@ if (socialVideo && socialPlayBtn) {
   });
 }
 
+// === GALERIA 1ª EDIÇÃO — LIGHTBOX ===
+// O carrossel duplica cada foto (loop sem emenda), então o índice de
+// navegação é montado pela primeira ocorrência de cada src — as cópias
+// (aria-hidden) abrem a mesma foto, só que sem entrar na leitura de tela.
+const galleryPhotos = Array.from(document.querySelectorAll('.gallery-photo'));
+
+if (galleryPhotos.length) {
+  const seen = new Map();
+  const items = [];
+
+  galleryPhotos.forEach(fig => {
+    const img = fig.querySelector('img');
+    const src = img.getAttribute('src');
+    if (!seen.has(src)) {
+      seen.set(src, items.length);
+      items.push({ src, alt: img.getAttribute('alt') || '' });
+    }
+    fig.dataset.galleryIndex = seen.get(src);
+
+    if (!fig.hasAttribute('aria-hidden')) {
+      fig.setAttribute('role', 'button');
+      fig.setAttribute('tabindex', '0');
+      fig.setAttribute('aria-label', 'Ampliar foto: ' + (img.getAttribute('alt') || ''));
+    }
+  });
+
+  const modal = document.createElement('div');
+  modal.className = 'gallery-lightbox';
+  modal.innerHTML = `
+    <button class="gallery-lightbox-close" type="button" aria-label="Fechar">&times;</button>
+    <button class="gallery-lightbox-nav gallery-lightbox-prev" type="button" aria-label="Foto anterior">&lsaquo;</button>
+    <img class="gallery-lightbox-img" src="" alt="" />
+    <button class="gallery-lightbox-nav gallery-lightbox-next" type="button" aria-label="Próxima foto">&rsaquo;</button>
+  `;
+  document.body.appendChild(modal);
+
+  const lbImg = modal.querySelector('.gallery-lightbox-img');
+  let current = 0;
+
+  function openGalleryAt(i) {
+    current = (i + items.length) % items.length;
+    lbImg.src = items[current].src;
+    lbImg.alt = items[current].alt;
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeGallery() {
+    modal.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  galleryPhotos.forEach(fig => {
+    const open = () => openGalleryAt(Number(fig.dataset.galleryIndex));
+    fig.addEventListener('click', open);
+    fig.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
+    });
+  });
+
+  modal.querySelector('.gallery-lightbox-close').addEventListener('click', closeGallery);
+  modal.querySelector('.gallery-lightbox-prev').addEventListener('click', () => openGalleryAt(current - 1));
+  modal.querySelector('.gallery-lightbox-next').addEventListener('click', () => openGalleryAt(current + 1));
+  modal.addEventListener('click', e => { if (e.target === modal) closeGallery(); });
+
+  document.addEventListener('keydown', e => {
+    if (!modal.classList.contains('open')) return;
+    if (e.key === 'Escape') closeGallery();
+    if (e.key === 'ArrowLeft') openGalleryAt(current - 1);
+    if (e.key === 'ArrowRight') openGalleryAt(current + 1);
+  });
+}
+
 // === SMOOTH SCROLL ===
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
   anchor.addEventListener('click', function(e) {
@@ -611,7 +683,7 @@ const revealObserver = new IntersectionObserver((entries) => {
 // do proprio carrossel ja cumpre o papel da entrada.
 document.querySelectorAll(
   '.card, .module-card, .testimonial-card, .ticket-card, ' +
-  '.schedule-item, .faq-item, .checklist-item, .brand-main-card, .sponsor-card'
+  '.schedule-item, .faq-item, .checklist-item, .brand-main-card, .sponsor-card, .gallery-photo'
 ).forEach(el => {
   el.classList.add('reveal-on-scroll');
   // Itens de uma mesma lista entram em cascata, e nao todos de uma vez. O
