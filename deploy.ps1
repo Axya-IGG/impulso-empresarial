@@ -38,7 +38,7 @@ $WranglerCfg = Join-Path $env:USERPROFILE '.wrangler-axya'
 $Files = @(
     'index.html', 'style.css', 'script.js',
     'admin.html', 'admin.css', 'admin.js',
-    '_headers', '_redirects', 'robots.txt', 'sitemap.xml',
+    '_headers', '_redirects', 'robots.txt', 'sitemap.xml', 'llms.txt',
     'favicon.ico', 'favicon-32.png', 'favicon-192.png', 'apple-touch-icon.png'
 )
 # assets/ = otimizados nesta máquina; images/ = fotos das palestrantes e logos
