@@ -1100,17 +1100,19 @@
   </div>
 </div>
 
-<!-- Duas fases: até a abertura das vendas em 09/09 o contador chama para
-     a data de estreia; a partir dali passa a contar para o evento. Datas no
+<!-- Vendas antecipadas em 07/09 (decisao de negocio, o plano original era
+     09/09) — a fase de lista de espera, que contava pra essa data, foi
+     retirada e o contador agora so mira o evento. vendas_abrem fica no
+     passado de proposito, em vez de apagar o campo: se um dia for preciso
+     reabrir a lista de espera, basta adiantar essa data outra vez. Datas no
      fuso de Brasília — o script converte. -->
 <script type="application/json" id="countdown-config">
 {
   "fases": [
-    { "ate": "2026-09-09T00:00:00-03:00", "label": "As vendas começam em:" },
     { "ate": "2026-10-10T08:30:00-03:00", "label": "O evento começa em:" }
   ],
   "encerrado": "O evento já começou",
-  "vendas_abrem": "2026-09-09T00:00:00-03:00",
+  "vendas_abrem": "2026-09-07T00:00:00-03:00",
   "espera": {
     "rotulo": "ENTRAR NA LISTA DE ESPERA",
     "nota": "Vendas a partir de 09/09 — avisamos você primeiro.",
