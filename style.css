@@ -134,7 +134,9 @@ a { color: inherit; text-decoration: none; }
 
 .btn-whatsapp {
   background: #25D366;
-  color: var(--white);
+  /* Branco sobre este verde dá só 1.75:1 de contraste (falha WCAG AA, que
+     pede 4.5:1) — navy sobre o mesmo verde dá 8.56:1. */
+  color: var(--navy);
   padding: 14px 28px;
   font-family: var(--font-heading);
   font-weight: 700;
@@ -651,7 +653,7 @@ a { color: inherit; text-decoration: none; }
   border: 2px solid var(--dark);
 }
 
-.schedule-content h4 {
+.schedule-content h3 {
   font-family: var(--font-heading);
   font-size: 15px;
   font-weight: 700;
@@ -660,19 +662,19 @@ a { color: inherit; text-decoration: none; }
 }
 .schedule-content p { font-size: 13px; color: var(--text-muted); }
 /* Itens da prévia só têm o título: sem descrição abaixo, a margem sobra. */
-.schedule-content h4:last-child { margin-bottom: 0; }
+.schedule-content h3:last-child { margin-bottom: 0; }
 
 .schedule-break .schedule-content {
   background: rgba(163,185,198,0.07);
   border-color: rgba(163,185,198,0.25);
 }
-.schedule-break .schedule-content h4 { color: var(--slate); }
+.schedule-break .schedule-content h3 { color: var(--slate); }
 
 .schedule-end .schedule-content {
   background: rgba(119,203,245,0.07);
   border-color: rgba(119,203,245,0.25);
 }
-.schedule-end .schedule-content h4 { color: var(--primary); }
+.schedule-end .schedule-content h3 { color: var(--primary); }
 
 /* === CRONOGRAMA EM ROLO (seletor de hora do despertador do iPhone) ===
    Tudo aqui depende do .is-wheel, que só o script.js coloca. Sem JS — ou com
@@ -786,7 +788,7 @@ a { color: inherit; text-decoration: none; }
   transform: none;
 }
 .schedule-track.is-wheel .schedule-content::before { display: none; }
-.schedule-track.is-wheel .schedule-content h4 {
+.schedule-track.is-wheel .schedule-content h3 {
   margin: 0;
   font-size: 15px;
   line-height: 1.32;
@@ -799,9 +801,9 @@ a { color: inherit; text-decoration: none; }
 }
 
 .schedule-track.is-wheel .schedule-item.is-center .schedule-time { color: var(--primary); }
-.schedule-track.is-wheel .schedule-item.is-center .schedule-content h4 { color: var(--white); }
-.schedule-track.is-wheel .schedule-end.is-center .schedule-content h4 { color: var(--primary); }
-.schedule-track.is-wheel .schedule-break .schedule-content h4 { font-weight: 600; }
+.schedule-track.is-wheel .schedule-item.is-center .schedule-content h3 { color: var(--white); }
+.schedule-track.is-wheel .schedule-end.is-center .schedule-content h3 { color: var(--primary); }
+.schedule-track.is-wheel .schedule-break .schedule-content h3 { font-weight: 600; }
 
 /* Mostra quanto do dia já passou — e, de quebra, avisa que a seção solta a
    página quando encher. */
@@ -842,7 +844,7 @@ a { color: inherit; text-decoration: none; }
   }
   .schedule-track.is-wheel .schedule-item { padding: 0 12px; gap: 12px; }
   .schedule-track.is-wheel .schedule-time { min-width: 42px; font-size: 11.5px; }
-  .schedule-track.is-wheel .schedule-content h4 {
+  .schedule-track.is-wheel .schedule-content h3 {
     font-size: 12.5px;
     -webkit-line-clamp: 4;
   }
@@ -862,7 +864,7 @@ a { color: inherit; text-decoration: none; }
   .schedule-track.is-wheel .section-title { font-size: 22px; }
   .schedule-track.is-wheel .section-subtitle,
   .schedule-track.is-wheel .schedule-hint { display: none; }
-  .schedule-track.is-wheel .schedule-content h4 {
+  .schedule-track.is-wheel .schedule-content h3 {
     font-size: 13px;
     -webkit-line-clamp: 3;
   }
@@ -1190,7 +1192,7 @@ a { color: inherit; text-decoration: none; }
   right: 28px;
   z-index: 999;
   background: #25D366;
-  color: var(--white);
+  color: var(--navy);
   width: 58px;
   height: 58px;
   border-radius: 50%;
@@ -2490,7 +2492,7 @@ a { color: inherit; text-decoration: none; }
   .schedule-time { text-align: left; min-width: unset; font-size: 12px; padding-top: 0; }
   .schedule-content { margin-left: 0; padding: 14px 16px; }
   .schedule-content::before { display: none; }
-  .schedule-content h4 { font-size: 14px; }
+  .schedule-content h3 { font-size: 14px; }
 
   /* Marcas realização */
   .brands-main-grid { grid-template-columns: 1fr; }

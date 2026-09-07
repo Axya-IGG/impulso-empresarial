@@ -19,20 +19,42 @@
   <meta name="theme-color" content="#141c2f" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <!-- Fonte carregada sem bloquear o render: o <link> real fica com
+       media="print" (baixa em paralelo, prioridade alta, mas não trava a
+       primeira pintura) e vira media="all" assim que chega — truque padrão
+       pra fugir do render-blocking de folha de estilo externa. noscript
+       cobre quem navega sem JS. wght só lista os pesos usados no CSS
+       (300 não é usado em lugar nenhum — pedi-lo só custava uma fonte a
+       mais na cadeia crítica). -->
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap" media="print" onload="this.media='all'" />
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap" /></noscript>
   <link rel="stylesheet" href="style.css?v=20260906a" />
 
   <!-- Meta Pixel. O ID nao e segredo (fica visivel em qualquer pagina que
        o use) — so o token da Conversions API, que mora no backend, e que
-       precisa ficar fora do HTML. -->
+       precisa ficar fora do HTML.
+       O fetch do fbevents.js (script de terceiro, ~100 KB) é adiado pro
+       'load' + idle: fbq() já funciona antes disso (fica na fila do próprio
+       snippet), então nenhum evento se perde — InitiateCheckout e Lead em
+       script.js chamam fbq() do mesmo jeito antes ou depois disso terminar.
+       Só a execução do script pesado sai do caminho crítico da primeira
+       pintura. -->
   <script>
     !function(f,b,e,v,n,t,s)
     {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
     n.callMethod.apply(n,arguments):n.queue.push(arguments)};
     if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-    n.queue=[];t=b.createElement(e);t.async=!0;
-    t.src=v;s=b.getElementsByTagName(e)[0];
-    s.parentNode.insertBefore(t,s)}(window, document,'script',
+    n.queue=[];
+    function carregaPixel(){
+      t=b.createElement(e);t.async=!0;t.src=v;
+      s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s);
+    }
+    if (b.readyState === 'complete') { carregaPixel(); }
+    else f.addEventListener('load', function(){
+      ('requestIdleCallback' in f) ? f.requestIdleCallback(carregaPixel, {timeout:2000}) : f.setTimeout(carregaPixel, 1);
+    });
+    }(window, document,'script',
     'https://connect.facebook.net/en_US/fbevents.js');
     fbq('init', '1478085317261876');
     fbq('track', 'PageView');
@@ -44,6 +66,8 @@
 
 <!-- Progresso de leitura: fica no topo, no lugar que era da tarja de preco. -->
 <div class="scroll-progress" id="scroll-progress" aria-hidden="true"></div>
+
+<main>
 
 <!-- ========== DOBRA 1 — HERO ==========
      Desktop: duas colunas — texto alinhado à esquerda, foto em destaque à
@@ -212,7 +236,7 @@
         <p>É cobrado pela pauta NR-1 dentro da empresa mas sente que não tem poder proporcional a essa responsabilidade.</p>
       </div>
     </div>
-    <div class="carousel-dots" id="checklist-dots" aria-hidden="true"></div>
+    <div class="carousel-dots" id="checklist-dots"></div>
     <div class="section-cta-center">
       <a href="#ingressos" class="btn btn-primary btn-lg">
         QUERO GARANTIR MINHA VAGA
@@ -308,7 +332,7 @@
       </div>
     </div>
 
-    <div class="carousel-dots" id="speakers-dots" aria-hidden="true"></div>
+    <div class="carousel-dots" id="speakers-dots"></div>
 
     <div class="section-cta-center" style="margin-top:40px;">
       <a href="#ingressos" class="btn btn-primary btn-lg">
@@ -341,120 +365,120 @@
             <div class="schedule-item schedule-break">
               <div class="schedule-time">8h30</div>
               <div class="schedule-content">
-                <h4>
+                <h3>
                   <span class="sched-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h1a4 4 0 0 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" y1="2" x2="6" y2="4"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="14" y1="2" x2="14" y2="4"/></svg></span>
                   Credenciamento e Welcome Coffee
-                </h4>
+                </h3>
               </div>
             </div>
 
             <div class="schedule-item">
               <div class="schedule-time">9h00</div>
               <div class="schedule-content">
-                <h4>
+                <h3>
                   <span class="sched-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg></span>
                   Painel de Abertura
-                </h4>
+                </h3>
               </div>
             </div>
 
             <div class="schedule-item">
               <div class="schedule-time">9h10</div>
               <div class="schedule-content">
-                <h4>Palestra | O lado invisível da NR-1: por que cumprir a norma não vai ser suficiente</h4>
+                <h3>Palestra | O lado invisível da NR-1: por que cumprir a norma não vai ser suficiente</h3>
               </div>
             </div>
 
             <div class="schedule-item">
               <div class="schedule-time">9h50</div>
               <div class="schedule-content">
-                <h4>Palestra | NR-1 e Gestão: como transformar líderes despreparados nos maiores aliados do RH</h4>
+                <h3>Palestra | NR-1 e Gestão: como transformar líderes despreparados nos maiores aliados do RH</h3>
               </div>
             </div>
 
             <div class="schedule-item">
               <div class="schedule-time">10h20</div>
               <div class="schedule-content">
-                <h4>Painel | Risco psicossocial na prática: como identificar e gerir sem ser psicólogo, gerenciar crises e orientar as lideranças</h4>
+                <h3>Painel | Risco psicossocial na prática: como identificar e gerir sem ser psicólogo, gerenciar crises e orientar as lideranças</h3>
               </div>
             </div>
 
             <div class="schedule-item">
               <div class="schedule-time">11h10</div>
               <div class="schedule-content">
-                <h4>Painel | Do achismo aos dados: o uso seguro da IA e como a tecnologia leva o RH para a mesa de decisão</h4>
+                <h3>Painel | Do achismo aos dados: o uso seguro da IA e como a tecnologia leva o RH para a mesa de decisão</h3>
               </div>
             </div>
 
             <div class="schedule-item">
               <div class="schedule-time">12h00</div>
               <div class="schedule-content">
-                <h4>Painel | Diante de tantas responsabilidades: a importância de parceiros estratégicos para o RH</h4>
+                <h3>Painel | Diante de tantas responsabilidades: a importância de parceiros estratégicos para o RH</h3>
               </div>
             </div>
 
             <div class="schedule-item schedule-break">
               <div class="schedule-time">12h10</div>
               <div class="schedule-content">
-                <h4>
+                <h3>
                   <span class="sched-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg></span>
                   Pausa para almoço
-                </h4>
+                </h3>
               </div>
             </div>
 
             <div class="schedule-item">
               <div class="schedule-time">13h40</div>
               <div class="schedule-content">
-                <h4>Hot Seat</h4>
+                <h3>Hot Seat</h3>
               </div>
             </div>
 
             <div class="schedule-item">
               <div class="schedule-time">14h00</div>
               <div class="schedule-content">
-                <h4>Palestra | Fluência Financeira Aplicada ao RH</h4>
+                <h3>Palestra | Fluência Financeira Aplicada ao RH</h3>
               </div>
             </div>
 
             <div class="schedule-item">
               <div class="schedule-time">14h30</div>
               <div class="schedule-content">
-                <h4>Painel | Como falar a língua do empresário: a competência que decide se o RH é ouvido ou ignorado</h4>
+                <h3>Painel | Como falar a língua do empresário: a competência que decide se o RH é ouvido ou ignorado</h3>
               </div>
             </div>
 
             <div class="schedule-item">
               <div class="schedule-time">15h20</div>
               <div class="schedule-content">
-                <h4>Palestra | Fiz o mapeamento, e agora? Como garantir a eficiência em SST e a Gestão Contínua dos riscos psicossociais</h4>
+                <h3>Palestra | Fiz o mapeamento, e agora? Como garantir a eficiência em SST e a Gestão Contínua dos riscos psicossociais</h3>
               </div>
             </div>
 
             <div class="schedule-item schedule-break">
               <div class="schedule-time">15h40</div>
               <div class="schedule-content">
-                <h4>
+                <h3>
                   <span class="sched-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h1a4 4 0 0 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" y1="2" x2="6" y2="4"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="14" y1="2" x2="14" y2="4"/></svg></span>
                   Coffee Break
-                </h4>
+                </h3>
               </div>
             </div>
 
             <div class="schedule-item">
               <div class="schedule-time">16h00</div>
               <div class="schedule-content">
-                <h4>Painel interativo | Perguntas e Respostas: Saúde e Segurança do Trabalho e Direito Trabalhista</h4>
+                <h3>Painel interativo | Perguntas e Respostas: Saúde e Segurança do Trabalho e Direito Trabalhista</h3>
               </div>
             </div>
 
             <div class="schedule-item schedule-end">
               <div class="schedule-time">16h25</div>
               <div class="schedule-content">
-                <h4>
+                <h3>
                   <span class="sched-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></span>
                   Painel de encerramento | O RH que adoece cuidando: identidade e equilíbrio pra sustentar a profissão
-                </h4>
+                </h3>
               </div>
             </div>
           </div>
@@ -719,7 +743,7 @@
     </div>
     <div class="brands-main-grid">
       <div class="brand-main-card">
-        <div class="brand-logo-placeholder brand-axya"><img src="images/axya.png" alt="axya" class="brand-logo-img" /></div>
+        <div class="brand-logo-placeholder brand-axya"><img src="images/axya.png" alt="axya" class="brand-logo-img" width="478" height="160" /></div>
         <div class="brand-info">
           <h3>axya | Inteligência em Gente e Gestão</h3>
           <p>Fundada por Kathleen Amaro e Luciana Splicigo, a <strong>axya</strong> é uma consultoria empresarial especializada em gestão de pessoas em Pequenas e Médias Empresas.</p>
@@ -730,7 +754,7 @@
           <!-- AVIF é bem menor, mas Safari 15 e anteriores não leem: PNG como fallback. -->
           <picture>
             <source srcset="images/bufunffa.avif" type="image/avif" />
-            <img src="images/bufunffa.png" alt="Bufunffa" class="brand-logo-img" />
+            <img src="images/bufunffa.png" alt="Bufunffa" class="brand-logo-img" width="768" height="151" />
           </picture>
         </div>
         <div class="brand-info">
@@ -826,52 +850,52 @@
     <div class="sponsors-marquee-wrapper">
       <div class="sponsors-marquee-track">
         <div class="sponsor-card">
-          <div class="sponsor-logo"><img src="assets/patrocinadores/logo-ief.png" alt="Instituto Empreendedor do Futuro" /></div>
+          <div class="sponsor-logo"><img src="assets/patrocinadores/logo-ief.png" alt="Instituto Empreendedor do Futuro" width="420" height="195" /></div>
           <p>Instituto Empreendedor do Futuro</p>
         </div>
         <div class="sponsor-card">
-          <div class="sponsor-logo"><img src="assets/patrocinadores/logo-s8-vox.png" alt="S8 Vox" /></div>
+          <div class="sponsor-logo"><img src="assets/patrocinadores/logo-s8-vox.png" alt="S8 Vox" width="420" height="140" /></div>
           <p>S8 Vox</p>
         </div>
         <div class="sponsor-card">
-          <div class="sponsor-logo"><img src="assets/patrocinadores/logo-s8-tech.png" alt="S8 Tech" /></div>
+          <div class="sponsor-logo"><img src="assets/patrocinadores/logo-s8-tech.png" alt="S8 Tech" width="420" height="139" /></div>
           <p>S8 Tech</p>
         </div>
         <div class="sponsor-card">
-          <div class="sponsor-logo"><img src="assets/patrocinadores/logo-catena.png" alt="Catena iT" /></div>
+          <div class="sponsor-logo"><img src="assets/patrocinadores/logo-catena.png" alt="Catena iT" width="420" height="69" /></div>
           <p>Catena iT</p>
         </div>
         <div class="sponsor-card">
-          <div class="sponsor-logo"><img src="assets/patrocinadores/logo-nucleo.png" alt="Núcleo de Psicologia — Débora Mariano" /></div>
+          <div class="sponsor-logo"><img src="assets/patrocinadores/logo-nucleo.png" alt="Núcleo de Psicologia — Débora Mariano" width="420" height="286" /></div>
           <p>Núcleo de Psicologia</p>
         </div>
         <div class="sponsor-card">
-          <div class="sponsor-logo"><img src="assets/patrocinadores/logo-ard.png" alt="AR&amp;D Assessoria de Marketing" /></div>
+          <div class="sponsor-logo"><img src="assets/patrocinadores/logo-ard.png" alt="AR&amp;D Assessoria de Marketing" width="420" height="125" /></div>
           <p>AR&amp;D Assessoria de Marketing</p>
         </div>
         <!-- Duplicado para loop sem emenda -->
         <div class="sponsor-card" aria-hidden="true">
-          <div class="sponsor-logo"><img src="assets/patrocinadores/logo-ief.png" alt="" /></div>
+          <div class="sponsor-logo"><img src="assets/patrocinadores/logo-ief.png" alt="" width="420" height="195" /></div>
           <p>Instituto Empreendedor do Futuro</p>
         </div>
         <div class="sponsor-card" aria-hidden="true">
-          <div class="sponsor-logo"><img src="assets/patrocinadores/logo-s8-vox.png" alt="" /></div>
+          <div class="sponsor-logo"><img src="assets/patrocinadores/logo-s8-vox.png" alt="" width="420" height="140" /></div>
           <p>S8 Vox</p>
         </div>
         <div class="sponsor-card" aria-hidden="true">
-          <div class="sponsor-logo"><img src="assets/patrocinadores/logo-s8-tech.png" alt="" /></div>
+          <div class="sponsor-logo"><img src="assets/patrocinadores/logo-s8-tech.png" alt="" width="420" height="139" /></div>
           <p>S8 Tech</p>
         </div>
         <div class="sponsor-card" aria-hidden="true">
-          <div class="sponsor-logo"><img src="assets/patrocinadores/logo-catena.png" alt="" /></div>
+          <div class="sponsor-logo"><img src="assets/patrocinadores/logo-catena.png" alt="" width="420" height="69" /></div>
           <p>Catena iT</p>
         </div>
         <div class="sponsor-card" aria-hidden="true">
-          <div class="sponsor-logo"><img src="assets/patrocinadores/logo-nucleo.png" alt="" /></div>
+          <div class="sponsor-logo"><img src="assets/patrocinadores/logo-nucleo.png" alt="" width="420" height="286" /></div>
           <p>Núcleo de Psicologia</p>
         </div>
         <div class="sponsor-card" aria-hidden="true">
-          <div class="sponsor-logo"><img src="assets/patrocinadores/logo-ard.png" alt="" /></div>
+          <div class="sponsor-logo"><img src="assets/patrocinadores/logo-ard.png" alt="" width="420" height="125" /></div>
           <p>AR&amp;D Assessoria de Marketing</p>
         </div>
       </div>
@@ -963,6 +987,8 @@
     </div>
   </div>
 </section>
+
+</main>
 
 <!-- ========== FOOTER ========== -->
 <footer class="footer">

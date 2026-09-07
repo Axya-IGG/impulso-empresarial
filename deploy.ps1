@@ -1,4 +1,4 @@
-<#
+﻿<#
     Deploy da landing page Impulso Empresarial para o Cloudflare Pages.
 
     Publica a partir de um diretório temporário contendo APENAS os arquivos do
@@ -38,7 +38,7 @@ $WranglerCfg = Join-Path $env:USERPROFILE '.wrangler-axya'
 $Files = @(
     'index.html', 'style.css', 'script.js',
     'admin.html', 'admin.css', 'admin.js',
-    '_headers', '_redirects',
+    '_headers', '_redirects', 'robots.txt', 'sitemap.xml',
     'favicon.ico', 'favicon-32.png', 'favicon-192.png', 'apple-touch-icon.png'
 )
 # assets/ = otimizados nesta máquina; images/ = fotos das palestrantes e logos
@@ -81,6 +81,58 @@ else { $missing += 'wrangler.pages.toml' }
 
 if ($missing.Count -gt 0) {
     throw "Arquivos esperados não encontrados no repositório: $($missing -join ', ')"
+}
+
+# --- minifica CSS/JS -------------------------------------------------------
+# O repositorio guarda style.css/script.js/admin.* comentados e legiveis de
+# proposito: quem le o codigo nao deveria abrir o arquivo minificado. A
+# minificacao acontece so aqui, em cima da copia no stage, entao o que e
+# versionado no Git nunca muda. Se terser/clean-css nao estiverem instalados
+# nesta maquina (ex.: outro computador que nunca rodou npm install -g), o
+# deploy segue sem minificar em vez de falhar - o site funciona do mesmo
+# jeito, so um pouco mais pesado.
+#
+# ATENCAO codificacao: este arquivo precisa manter um BOM UTF-8 no inicio.
+# Sem ele, o parser do PowerShell 5.1 nesta maquina le o .ps1 como se fosse
+# ANSI/codepage do sistema; qualquer acento ou travessao dentro de uma
+# STRING (nao em comentario) corrompe o token e quebra o parse de um jeito
+# que nao aparece como erro na hora certa - o sintoma e um bloco inteiro
+# (se/senao) sendo silenciosamente ignorado, sem nenhuma mensagem. Por
+# seguranca, as strings deste bloco evitam acento e travessao mesmo com o
+# BOM presente.
+$TerserBin   = Join-Path $env:APPDATA 'npm\node_modules\terser\bin\terser'
+$CleanCssBin = Join-Path $env:APPDATA 'npm\node_modules\clean-css-cli\bin\cleancss'
+
+if (Test-Path -LiteralPath $CleanCssBin) {
+    foreach ($f in @('style.css', 'admin.css')) {
+        $p = Join-Path $StagePub $f
+        if (-not (Test-Path -LiteralPath $p)) { continue }
+        $antes = (Get-Item $p).Length
+        $minificado = node $CleanCssBin -O2 $p
+        if ($LASTEXITCODE -eq 0 -and $minificado) {
+            [System.IO.File]::WriteAllText($p, ($minificado -join "`n"), (New-Object System.Text.UTF8Encoding($false)))
+            $depois = (Get-Item $p).Length
+            Write-Host ("  minify: {0,-11} {1} KB -> {2} KB" -f $f, [math]::Round($antes/1KB), [math]::Round($depois/1KB)) -ForegroundColor DarkGray
+        }
+    }
+} else {
+    Write-Host "  clean-css nao encontrado (npm install -g clean-css-cli): CSS publicado sem minificar." -ForegroundColor Yellow
+}
+
+if (Test-Path -LiteralPath $TerserBin) {
+    foreach ($f in @('script.js', 'admin.js')) {
+        $p = Join-Path $StagePub $f
+        if (-not (Test-Path -LiteralPath $p)) { continue }
+        $antes = (Get-Item $p).Length
+        $minificado = node $TerserBin $p --compress --mangle
+        if ($LASTEXITCODE -eq 0 -and $minificado) {
+            [System.IO.File]::WriteAllText($p, ($minificado -join "`n"), (New-Object System.Text.UTF8Encoding($false)))
+            $depois = (Get-Item $p).Length
+            Write-Host ("  minify: {0,-11} {1} KB -> {2} KB" -f $f, [math]::Round($antes/1KB), [math]::Round($depois/1KB)) -ForegroundColor DarkGray
+        }
+    }
+} else {
+    Write-Host "  terser nao encontrado (npm install -g terser): JS publicado sem minificar." -ForegroundColor Yellow
 }
 
 # --- versiona os assets pelo conteúdo -------------------------------------
