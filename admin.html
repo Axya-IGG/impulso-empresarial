@@ -191,6 +191,16 @@
 
       <label>
         <span>Texto da mensagem</span>
+        <!-- Marca o texto puro com os símbolos que o WhatsApp já reconhece
+             (*negrito*, _itálico_, ~tachado~) — não é HTML nem um editor
+             rico, então o que aparece aqui é exatamente o que a Evolution
+             manda pra frente. Sem sublinhado porque o WhatsApp não tem essa
+             formatação; tachado é a alternativa mais próxima. -->
+        <div class="msg-formatacao" role="toolbar" aria-label="Formatação do texto para o WhatsApp">
+          <button type="button" class="btn-mini" data-formatar="*" title="Negrito"><strong>N</strong></button>
+          <button type="button" class="btn-mini" data-formatar="_" title="Itálico"><em>I</em></button>
+          <button type="button" class="btn-mini" data-formatar="~" title="Tachado"><s>T</s></button>
+        </div>
         <textarea name="texto" rows="7" required placeholder="Oi {{primeiro_nome}}! ..."></textarea>
       </label>
       <p class="dica">
@@ -198,7 +208,9 @@
         Para variar o texto entre os envios (recomendado — texto idêntico em
         massa é um dos sinais que levam o número a cair), separe versões
         alternativas com uma linha só de <code>---</code>; uma é sorteada a
-        cada disparo.
+        cada disparo. Para formatar, selecione um trecho e use os botões
+        acima — o WhatsApp não sublinha texto, por isso a opção aqui é
+        negrito, itálico ou tachado.
       </p>
 
       <label class="check-inline">

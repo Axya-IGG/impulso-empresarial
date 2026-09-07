@@ -374,8 +374,23 @@ const modalMsg = $('#modal-mensagem');
 const formMsg = $('#form-mensagem');
 
 const fecharModais = () => $$('.modal').forEach(m => { m.hidden = true; });
-$$('[data-fechar]').forEach(el => el.addEventListener('click', fecharModais));
-document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharModais(); });
+
+// O X e o fundo de CADA modal fecham só aquele modal, não todos — o de teste
+// abre por CIMA do de mensagem (os dois ficam visíveis ao mesmo tempo), e
+// fechar todos de uma vez no X do de teste devolvia pra lista de mensagens
+// em vez de voltar pro formulário que estava sendo editado por baixo.
+$$('[data-fechar]').forEach(el => el.addEventListener('click', () => {
+  el.closest('.modal').hidden = true;
+}));
+
+// Esc fecha só o modal mais de cima. Todo .modal tem o mesmo z-index, então
+// quem aparece por cima é quem vem depois no HTML — daí pegar o último
+// visível da lista, não simplesmente "um modal qualquer".
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  const abertos = $$('.modal:not([hidden])');
+  if (abertos.length) abertos[abertos.length - 1].hidden = true;
+});
 
 $('#campo-tipo').addEventListener('change', e => {
   $('#bloco-atraso').hidden = e.target.value !== 'atraso';
@@ -431,6 +446,40 @@ function abrirModalMensagem(m) {
 }
 
 $('#btn-nova').addEventListener('click', () => abrirModalMensagem(null));
+
+// ------------------------------------------------- formatação (WhatsApp)
+// Envolve a seleção com o símbolo (*negrito*, _itálico_, ~tachado~) — texto
+// puro, sem HTML: é literalmente assim que a Evolution/WhatsApp reconhece a
+// formatação, então o que fica no textarea é exatamente o que chega pra
+// quem recebe. Clicar de novo em cima de um trecho já marcado desfaz, pra
+// dar pra alternar sem precisar apagar os símbolos na mão.
+function formatarSelecao(campo, marcador) {
+  const inicio = campo.selectionStart;
+  const fim = campo.selectionEnd;
+  const valor = campo.value;
+  const selecionado = valor.slice(inicio, fim);
+
+  const antes = valor.slice(Math.max(0, inicio - marcador.length), inicio);
+  const depois = valor.slice(fim, fim + marcador.length);
+  const jaMarcado = selecionado && antes === marcador && depois === marcador;
+
+  if (jaMarcado) {
+    campo.value = valor.slice(0, inicio - marcador.length) + selecionado + valor.slice(fim + marcador.length);
+    campo.selectionStart = inicio - marcador.length;
+    campo.selectionEnd = fim - marcador.length;
+  } else {
+    campo.value = valor.slice(0, inicio) + marcador + selecionado + marcador + valor.slice(fim);
+    // Sem seleção, o cursor fica entre os dois símbolos, pronto pra digitar;
+    // com seleção, continua abraçando o texto marcado (não o símbolo).
+    campo.selectionStart = inicio + marcador.length;
+    campo.selectionEnd = fim + marcador.length;
+  }
+  campo.focus();
+}
+
+$$('.msg-formatacao [data-formatar]').forEach(bt => bt.addEventListener('click', () => {
+  formatarSelecao(formMsg.texto, bt.dataset.formatar);
+}));
 
 formMsg.addEventListener('submit', async e => {
   e.preventDefault();

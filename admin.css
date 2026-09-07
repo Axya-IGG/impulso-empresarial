@@ -72,6 +72,13 @@ body {
 .btn-mini:hover { color: var(--text); border-color: var(--primary); }
 .btn-mini.perigo:hover { color: var(--vermelho); border-color: var(--vermelho); }
 
+.msg-formatacao {
+  display: flex;
+  gap: 6px;
+  margin-top: -2px;
+}
+.msg-formatacao .btn-mini { min-width: 32px; text-align: center; }
+
 /* -------------------------------------------------------------- login */
 .login {
   min-height: 100vh;

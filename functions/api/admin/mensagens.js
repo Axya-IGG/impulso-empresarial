@@ -26,7 +26,6 @@ export function validar(corpo) {
 
   if (titulo.length < 2) return [null, 'Dê um título à mensagem.'];
   if (texto.length < 2) return [null, 'Escreva o texto da mensagem.'];
-  if (texto.length > 3500) return [null, 'Texto muito longo (máximo 3500 caracteres).'];
 
   let atraso = null, enviarEm = null;
 
