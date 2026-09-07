@@ -2074,7 +2074,10 @@ a { color: inherit; text-decoration: none; }
 .carousel-dots {
   display: none;
   justify-content: center;
-  gap: 0;
+  /* 6px de vão: o dot ativo escala 1.4x (24px -> ~33.6px) e sem esse
+     respiro passa a encostar no vizinho, falhando o alvo de toque por
+     espaçamento insuficiente mesmo com 24x24 cada um. */
+  gap: 6px;
   margin-top: 20px;
 }
 .carousel-dot {
