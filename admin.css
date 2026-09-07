@@ -204,6 +204,24 @@ input:focus, select:focus, textarea:focus {
 }
 .barra input[type=search] { flex: 1; min-width: 220px; }
 
+.filtro-periodo {
+  /* flex-direction explicito: o `label { flex-direction: column }` global
+     (pra rotulo empilhado sobre campo, no resto do painel) tem
+     especificidade mais baixa que esta classe em display, mas
+     flex-direction nao e' tocado aqui por padrao — sem essa linha, a regra
+     global vence so' nessa propriedade e "De"/"até" empilham em vez de
+     ficar do lado do campo. */
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+.filtro-periodo input[type=date] { width: auto; padding: 8px 10px; }
+
+.dica-filtro { font-size: 0.78rem; color: var(--text-muted); margin: -8px 0 16px; }
+
 /* ------------------------------------------------------------- tabela */
 /* A tabela rola dentro da própria caixa: sem isso, no telefone, a página
    inteira ganharia rolagem horizontal. */
@@ -261,7 +279,61 @@ input:focus, select:focus, textarea:focus {
 .msg-info { flex: 1; min-width: 240px; }
 .msg-topo { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin-bottom: 5px; }
 .msg-topo h3 { font-size: 0.98rem; font-weight: 600; }
+.msg-data-topo {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--primary);
+  background: rgba(119,203,245,0.12);
+  border: 1px solid rgba(119,203,245,0.3);
+  padding: 2px 8px;
+  border-radius: 20px;
+}
 .msg-quando { font-size: 0.76rem; color: var(--primary); }
+
+/* A chave fica antes de tudo, no lugar do antigo botão "Ativar"/"Pausar" —
+   estado visível e ligável num clique só, sem precisar ler texto nenhum. O
+   checkbox real fica escondido (sr-only, não display:none) pra continuar
+   navegável e anunciável por teclado/leitor de tela; só o desenho é
+   substituído. */
+.msg-chave {
+  position: relative;
+  flex-shrink: 0;
+  width: 42px;
+  height: 24px;
+  margin-top: 2px;
+}
+.msg-chave input {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border: 0;
+}
+.msg-chave-trilho {
+  position: absolute;
+  inset: 0;
+  background: rgba(163,185,198,0.22);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  transition: background-color 0.2s ease;
+  cursor: pointer;
+}
+.msg-chave-trilho::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  background: var(--text);
+  border-radius: 50%;
+  transition: transform 0.2s ease;
+}
+.msg-chave input:checked + .msg-chave-trilho { background: var(--verde); border-color: transparent; }
+.msg-chave input:checked + .msg-chave-trilho::before { transform: translateX(18px); background: var(--navy); }
+.msg-chave input:focus-visible + .msg-chave-trilho { outline: 2px solid var(--primary); outline-offset: 2px; }
 .msg-texto {
   font-size: 0.85rem;
   color: var(--text-muted);

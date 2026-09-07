@@ -242,16 +242,67 @@ function descreverQuando(m) {
   return `${min} minuto(s) após ${ancora}`;
 }
 
+/** dd/mm/aaaa compacto pra ficar ao lado do título — só existe pra tipo
+ *  'data', que é o único com um dia fixo no calendário; 'atraso' devolve
+ *  null e o chamador simplesmente não desenha a etiqueta. */
+function dataEnvioCompacta(m) {
+  if (m.tipo !== 'data') return null;
+  return new Date(m.enviar_em).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+}
+
+/** enviar_em é sempre 10h em Brasília = 13h UTC (ver mensagens.js no
+ *  backend) — nunca cruza a virada do dia, então cortar os 10 primeiros
+ *  caracteres do ISO (que vem em UTC) já dá o dia certo em Brasília, sem
+ *  precisar converter fuso pra comparar com o período. */
+const diaDoEnvio = (m) => m.enviar_em.slice(0, 10);
+
+function passaNoFiltro(m) {
+  const publico = $('#filtro-publico-msg').value;
+  if (publico && m.publico !== publico) return false;
+
+  const de = $('#filtro-data-de').value;
+  const ate = $('#filtro-data-ate').value;
+  if (de || ate) {
+    // Período só compara com quem tem um dia fixo — 'atraso' é relativo a
+    // cada lead (não tem "um dia" pra cair dentro ou fora do intervalo).
+    if (m.tipo !== 'data') return false;
+    const dia = diaDoEnvio(m);
+    if (de && dia < de) return false;
+    if (ate && dia > ate) return false;
+  }
+  return true;
+}
+
+let cacheMensagens = [];
+
 async function carregarMensagens() {
   const arq = $('#ver-arquivadas').checked ? 1 : 0;
   const { mensagens } = await api(`/api/admin/mensagens?arquivadas=${arq}`);
+  cacheMensagens = mensagens;
+  renderizarMensagens();
+}
+
+function renderizarMensagens() {
+  const periodoAtivo = Boolean($('#filtro-data-de').value || $('#filtro-data-ate').value);
+  $('#dica-periodo').hidden = !periodoAtivo;
+
+  const mensagens = cacheMensagens.filter(passaNoFiltro);
+  const arq = $('#ver-arquivadas').checked;
+  const filtrouAlgo = periodoAtivo || $('#filtro-publico-msg').value;
 
   $('#lista-mensagens').innerHTML = mensagens.length
-    ? mensagens.map(m => `
+    ? mensagens.map(m => {
+        const dataTopo = dataEnvioCompacta(m);
+        return `
         <div class="msg-card ${m.ativo ? '' : 'inativa'}">
+          <label class="msg-chave" title="${m.ativo ? 'Pausar' : 'Ativar'}">
+            <input type="checkbox" data-chave="${m.id}" ${m.ativo ? 'checked' : ''} />
+            <span class="msg-chave-trilho"></span>
+          </label>
           <div class="msg-info">
             <div class="msg-topo">
               <h3>${esc(m.titulo)}</h3>
+              ${dataTopo ? `<span class="msg-data-topo">${esc(dataTopo)}</span>` : ''}
               <span class="selo ${m.ativo ? 'selo-ok' : 'selo-off'}">${m.ativo ? 'ativa' : 'pausada'}</span>
             </div>
             <div class="msg-quando">
@@ -262,21 +313,39 @@ async function carregarMensagens() {
           </div>
           <div class="msg-acoes">
             <button class="btn-mini" data-editar="${m.id}">Editar</button>
-            <button class="btn-mini" data-acao="${m.ativo ? 'desativar' : 'ativar'}" data-id="${m.id}">
-              ${m.ativo ? 'Pausar' : 'Ativar'}
-            </button>
             <button class="btn-mini" data-acao="${m.arquivado ? 'desarquivar' : 'arquivar'}" data-id="${m.id}">
               ${m.arquivado ? 'Desarquivar' : 'Arquivar'}
             </button>
             <button class="btn-mini perigo" data-excluir="${m.id}">Excluir</button>
           </div>
-        </div>`).join('')
-    : `<div class="vazio">Nenhuma mensagem ${arq ? 'arquivada' : 'cadastrada'}.</div>`;
-
-  cacheMensagens = mensagens;
+        </div>`;
+      }).join('')
+    : `<div class="vazio">${filtrouAlgo
+        ? 'Nenhuma mensagem bate com esse filtro.'
+        : `Nenhuma mensagem ${arq ? 'arquivada' : 'cadastrada'}.`}</div>`;
 }
 
-let cacheMensagens = [];
+$('#filtro-publico-msg').addEventListener('change', renderizarMensagens);
+$('#filtro-data-de').addEventListener('change', renderizarMensagens);
+$('#filtro-data-ate').addEventListener('change', renderizarMensagens);
+
+$('#lista-mensagens').addEventListener('change', async e => {
+  const chave = e.target.closest('[data-chave]');
+  if (!chave) return;
+  // Otimista: o próprio clique já moveu o visual da chave, então só
+  // reverte se o servidor recusar — não trava esperando a resposta.
+  try {
+    await api(`/api/admin/mensagens/${chave.dataset.chave}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ acao: chave.checked ? 'ativar' : 'desativar' }),
+    });
+    toast(chave.checked ? 'Mensagem ativada.' : 'Mensagem pausada.');
+    carregarMensagens();
+  } catch (err) {
+    chave.checked = !chave.checked;
+    toast(err.message);
+  }
+});
 
 $('#lista-mensagens').addEventListener('click', async e => {
   const bt = e.target.closest('[data-acao], [data-editar], [data-excluir]');

@@ -86,8 +86,32 @@
           <input type="checkbox" id="ver-arquivadas" />
           <span>Ver arquivadas</span>
         </label>
+
+        <select id="filtro-publico-msg" title="Filtrar por lista">
+          <option value="">Todas as listas</option>
+          <option value="todos">Todos os leads</option>
+          <option value="compradores">Só quem comprou</option>
+          <option value="nao_compradores">Só quem não comprou</option>
+        </select>
+
+        <label class="filtro-periodo">
+          <span>De</span>
+          <input type="date" id="filtro-data-de" />
+        </label>
+        <label class="filtro-periodo">
+          <span>até</span>
+          <input type="date" id="filtro-data-ate" />
+        </label>
+
         <button class="btn btn-primario" id="btn-nova">+ Nova mensagem</button>
       </div>
+      <!-- Só aparece quando o período tem algum limite preenchido: e' quando
+           passa a valer a pena explicar por que uma mensagem de "tempo apos
+           o cadastro" some da lista (ela nao tem um dia fixo no calendario
+           pra comparar com o periodo). -->
+      <p class="dica-filtro" id="dica-periodo" hidden>
+        O período filtra só as mensagens com data específica — as de "tempo após o cadastro" não têm um dia fixo.
+      </p>
 
       <div id="lista-mensagens" class="lista-mensagens"></div>
     </section>
