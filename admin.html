@@ -118,6 +118,27 @@
 
     <!-- --------------------------- ENVIOS --------------------------- -->
     <section class="painel-aba" data-painel="envios" hidden>
+      <div class="barra">
+        <input type="search" id="busca-envios" placeholder="Buscar por nome ou WhatsApp..." />
+        <select id="filtro-envio-mensagem" title="Filtrar por mensagem">
+          <option value="">Todas as mensagens</option>
+        </select>
+        <select id="filtro-envio-status" title="Filtrar por status">
+          <option value="">Todos os status</option>
+          <option value="enviado">Enviado</option>
+          <option value="erro">Erro</option>
+          <option value="enviando">Enviando</option>
+        </select>
+        <label class="filtro-periodo">
+          <span>De</span>
+          <input type="date" id="filtro-envio-de" />
+        </label>
+        <label class="filtro-periodo">
+          <span>até</span>
+          <input type="date" id="filtro-envio-ate" />
+        </label>
+      </div>
+
       <div class="tabela-wrap">
         <table class="tabela">
           <thead>

@@ -561,9 +561,36 @@ $('#form-teste').addEventListener('submit', async e => {
 });
 
 // -------------------------------------------------------------- envios
+/** Preenche o select de mensagens sem perder a escolha atual — a lista que
+ *  vem da API é sempre o universo INTEIRO (o backend ignora os filtros só
+ *  pra montar essa lista), então repopular a cada carregarEnvios() não faz
+ *  as opções mudarem debaixo do operador. */
+function popularFiltroEnvioMensagem(mensagens) {
+  const select = $('#filtro-envio-mensagem');
+  const atual = select.value;
+  select.innerHTML = '<option value="">Todas as mensagens</option>' +
+    mensagens.map(m => `<option value="${m.id}">${esc(m.titulo)}</option>`).join('');
+  select.value = atual;
+}
+
 async function carregarEnvios() {
-  const { envios } = await api('/api/admin/envios');
+  const qs = new URLSearchParams();
+  const busca = $('#busca-envios').value.trim();
+  const mensagemId = $('#filtro-envio-mensagem').value;
+  const status = $('#filtro-envio-status').value;
+  const de = $('#filtro-envio-de').value;
+  const ate = $('#filtro-envio-ate').value;
+  if (busca) qs.set('busca', busca);
+  if (mensagemId) qs.set('mensagem_id', mensagemId);
+  if (status) qs.set('status', status);
+  if (de) qs.set('de', de);
+  if (ate) qs.set('ate', ate);
+
+  const { envios, mensagens } = await api(`/api/admin/envios?${qs}`);
+  popularFiltroEnvioMensagem(mensagens);
+
   const selo = { enviado: 'selo-ok', erro: 'selo-erro', enviando: 'selo-andamento' };
+  const filtrouAlgo = Boolean(busca || mensagemId || status || de || ate);
 
   $('#corpo-envios').innerHTML = envios.length
     ? envios.map(e => `
@@ -574,8 +601,18 @@ async function carregarEnvios() {
           <td><span class="selo ${selo[e.status] || 'selo-off'}">${esc(e.status)}</span></td>
           <td>${esc((e.detalhe || '').slice(0, 90))}</td>
         </tr>`).join('')
-    : '<tr><td colspan="5" class="vazio">Nenhum envio ainda.</td></tr>';
+    : `<tr><td colspan="5" class="vazio">${filtrouAlgo ? 'Nenhum envio bate com esse filtro.' : 'Nenhum envio ainda.'}</td></tr>`;
 }
+
+let buscaEnviosTimer;
+$('#busca-envios').addEventListener('input', () => {
+  clearTimeout(buscaEnviosTimer);
+  buscaEnviosTimer = setTimeout(carregarEnvios, 300);
+});
+$('#filtro-envio-mensagem').addEventListener('change', carregarEnvios);
+$('#filtro-envio-status').addEventListener('change', carregarEnvios);
+$('#filtro-envio-de').addEventListener('change', carregarEnvios);
+$('#filtro-envio-ate').addEventListener('change', carregarEnvios);
 
 // -------------------------------------------------------------- arranque
 // Uma chamada protegida decide a tela inicial: com cookie válido o painel
