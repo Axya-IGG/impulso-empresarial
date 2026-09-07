@@ -60,8 +60,14 @@ CREATE TABLE IF NOT EXISTS sessoes (
 
 -- ------------------------------------------------------------ mensagens
 -- Dois tipos, porque os disparos tem naturezas diferentes:
---   'atraso' -> relativo a cada lead   (atraso_minutos apos o cadastro)
---   'data'   -> absoluto para a base   (enviar_em, uma vez so)
+--   'atraso' -> relativo a cada lead (atraso_minutos apos o cadastro/compra)
+--   'data'   -> um dia especifico para toda a base, mas nao todo mundo no
+--               mesmo instante: enviar_em guarda o INICIO de uma janela de
+--               10h (10h-20h, horario de Brasilia) e cada lead recebe um
+--               deslocamento deterministico dentro dela (ver montarFila em
+--               worker-remarketing/src/index.js) — dispara aos poucos ao
+--               longo do dia em vez de tudo de uma vez, que e' um dos sinais
+--               que derrubam um numero de WhatsApp.
 -- 'ativo' liga/desliga sem perder o historico; 'arquivado' tira da lista
 -- principal sem apagar. Excluir de vez tambem e possivel pelo painel.
 -- publico mira o disparo em quem comprou / nao comprou (ver `compras`

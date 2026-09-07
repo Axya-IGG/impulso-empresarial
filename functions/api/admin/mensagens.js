@@ -35,8 +35,23 @@ export function validar(corpo) {
     if (!Number.isFinite(atraso) || atraso < 0) return [null, 'Atraso inválido.'];
     atraso = Math.round(atraso);
   } else {
-    const d = new Date(corpo?.enviar_em);
+    // O painel manda so o dia (AAAA-MM-DD), sem hora: a janela de envio e'
+    // sempre 10h-20h em Brasilia nesse dia, para o disparo sair aos poucos
+    // em vez de tudo de uma vez (ver worker-remarketing/src/index.js). Aqui
+    // fixamos 10h porque enviar_em guarda o INICIO da janela — o worker
+    // calcula o fim (+10h) na hora de montar a fila.
+    const dia = String(corpo?.enviar_em || '').trim().slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dia)) return [null, 'Escolha o dia do envio.'];
+    const d = new Date(`${dia}T10:00:00-03:00`);
     if (isNaN(d)) return [null, 'Data de envio inválida.'];
+
+    // Dia passado deixaria a janela inteira (10h-20h) no passado, o que
+    // torna todo mundo elegivel de uma vez so na proxima rodada do cron —
+    // exatamente o disparo em massa que essa janela existe para evitar.
+    const hojeBrasilia = new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' });
+    const hojeISO = new Date(hojeBrasilia).toISOString().slice(0, 10);
+    if (dia < hojeISO) return [null, 'Escolha uma data igual ou posterior a hoje.'];
+
     enviarEm = d.toISOString();
   }
 

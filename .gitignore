@@ -8,8 +8,10 @@ Thumbs.db
 impulso empresarial 2 edição/
 
 # Config gerada no diretório temporário de publicação pelo deploy.ps1.
-# A versionada é a wrangler.pages.toml.
-wrangler.toml
+# A versionada é a wrangler.pages.toml. Só na raiz (barra à frente) — o
+# worker-remarketing/wrangler.toml é de verdade, não gerado, e precisa ficar
+# no Git.
+/wrangler.toml
 
 # Vars locais para `wrangler pages dev` (senha/segredo de teste, nunca os reais).
 .dev.vars

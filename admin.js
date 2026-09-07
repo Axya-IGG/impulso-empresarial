@@ -225,7 +225,13 @@ const PUBLICOS = {
 };
 
 function descreverQuando(m) {
-  if (m.tipo === 'data') return `Em ${dataBR(m.enviar_em)}`;
+  if (m.tipo === 'data') {
+    // enviar_em guarda o inicio da janela (sempre 10h em Brasilia) — a data
+    // sozinha ja descreve o agendamento, a hora fixa so confundiria, dado
+    // que o envio de cada lead sai espalhado, nao nesse horario exato.
+    const dia = new Date(m.enviar_em).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+    return `Em ${dia}, aos poucos entre 10h e 20h`;
+  }
   // Mensagem de comprador conta o prazo a partir da compra, não do
   // cadastro — mesma regra do worker (montarFila), só descrita em texto.
   const ancora = m.publico === 'compradores' ? 'a compra' : 'o cadastro';
@@ -342,13 +348,13 @@ function abrirModalMensagem(m) {
   formMsg.atraso_unidade.value = String(unidade);
 
   if (m?.enviar_em) {
-    // O input datetime-local não aceita sufixo de fuso; convertemos para o
-    // horário de Brasília e cortamos, senão o campo abre em UTC e o
-    // operador vê 3 horas a mais do que agendou.
+    // O input date não aceita sufixo de fuso; convertemos para o horário de
+    // Brasília antes de cortar, senão o campo pode abrir um dia adiantado ou
+    // atrasado (o enviar_em salvo está em UTC, 10h em Brasília = 13h UTC).
     const d = new Date(m.enviar_em);
     const br = new Date(d.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
     formMsg.enviar_em.value = new Date(br.getTime() - br.getTimezoneOffset() * 60000)
-      .toISOString().slice(0, 16);
+      .toISOString().slice(0, 10);
   }
 
   $('#campo-tipo').dispatchEvent(new Event('change'));
@@ -374,13 +380,13 @@ formMsg.addEventListener('submit', async e => {
     corpo.atraso_minutos = Number(formMsg.atraso_valor.value) * Number(formMsg.atraso_unidade.value);
   } else {
     if (!formMsg.enviar_em.value) {
-      erro.textContent = 'Escolha a data e a hora do envio.';
+      erro.textContent = 'Escolha o dia do envio.';
       erro.hidden = false;
       return;
     }
-    // -03:00 explícito: o valor digitado é horário de Brasília, não o fuso
-    // do computador de quem opera o painel.
-    corpo.enviar_em = `${formMsg.enviar_em.value}:00-03:00`;
+    // Só o dia (AAAA-MM-DD): a hora não é escolhida aqui, o backend fixa o
+    // início da janela de espalhamento (10h em Brasília) sozinho.
+    corpo.enviar_em = formMsg.enviar_em.value;
   }
 
   const id = formMsg.id.value;

@@ -135,7 +135,7 @@
         <span>Quando enviar</span>
         <select name="tipo" id="campo-tipo">
           <option value="atraso" id="opcao-atraso-cadastro">Tempo após o cadastro do lead</option>
-          <option value="data">Data e hora fixas (para toda a base)</option>
+          <option value="data">Numa data específica (espalhado ao longo do dia)</option>
         </select>
       </label>
 
@@ -155,9 +155,14 @@
 
       <div id="bloco-data" hidden>
         <label>
-          <span>Enviar em (horário de Brasília)</span>
-          <input type="datetime-local" name="enviar_em" />
+          <span>Dia do envio (horário de Brasília)</span>
+          <input type="date" name="enviar_em" />
         </label>
+        <p class="dica">
+          Ninguém recebe às 10h em ponto: os envios saem aos poucos entre
+          10h e 20h desse dia, num horário diferente para cada pessoa, para
+          não parecer um disparo em massa.
+        </p>
       </div>
 
       <label>

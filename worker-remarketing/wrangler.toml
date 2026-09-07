@@ -1,0 +1,27 @@
+# Worker separado (não Pages Function) porque só ele precisa de Cron
+# Trigger — Pages Functions não roda em agenda, só responde a requisição.
+# Compartilha o mesmo banco D1 do site (binding "DB") e reaproveita
+# functions/_lib.js do repo principal via import relativo.
+
+name = "impulso-remarketing"
+main = "src/index.js"
+compatibility_date = "2026-08-28"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "impulso-db"
+database_id = "0685aff2-e875-432f-af5b-eeb848c42b73"
+
+[vars]
+EVOLUTION_URL = "https://zap.ardassessoria.com.br"
+EVOLUTION_INSTANCIA = "axya"
+
+# A cada 5 minutos — MAX_POR_RODADA em src/index.js supõe essa cadência
+# (30/rodada * 12 rodadas/hora ~ o teto diário de sobra, nunca o gargalo).
+[triggers]
+crons = ["*/5 * * * *"]
+
+# EVOLUTION_APIKEY e ADMIN_SENHA são secrets e ficam fora daqui (mesmo valor
+# já usado pelas Pages Functions — não precisa gerar de novo, só copiar):
+#   printf '%s' "$valor" | npx wrangler secret put EVOLUTION_APIKEY --name impulso-remarketing
+#   printf '%s' "$valor" | npx wrangler secret put ADMIN_SENHA      --name impulso-remarketing

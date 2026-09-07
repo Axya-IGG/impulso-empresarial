@@ -70,7 +70,16 @@ async function montarFila(db, limite) {
      LIMIT ?
   `).bind(limite).all();
 
-  // 'data': vence numa data absoluta, para o publico selecionado.
+  // 'data': vence num dia especifico, mas nao dispara pra base inteira no
+  // mesmo instante — enviar_em guarda o INICIO de uma janela de 10h (10h as
+  // 20h, horario de Brasilia) e cada lead recebe um deslocamento dentro dela.
+  // O deslocamento vem de um hash simples e deterministico de (lead, mensagem)
+  // — mesmo par sempre cai no mesmo minuto — em vez de RANDOM(), que mudaria
+  // a cada rodada e faria o mesmo lead ora entrar ora sair da fila. Sem
+  // gravar nada a mais no banco, a fila fica estavel e ainda assim espalhada
+  // ao longo do dia, que e' o ponto: uma rajada de centenas de mensagens no
+  // mesmo minuto e' um dos sinais mais fortes de automacao que derrubam um
+  // numero.
   const porData = await db.prepare(`
     SELECT l.id AS lead_id, l.nome, l.whatsapp, m.id AS mensagem_id, m.texto
       FROM leads l
@@ -78,7 +87,10 @@ async function montarFila(db, limite) {
         ON m.ativo = 1 AND m.arquivado = 0 AND m.tipo = 'data'
      WHERE l.optout = 0
        ${condPublico}
-       AND m.enviar_em <= datetime('now')
+       AND datetime(
+             m.enviar_em,
+             '+' || ((l.rowid * 2654435761 + m.id * 40503) % 600) || ' minutes'
+           ) <= datetime('now')
        AND NOT EXISTS (SELECT 1 FROM envios e
                         WHERE e.lead_id = l.id AND e.mensagem_id = m.id)
      ORDER BY m.enviar_em, l.criado_em
