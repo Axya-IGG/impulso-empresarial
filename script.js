@@ -485,25 +485,33 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
 });
 
 // === CRONOGRAMA EM ROLO ===
-// A seção prende na tela e o scroll gasto ali gira os tópicos como o seletor
-// de hora do despertador do iPhone.
+// Os tópicos giram como o seletor de hora do despertador do iPhone, e quem
+// gira é a rolagem DENTRO de um container próprio: o #schedule-scroll, uma
+// camada invisível do tamanho exato da janela do rolo. Esse é o "quadrado" da
+// interação — fora dele a página rola como em qualquer outra seção.
 //
-// A base é a posição do scroll da página, não wheel/touch capturados: no
-// celular "arrastar a tela" JA e' rolar, entao um mecanismo so' atende os
-// dois casos que o pedido cita, rolar para tras volta o rolo de graça, e nada
-// disso quebra teclado, barra de espaço, Home/End ou a busca do navegador.
-// A unica excecao e' a roda do mouse, que ganha um tratamento a parte mais
-// abaixo (sem tocar em teclado nem em toque): sem ele, um giro comum de roda
-// manda mais pixel do que separa dois topicos e a rolagem pousava no topico
-// ERRADO. O rolo nao gira infinito: comeca no primeiro topico centralizado e
-// trava no ultimo.
+// Rolagem nativa, não evento sequestrado, porque é ela que resolve de graça
+// os casos difíceis: no celular o dedo já rola o container, teclado
+// (setas/PageUp/Home) funciona sozinho, e — o mais importante — ao chegar
+// numa ponta o navegador encadeia a rolagem de volta pra página, então
+// ninguém fica preso na seção. A única exceção é a roda do mouse, tratada
+// mais abaixo: um giro comum manda mais pixel do que separa dois tópicos, e
+// a rolagem nativa pousaria no tópico ERRADO.
+//
+// A versão anterior prendia a seção na tela (stage sticky) e gastava o scroll
+// da PÁGINA numa altura extra do trilho. Girava bonito, mas obrigava quem só
+// queria passar direto a percorrer o dia inteiro antes de alcançar a próxima
+// seção — que é exatamente o que esta versão desfaz.
+//
+// O rolo não gira infinito: começa no primeiro tópico centralizado e trava no
+// último.
 (function cronogramaEmRolo() {
-  const trilho = document.getElementById('schedule-track');
-  const roda   = document.getElementById('schedule-wheel');
-  const janela = document.getElementById('schedule-wrapper');
-  const barra  = document.getElementById('schedule-rail-fill');
-  const palco  = trilho?.querySelector('.schedule-stage');
-  if (!trilho || !roda || !janela || !palco) return;
+  const trilho     = document.getElementById('schedule-track');
+  const roda       = document.getElementById('schedule-wheel');
+  const superficie = document.getElementById('schedule-scroll');
+  const espacador  = document.getElementById('schedule-scroll-spacer');
+  const barra      = document.getElementById('schedule-rail-fill');
+  if (!trilho || !roda || !superficie || !espacador) return;
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
   const itens = [...roda.querySelectorAll('.schedule-item')];
@@ -513,16 +521,9 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
   const RAD = Math.PI / 180;
   const ehMobile = () => window.innerWidth <= 768;
 
-  let raio = 0, rolagemUtil = 1, topoPx = 0, pos = -1, porItemAtual = 88;
+  let raio = 0, pos = -1, porItemAtual = 88;
 
   function medir() {
-    // A home nao tem header fixo (so' a pre-venda tinha), mas se um dia
-    // ganhar um, o palco tem que grudar abaixo dele — nao atras.
-    const cabecalho = document.querySelector('.header');
-    const preso = cabecalho && ['sticky', 'fixed'].includes(getComputedStyle(cabecalho).position);
-    topoPx = preso ? cabecalho.offsetHeight : 0;
-    trilho.style.setProperty('--sched-topo', `${topoPx}px`);
-
     const alturaItem = parseFloat(getComputedStyle(trilho).getPropertyValue('--roda-item-h')) || 78;
     // Raio do cilindro em que dois vizinhos ficam exatamente encostados:
     // metade da altura do item sobre a tangente de meio passo.
@@ -535,19 +536,23 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     // que e' exatamente o que o seletor do iPhone faz.
     roda.style.transform = `translateZ(${-raio}px)`;
 
-    // Quanto de scroll cada tópico consome. Mais curto no celular, onde o
-    // mesmo gesto cobre menos pixels de página.
+    // Quanto de rolagem cada tópico consome. Mais curto no celular, onde o
+    // mesmo gesto cobre menos pixels.
     porItemAtual = ehMobile() ? 74 : 88;
-    rolagemUtil = (itens.length - 1) * porItemAtual;
-    trilho.style.height = `${palco.offsetHeight + rolagemUtil}px`;
+
+    // O espaçador é o único conteúdo do container, e é só ele que define
+    // quanto dá pra rolar: uma janela inteira (pra o primeiro tópico já
+    // nascer centralizado, sem rolagem nenhuma) mais um passo por tópico
+    // restante. Assim scrollTop vai de 0 ao último tópico e para ali.
+    espacador.style.height = `${superficie.clientHeight + (itens.length - 1) * porItemAtual}px`;
   }
 
   function desenhar() {
-    // Enquanto o palco não grudou, trilho.top > topoPx e o progresso fica
-    // negativo → clampa em 0 (primeiro tópico no centro). Passado o trilho
-    // inteiro, clampa em 1 (último tópico no centro). Nunca dá a volta.
-    const andado = topoPx - trilho.getBoundingClientRect().top;
-    const p = Math.min(1, Math.max(0, andado / rolagemUtil));
+    // scrollTop 0 = primeiro tópico no centro; no fim do container, último no
+    // centro. O clamp cobre o overscroll elástico do iOS, que devolve
+    // scrollTop negativo ou acima do máximo por alguns quadros.
+    const util = (itens.length - 1) * porItemAtual;
+    const p = Math.min(1, Math.max(0, superficie.scrollTop / util));
     const alvo = p * (itens.length - 1);
     if (Math.abs(alvo - pos) < 0.0005) return;
     pos = alvo;
@@ -575,11 +580,11 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
   };
 
   // Encaixa no tópico mais próximo depois que a rolagem para de verdade.
-  // Tentei primeiro com scroll-snap-stop:always do CSS, mas o Chromium nao
-  // honra a promessa quando o delta de um giro de roda passa de meio passo —
-  // testado: um giro de 150px (comum num giro rapido) pulava direto pro
-  // SEGUNDO marco, ignorando o primeiro. Daqui em diante quem decide o
-  // destino sou eu: `pos` e' continuo e reflete o scroll de verdade, entao
+  // Tentei primeiro com scroll-snap do CSS, mas o Chromium nao honra
+  // scroll-snap-stop:always quando o delta de um giro de roda passa de meio
+  // passo — testado: um giro de 150px (comum num giro rapido) pulava direto
+  // pro SEGUNDO marco, ignorando o primeiro. Daqui em diante quem decide o
+  // destino sou eu: `pos` e' continuo e reflete a rolagem de verdade, entao
   // Math.round(pos) nunca erra por mais de meio item — nao importa o quao
   // rapido ou longo foi o gesto que trouxe a rolagem ate' aqui.
   let temporizadorEncaixe = null;
@@ -591,77 +596,100 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     if (arrastando) return; // dedo/mouse ainda preso: o soltar cuida disso
     if (pos <= 0 || pos >= itens.length - 1) return; // pontas ja' sao exatas
     const alvo = Math.round(pos);
-    const diferenca = alvo - pos;
-    if (Math.abs(diferenca) < 0.01) return;
-    // scrollBy, nao scrollTo: preserva a mesma logica de "quanto de pagina
-    // equivale a um topico" que desenhar() usa pra ler a posicao de volta.
-    window.scrollBy({ top: diferenca * porItemAtual, behavior: 'smooth' });
+    if (Math.abs(alvo - pos) < 0.01) return;
+    superficie.scrollTo({ top: alvo * porItemAtual, behavior: 'smooth' });
   }
 
   // Arrastar o rolo com o mouse, como se pegasse no cilindro. Só mouse: no
-  // toque, arrastar já rola a página, e roubar o gesto deixaria o dedo preso
-  // na seção. Empurra o scroll da própria página para o estado continuar
-  // sendo um só — daí o 'instant', senão o scroll-behavior:smooth do CSS
-  // animaria cada quadro e o arrasto ficaria borrachudo.
+  // toque, arrastar já rola o container nativamente, e roubar o gesto
+  // deixaria o dedo preso. Escreve scrollTop direto (e não scrollTo) porque
+  // aqui cada quadro já é a posição final: com 'smooth' o navegador animaria
+  // cada passo do arrasto e ele ficaria borrachudo.
   let arrastando = false, ultimoY = 0;
-  janela.addEventListener('pointerdown', (e) => {
+  superficie.addEventListener('pointerdown', (e) => {
     if (e.pointerType !== 'mouse' || e.button !== 0) return;
     arrastando = true;
     ultimoY = e.clientY;
-    janela.setPointerCapture(e.pointerId);
-    janela.classList.add('is-dragging');
+    superficie.setPointerCapture(e.pointerId);
+    superficie.classList.add('is-dragging');
     clearTimeout(temporizadorEncaixe); // nao encaixa no meio do arrasto
     e.preventDefault();
   });
-  janela.addEventListener('pointermove', (e) => {
+  superficie.addEventListener('pointermove', (e) => {
     if (!arrastando) return;
     const dy = e.clientY - ultimoY;
     ultimoY = e.clientY;
-    window.scrollBy({ top: -dy * 1.8, behavior: 'instant' });
+    superficie.scrollTop -= dy * 1.8;
   });
   const soltar = (e) => {
     if (!arrastando) return;
     arrastando = false;
-    janela.classList.remove('is-dragging');
-    try { janela.releasePointerCapture(e.pointerId); } catch { /* ponteiro já foi */ }
+    superficie.classList.remove('is-dragging');
+    try { superficie.releasePointerCapture(e.pointerId); } catch { /* ponteiro já foi */ }
     encaixarNoCentro();
   };
-  janela.addEventListener('pointerup', soltar);
-  janela.addEventListener('pointercancel', soltar);
+  superficie.addEventListener('pointerup', soltar);
+  superficie.addEventListener('pointercancel', soltar);
 
   // === RODA DE MOUSE: um giro, um tópico — nunca dois ===
-  // Antes a roda só empurrava o scroll da página (como qualquer outra rolagem)
-  // e o encaixe corrigia pro tópico mais próximo de onde ela parasse. Isso é
-  // matematicamente correto, mas um giro comum de roda no Windows manda mais
-  // pixel do que os ~88px que separam dois tópicos — testado: um unico giro
-  // de 120 a 200px (nada fora do normal) já cai mais perto do SEGUNDO tópico
-  // que do primeiro, e o encaixe, corretamente, pousa aí. O resultado
-  // percebido é "pulou um".
+  // Deixada por conta do navegador, a roda rolaria o container pelo tanto de
+  // pixel que o sistema mandou — e um giro comum no Windows manda mais do que
+  // os ~88px que separam dois tópicos (testado: um único giro de 120 a 200px,
+  // nada fora do normal, já cai mais perto do SEGUNDO tópico). O encaixe
+  // então pousa lá, corretamente, e o resultado percebido é "pulou um".
   //
   // Pra roda especificamente, então, cada evento avança exatamente um tópico
-  // — não o tanto de pixel que o sistema mandou — e fica em cooldown até a
-  // rolagem programada assentar, pra um giro rápido (vários eventos em
-  // sequência) também avançar de um em um, nunca de dois. Só roda: arrastar
-  // com o mouse já tem o próprio tratamento acima, e no toque isso nem
-  // dispara (arrastar a tela já é rolar, do jeito que sempre foi).
+  // e fica em cooldown até a rolagem programada assentar, pra um giro rápido
+  // (vários eventos em sequência) também avançar de um em um.
+  //
+  // deltaY nao vem sempre em pixels: alguns navegadores/dispositivos mandam em
+  // linhas ou em telas cheias. Sem converter, encaminhar o valor cru pra
+  // pagina rolaria 3px onde deveria rolar 100.
+  const pixelsDoEvento = (e) => {
+    if (e.deltaMode === 1) return e.deltaY * 16;                 // linhas
+    if (e.deltaMode === 2) return e.deltaY * window.innerHeight; // telas
+    return e.deltaY;                                             // pixels
+  };
+
   let travadoAte = 0;
-  palco.addEventListener('wheel', (e) => {
-    const indiceAtual = Math.round(pos);
+  superficie.addEventListener('wheel', (e) => {
+    const maxRolo = superficie.scrollHeight - superficie.clientHeight;
     const indoParaFrente = e.deltaY > 0;
-    const podeAvancar = indoParaFrente ? indiceAtual < itens.length - 1 : indiceAtual > 0;
-    if (!podeAvancar) return; // nas pontas, deixa a pagina rolar pra fora da secao
+    // Lê a rolagem real do container, não `pos` arredondado: num giro rápido
+    // `pos` passa por 13,6 (arredonda pra 14, o último) antes de o rolo ter
+    // de fato chegado lá, e a página começaria a rolar cedo demais, comendo
+    // o último tópico.
+    const podeAvancar = indoParaFrente
+      ? superficie.scrollTop < maxRolo - 1
+      : superficie.scrollTop > 1;
+
+    // Ponta do rolo: a rolagem tem que seguir para a página. Daria pra só não
+    // chamar preventDefault e deixar o navegador encadear sozinho — mas ele
+    // só encadeia num gesto NOVO: num giro contínuo o Chrome gruda a
+    // gesticulação neste container e a página fica parada até a pessoa parar
+    // e girar de novo (testado aqui, com gesto sintetizado com fases). Como
+    // prender a pessoa na seção é exatamente o que esta mudança veio desfazer,
+    // o encaminhamento é explícito.
+    if (!podeAvancar) {
+      e.preventDefault();
+      window.scrollBy({ top: pixelsDoEvento(e), behavior: 'instant' });
+      return;
+    }
     e.preventDefault();
     if (performance.now() < travadoAte) return;
     travadoAte = performance.now() + 320;
     clearTimeout(temporizadorEncaixe);
-    window.scrollBy({ top: (indoParaFrente ? 1 : -1) * porItemAtual, behavior: 'smooth' });
+    superficie.scrollBy({ top: (indoParaFrente ? 1 : -1) * porItemAtual, behavior: 'smooth' });
   }, { passive: false });
 
+  // is-wheel antes de medir: e' ele que liga o CSS do rolo, e sem isso o
+  // container ainda estaria display:none (clientHeight 0) e a --roda-item-h
+  // nem existiria.
   trilho.classList.add('is-wheel');
   medir();
   desenhar();
 
-  window.addEventListener('scroll', agendar, { passive: true });
+  superficie.addEventListener('scroll', agendar, { passive: true });
   window.addEventListener('resize', () => { medir(); pos = -1; desenhar(); }, { passive: true });
 })();
 

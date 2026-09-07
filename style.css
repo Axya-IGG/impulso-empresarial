@@ -681,6 +681,7 @@ a { color: inherit; text-decoration: none; }
    movimento reduzido — a lista com trilho e cards acima continua valendo
    inteira: o rolo é enfeite, não é o único jeito de ler a programação. */
 .schedule-band,
+.schedule-scroll,
 .schedule-rail,
 .schedule-hint { display: none; }
 
@@ -695,14 +696,13 @@ a { color: inherit; text-decoration: none; }
    seguinte), então quem decide o destino final é o JS, a partir da posição
    contínua real do scroll. */
 
-/* O palco gruda na tela logo abaixo do header e o trilho alto (altura vem do
-   JS) é o que sobra de scroll para girar o rolo. */
+/* Seção comum: não gruda na tela nem consome scroll da página. Quem gira o
+   rolo é a rolagem dentro do .schedule-scroll (logo abaixo). Antes o palco
+   era sticky e o trilho ganhava altura extra pelo JS — girava bonito, mas
+   obrigava quem só queria passar direto a percorrer o dia inteiro antes de
+   alcançar a próxima seção. */
 .schedule-track.is-wheel .schedule-stage {
-  position: sticky;
-  top: var(--sched-topo, 0px);
-  height: calc(100svh - var(--sched-topo, 0px));
-  display: flex;
-  align-items: center;
+  display: block;
 }
 .schedule-track.is-wheel .schedule-stage > .container {
   width: 100%;
@@ -717,14 +717,42 @@ a { color: inherit; text-decoration: none; }
   overflow: hidden;
   perspective: 900px;
   perspective-origin: 50% 50%;
-  cursor: grab;
   /* As pontas somem em vez de cortar reto — é o que dá a impressão de que o
      rolo continua girando para dentro do aparelho. */
   -webkit-mask-image: linear-gradient(180deg, transparent, #000 13%, #000 87%, transparent);
           mask-image: linear-gradient(180deg, transparent, #000 13%, #000 87%, transparent);
 }
-.schedule-track.is-wheel .schedule-wrapper.is-dragging { cursor: grabbing; }
 .schedule-track.is-wheel .schedule-wrapper::before { display: none; }
+
+/* A superfície invisível que recebe a rolagem — o "quadrado" da interação.
+   Cobre exatamente a janela do rolo e é um container de rolagem NATIVO: roda
+   do mouse e dedo funcionam sem sequestrar evento nenhum, e ao chegar numa
+   ponta o próprio navegador encadeia a rolagem de volta pra página (é o que
+   impede a seção de prender quem só quer passar). O rolo abaixo é só visual;
+   por isso esta camada fica por cima e leva o cursor de "pegar". */
+.schedule-track.is-wheel .schedule-scroll {
+  display: block;
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  overflow-y: auto;
+  overflow-x: hidden;
+  cursor: grab;
+  /* Barra de rolagem escondida: ela denunciaria a camada e cortaria o
+     degradê das pontas. O conteúdo continua alcançável pelo teclado — daí o
+     tabindex no HTML — então esconder aqui é só estética, não acesso. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.schedule-track.is-wheel .schedule-scroll::-webkit-scrollbar { width: 0; height: 0; }
+.schedule-track.is-wheel .schedule-scroll.is-dragging { cursor: grabbing; }
+/* Sem isto o foco por teclado não teria nenhuma marca visível: a camada é
+   transparente e o anel padrão do navegador cairia fora da máscara. */
+.schedule-track.is-wheel .schedule-scroll:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+  border-radius: var(--radius);
+}
 
 /* A faixa clara parada no centro, igual à do seletor do iPhone. */
 .schedule-track.is-wheel .schedule-band {
@@ -851,10 +879,9 @@ a { color: inherit; text-decoration: none; }
   .schedule-track.is-wheel .section-header { margin-bottom: 16px; }
 }
 
-/* Tela baixa (celular deitado, sobretudo): o palco preso tem a altura da
-   janela, entao cabecalho + rolo tem que caber nela. Aqui o rolo encolhe e o
-   que e' acessorio sai — sem isso o fim do rolo fica embaixo da dobra e a
-   pessoa rola a seção inteira sem nunca ver o item central. */
+/* Tela baixa (celular deitado, sobretudo): cabecalho + rolo precisam caber
+   sem empurrar o item central pra baixo da dobra. Aqui o rolo encolhe e o que
+   e' acessorio sai. */
 @media (max-height: 560px) {
   .schedule-track.is-wheel {
     --roda-h: min(52svh, 210px);

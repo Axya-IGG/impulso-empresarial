@@ -482,10 +482,25 @@
               </div>
             </div>
           </div>
+
+          <!-- Superfície de rolagem invisível por cima do rolo: é ela que
+               delimita o "quadrado" onde a roda do mouse (e o dedo, no
+               celular) gira o cronograma. Fora daqui a página rola como em
+               qualquer outra seção, e quando o rolo chega numa ponta a
+               rolagem encadeia de volta pra página sozinha — comportamento
+               nativo de container de rolagem, e o que garante que ninguém
+               fica preso aqui. O espaçador não tem conteúdo: só existe pra dar
+               comprimento de rolagem. Os tópicos de verdade são os
+               .schedule-item acima, que seguem no DOM e são lidos
+               normalmente por leitor de tela. -->
+          <div class="schedule-scroll" id="schedule-scroll" tabindex="0"
+               role="group" aria-label="Programação do dia — role para percorrer">
+            <div class="schedule-scroll-spacer" id="schedule-scroll-spacer"></div>
+          </div>
         </div>
 
         <div class="schedule-rail" aria-hidden="true"><span id="schedule-rail-fill"></span></div>
-        <p class="schedule-hint" id="schedule-hint" aria-hidden="true">role para percorrer o dia</p>
+        <p class="schedule-hint" id="schedule-hint" aria-hidden="true">role sobre a lista para percorrer o dia</p>
       </div>
     </div>
   </div>
