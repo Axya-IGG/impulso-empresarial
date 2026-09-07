@@ -66,9 +66,35 @@ function updateCountdown() {
   }
 }
 
+// === VIRADA DE LOTE ===
+// Quando `virada_lote.em` (no #countdown-config) passa, os preços trocam
+// sozinhos — sem isso alguém teria que lembrar de editar o HTML às 23:59 do
+// dia certo. Só ida: não existe caminho de volta pro preço do lote 1 (ao
+// contrário da lista de espera, que podia reabrir), então não precisa
+// guardar o valor original em lugar nenhum pra restaurar depois.
+const cfgLote = countdownCfg?.virada_lote;
+const viradaLoteEm = cfgLote?.em ? new Date(cfgLote.em).getTime() : 0;
+let loteJaVirou = false; // trava a reescrita do DOM: sem isso rodaria a cada segundo à toa
+
+function pintarLote() {
+  if (!cfgLote || !viradaLoteEm || Date.now() < viradaLoteEm) return;
+  if (loteJaVirou) return;
+  loteJaVirou = true;
+
+  const preencher = (id, texto) => {
+    const el = document.getElementById(id);
+    if (el && texto) el.textContent = texto;
+  };
+  preencher('preco-ate3', `R$ ${cfgLote.preco_ate3}`);
+  preencher('preco-4mais', `R$ ${cfgLote.preco_4mais}`);
+  preencher('preco-cta-ate3', cfgLote.preco_ate3);
+  preencher('preco-cta-4mais', cfgLote.preco_4mais);
+}
+
 if (countdownCfg) {
   updateCountdown();
-  setInterval(updateCountdown, 1000);
+  pintarLote();
+  setInterval(() => { updateCountdown(); pintarLote(); }, 1000);
 }
 
 // === ATRIBUIÇÃO (UTM + Meta Pixel) — CAMINHO DE RESERVA ===

@@ -139,7 +139,7 @@
 
     <!-- Countdown -->
     <div class="countdown-wrapper">
-      <p class="countdown-label">As vendas começam em:</p>
+      <p class="countdown-label">O lote promocional encerra em:</p>
       <div class="countdown" id="countdown">
         <div class="countdown-item">
           <span class="countdown-num" id="cd-days">05</span>
@@ -644,7 +644,7 @@
     </div>
 
     <div class="tickets-countdown">
-      <p class="countdown-label">As vendas começam em:</p>
+      <p class="countdown-label">O lote promocional encerra em:</p>
       <div class="countdown" id="countdown2">
         <div class="countdown-item">
           <span class="countdown-num" id="cd2-days">05</span>
@@ -678,7 +678,7 @@
             <p class="ticket-qty">Até <strong>3 INGRESSOS</strong></p>
             <p class="ticket-lote">Lote Promocional</p>
             <p class="ticket-from"><s>De R$ 147,00</s> Por</p>
-            <p class="ticket-price">R$ 97,00</p>
+            <p class="ticket-price" id="preco-ate3">R$ 97,00</p>
             <p class="ticket-per">POR PESSOA</p>
           </div>
           <div class="ticket-stub" aria-hidden="true">
@@ -700,7 +700,7 @@
             <p class="ticket-qty">4 ou <strong>+ INGRESSOS</strong></p>
             <p class="ticket-lote">Lote Promocional</p>
             <p class="ticket-from"><s>De R$ 147,00</s> Por</p>
-            <p class="ticket-price">R$ 87,00</p>
+            <p class="ticket-price" id="preco-4mais">R$ 87,00</p>
             <p class="ticket-per">POR PESSOA</p>
           </div>
           <div class="ticket-stub" aria-hidden="true">
@@ -964,7 +964,7 @@
     <div class="cta-final-content">
       <h2>Não deixe de viver essa experiência</h2>
       <p>Garanta sua vaga com o preço especial antes que os ingressos acabem.</p>
-      <p class="countdown-label">As vendas começam em:</p>
+      <p class="countdown-label">O lote promocional encerra em:</p>
       <div class="cta-final-timer" id="countdown3">
         <div class="countdown-item">
           <span class="countdown-num" id="cd3-days">05</span>
@@ -991,10 +991,10 @@
            a espera e devolve os dois quando as vendas abrem. -->
       <div class="cta-final-buttons" data-espera-unico>
         <a href="https://chk.eduzz.com/80176KVQ07" data-checkout="ate3" class="btn btn-primary btn-xl" target="_blank" rel="noopener">
-          ATÉ 3 INGRESSOS · R$ 97,00 CADA
+          ATÉ 3 INGRESSOS · R$ <span id="preco-cta-ate3">97,00</span> CADA
         </a>
         <a href="https://chk.eduzz.com/797ZY8210E" data-checkout="4mais" class="btn btn-gold btn-xl" target="_blank" rel="noopener">
-          4 OU + INGRESSOS · R$ 87,00 CADA
+          4 OU + INGRESSOS · R$ <span id="preco-cta-4mais">87,00</span> CADA
         </a>
       </div>
       <p class="nota-espera" data-nota-espera hidden></p>
@@ -1117,17 +1117,33 @@
 
 <!-- Vendas antecipadas em 07/09 (decisao de negocio, o plano original era
      09/09) — a fase de lista de espera, que contava pra essa data, foi
-     retirada e o contador agora so mira o evento. vendas_abrem fica no
-     passado de proposito, em vez de apagar o campo: se um dia for preciso
-     reabrir a lista de espera, basta adiantar essa data outra vez. Datas no
-     fuso de Brasília — o script converte. -->
+     retirada. vendas_abrem fica no passado de proposito, em vez de apagar o
+     campo: se um dia for preciso reabrir a lista de espera, basta adiantar
+     essa data outra vez.
+
+     Duas fases agora: ate a virada do lote (30/09, 23:59) o contador mira o
+     fim do preco promocional; dali ate o evento, mira o evento. virada_lote
+     e' quem, de fato, troca os precos exibidos (script.js, pintarLote) — as
+     fases do contador so' escolhem o ROTULO/tempo mostrado, e por isso
+     carregam a mesma data em `ate` que virada_lote carrega em `em`; sao dois
+     campos porque tem formatos diferentes (fases e' lista, virada_lote e' um
+     objeto com os precos novos), nao porque a data pode divergir — mudar uma
+     sem a outra deixa contador e preco fora de sincronia.
+
+     Datas no fuso de Brasília — o script converte. -->
 <script type="application/json" id="countdown-config">
 {
   "fases": [
+    { "ate": "2026-09-30T23:59:00-03:00", "label": "O lote promocional encerra em:" },
     { "ate": "2026-10-10T08:30:00-03:00", "label": "O evento começa em:" }
   ],
   "encerrado": "O evento já começou",
   "vendas_abrem": "2026-09-07T00:00:00-03:00",
+  "virada_lote": {
+    "em": "2026-09-30T23:59:00-03:00",
+    "preco_ate3": "107,00",
+    "preco_4mais": "97,00"
+  },
   "espera": {
     "rotulo": "ENTRAR NA LISTA DE ESPERA",
     "nota": "Vendas a partir de 09/09 — avisamos você primeiro.",
