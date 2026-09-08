@@ -157,7 +157,7 @@ if (Test-Path -LiteralPath $TerserBin) {
 $semBom = New-Object System.Text.UTF8Encoding($false)
 $htmls  = @(Get-ChildItem -LiteralPath $StagePub -Filter *.html -File)
 
-foreach ($asset in @('style.css', 'script.js', 'admin.css', 'admin.js', 'assets/hero-realizadoras.jpg')) {
+foreach ($asset in @('style.css', 'script.js', 'admin.css', 'admin.js', 'assets/hero-realizadoras.jpg', 'images/fabi-vieira.jpg', 'images/juliana-godoi.jpg', 'images/daniel-godoi.jpg', 'images/debora-mariano.jpg')) {
     $caminho = Join-Path $StagePub $asset
     if (-not (Test-Path -LiteralPath $caminho)) { continue }
 
