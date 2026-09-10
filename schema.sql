@@ -97,6 +97,9 @@ CREATE TABLE IF NOT EXISTS mensagens (
 -- EXISTS (SELECT 1 FROM compras WHERE lead_id = ? AND status = 'aprovada').
 -- Alimentada pelo webhook da Eduzz (functions/api/webhook/eduzz.js) e/ou
 -- por marcacao manual no painel (origem='manual', sem transacao_id).
+-- utm_*: origem da compra em si, gravada no instante em que o webhook da
+-- Eduzz confirma o pagamento (nao inferida depois a partir do lead, cujo trk
+-- sempre aponta pra visita mais recente — ver migrations/005_compras_utm.sql).
 CREATE TABLE IF NOT EXISTS compras (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,
   lead_id       TEXT NOT NULL,
@@ -106,6 +109,11 @@ CREATE TABLE IF NOT EXISTS compras (
   transacao_id  TEXT,
   origem        TEXT NOT NULL DEFAULT 'eduzz' CHECK (origem IN ('eduzz','manual')),
   criado_em     TEXT NOT NULL,
+  utm_source    TEXT,
+  utm_medium    TEXT,
+  utm_campaign  TEXT,
+  utm_content   TEXT,
+  utm_term      TEXT,
   FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS idx_compras_lead ON compras(lead_id);

@@ -107,6 +107,26 @@ $('#busca-leads').addEventListener('input', () => {
 });
 $('#filtro-comprou').addEventListener('change', carregarLeads);
 
+// UTM gravada na propria compra (ver migrations/005_compras_utm.sql) — "—"
+// quando nao comprou, "sem utm" quando comprou mas nenhum utm_* foi
+// capturado (link do checkout sem parametro, ou compra de antes desta
+// migracao sem sessao/atribuicao pra backfill). O título mostra origem,
+// meio, campanha, conteúdo e termo completos; o texto da célula só
+// origem/campanha, que já dá pra saber de qual anúncio veio.
+function renderUtmCompra(l) {
+  if (!l.comprou) return '—';
+  const partes = [l.compra_utm_source, l.compra_utm_campaign].filter(Boolean);
+  if (!partes.length) return '<span class="utm-vazio">sem utm</span>';
+  const detalhe = [
+    l.compra_utm_source && `origem: ${l.compra_utm_source}`,
+    l.compra_utm_medium && `meio: ${l.compra_utm_medium}`,
+    l.compra_utm_campaign && `campanha: ${l.compra_utm_campaign}`,
+    l.compra_utm_content && `conteúdo: ${l.compra_utm_content}`,
+    l.compra_utm_term && `termo: ${l.compra_utm_term}`,
+  ].filter(Boolean).join(' · ');
+  return `<span title="${esc(detalhe)}">${esc(partes.join(' / '))}</span>`;
+}
+
 async function carregarLeads() {
   const busca = $('#busca-leads').value.trim();
   const comprou = $('#filtro-comprou').value;
@@ -132,6 +152,7 @@ async function carregarLeads() {
           <td>${esc(l.origem || '—')}</td>
           <td>${esc(dataBR(l.criado_em))}</td>
           <td>${l.comprou ? '<span class="selo selo-ok">comprou</span>' : '—'}</td>
+          <td>${renderUtmCompra(l)}</td>
           <td>
             <button class="btn-mini" data-comprou="${esc(l.id)}" data-valor="${l.comprou ? 0 : 1}">
               ${l.comprou ? 'Desmarcar compra' : 'Marcar como comprador'}
@@ -142,7 +163,7 @@ async function carregarLeads() {
             <button class="btn-mini perigo" data-excluir-lead="${esc(l.id)}">Excluir</button>
           </td>
         </tr>`).join('')
-    : '<tr><td colspan="7" class="vazio">Nenhum lead ainda.</td></tr>';
+    : '<tr><td colspan="8" class="vazio">Nenhum lead ainda.</td></tr>';
 }
 
 $('#corpo-leads').addEventListener('click', async e => {

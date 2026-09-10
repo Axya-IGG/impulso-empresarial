@@ -11,17 +11,37 @@ const csvCampo = (v) => {
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
 
+  // Utm da compra mais recente aprovada de cada lead — gravada na propria
+  // linha de `compras` (ver migrations/005_compras_utm.sql), nao inferida do
+  // lead, porque leads.trk sempre aponta pra visita mais recente e pode nao
+  // ser mais a mesma sessao que gerou a venda. MAX(criado_em) + GROUP BY sem
+  // outra agregacao e' o idioma do SQLite/D1 pra "as outras colunas vem da
+  // linha do maximo" — nao e' comportamento generico de SQL.
+  const JUNCAO_UTM_COMPRA = `
+    LEFT JOIN (
+      SELECT lead_id, utm_source, utm_medium, utm_campaign, utm_content, utm_term, MAX(criado_em)
+      FROM compras WHERE status = 'aprovada'
+      GROUP BY lead_id
+    ) cu ON cu.lead_id = l.id
+  `;
+
   if (url.searchParams.get('formato') === 'csv') {
     const { results } = await env.DB.prepare(`
       SELECT l.nome, l.email, l.whatsapp, l.origem, l.criado_em, l.optout,
-        EXISTS(SELECT 1 FROM compras c WHERE c.lead_id = l.id AND c.status = 'aprovada') AS comprou
-      FROM leads l ORDER BY l.criado_em DESC
+        EXISTS(SELECT 1 FROM compras c WHERE c.lead_id = l.id AND c.status = 'aprovada') AS comprou,
+        cu.utm_source, cu.utm_medium, cu.utm_campaign, cu.utm_content, cu.utm_term
+      FROM leads l ${JUNCAO_UTM_COMPRA}
+      ORDER BY l.criado_em DESC
     `).all();
 
-    const cab = ['Nome', 'E-mail', 'WhatsApp', 'Origem', 'Cadastro', 'Descadastrado', 'Comprou'];
+    const cab = [
+      'Nome', 'E-mail', 'WhatsApp', 'Origem', 'Cadastro', 'Descadastrado', 'Comprou',
+      'UTM Origem', 'UTM Meio', 'UTM Campanha', 'UTM Conteudo', 'UTM Termo',
+    ];
     const linhas = (results || []).map(l => [
       l.nome, l.email, l.whatsapp, l.origem || '', l.criado_em, l.optout ? 'sim' : 'nao',
       l.comprou ? 'sim' : 'nao',
+      l.utm_source || '', l.utm_medium || '', l.utm_campaign || '', l.utm_content || '', l.utm_term || '',
     ].map(csvCampo).join(','));
 
     // BOM: sem ele o Excel no Windows abre o arquivo em ANSI e quebra os acentos.
@@ -48,8 +68,12 @@ export async function onRequestGet({ request, env }) {
 
   const sql = `
     SELECT l.*,
-      EXISTS(SELECT 1 FROM compras c WHERE c.lead_id = l.id AND c.status = 'aprovada') AS comprou
+      EXISTS(SELECT 1 FROM compras c WHERE c.lead_id = l.id AND c.status = 'aprovada') AS comprou,
+      cu.utm_source AS compra_utm_source, cu.utm_medium AS compra_utm_medium,
+      cu.utm_campaign AS compra_utm_campaign, cu.utm_content AS compra_utm_content,
+      cu.utm_term AS compra_utm_term
     FROM leads l
+    ${JUNCAO_UTM_COMPRA}
     WHERE (l.nome LIKE ? OR l.email LIKE ? OR l.whatsapp LIKE ?)
     ${condComprou}
     ORDER BY l.criado_em DESC LIMIT 500

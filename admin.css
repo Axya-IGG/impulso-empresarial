@@ -255,6 +255,7 @@ input:focus, select:focus, textarea:focus {
 .tabela tr:last-child td { border-bottom: none; }
 .tabela tbody tr:hover { background: rgba(255,255,255,0.025); }
 .vazio { text-align: center; color: var(--text-muted); padding: 34px 14px; font-size: 0.88rem; }
+.utm-vazio { color: var(--text-muted); font-size: 0.82rem; }
 
 .selo {
   display: inline-block;

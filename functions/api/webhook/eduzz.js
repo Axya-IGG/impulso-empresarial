@@ -43,6 +43,45 @@ async function assinaturaValida(corpoBruto, recebida, segredo) {
   return diff === 0;
 }
 
+const CAMPOS_UTM = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
+
+// UTM da propria sessao (nosso cookie/borda, functions/_middleware.js) — a
+// mesma fonte que o resto do sistema usa, e a mais confiavel porque casa
+// exato com o `trk` da compra.
+function utmDaSessao(sessao) {
+  if (!sessao) return null;
+  const limpo = {};
+  for (const c of CAMPOS_UTM) if (sessao[c]) limpo[c] = sessao[c];
+  return Object.keys(limpo).length ? limpo : null;
+}
+
+// UTM que a propria Eduzz capturou do link do checkout (`d.utm` no
+// payload — ver comentario no topo do arquivo). Cobre o caso de trk ausente
+// (cookie bloqueado); formato exato nao confirmado por payload real ainda,
+// por isso le' os nomes padrao (utm_source, utm_medium, ...) e ignora o que
+// nao bater.
+function utmDoPayloadEduzz(utm) {
+  if (!utm || typeof utm !== 'object') return null;
+  const limpo = {};
+  for (const c of CAMPOS_UTM) {
+    const v = utm[c];
+    if (typeof v === 'string' && v) limpo[c] = v.slice(0, 300);
+  }
+  return Object.keys(limpo).length ? limpo : null;
+}
+
+// Ultimo recurso: atribuicao gravada no cadastro do lead (JSON em
+// leads.atribuicao — ver functions/api/lead.js), usada so quando nem sessao
+// nem o payload da Eduzz trouxeram nada.
+function utmDaAtribuicao(bruto) {
+  if (!bruto) return null;
+  let obj;
+  try { obj = JSON.parse(bruto); } catch { return null; }
+  const limpo = {};
+  for (const c of CAMPOS_UTM) if (typeof obj?.[c] === 'string' && obj[c]) limpo[c] = obj[c];
+  return Object.keys(limpo).length ? limpo : null;
+}
+
 // Confirmados por teste real: 'myeduzz.invoice_paid', 'myeduzz.invoice_refunded'
 // e um dos dois nomes de cancelamento abaixo (confirmado indiretamente em
 // 03/09 — o log de "evento ignorado" não disparou nesse teste, mas o
@@ -135,12 +174,27 @@ export async function onRequestPost({ request, env }) {
   // "agora" para a ancora de atraso do worker, que soma minutos a esta data.
   const quando = !isNaN(new Date(d.paidAt)) ? new Date(d.paidAt).toISOString() : agora();
 
+  // Buscados aqui (antes do INSERT) porque a UTM desta compra especifica e'
+  // gravada na propria linha de `compras`, nao inferida depois a partir do
+  // lead — ver migrations/005_compras_utm.sql. sessao e leadCompleto tambem
+  // servem pro evento de Meta logo abaixo, sem precisar buscar de novo.
+  const sessao = trk ? await env.DB.prepare('SELECT * FROM sessoes WHERE trk = ?').bind(trk).first() : null;
+  const leadCompleto = await env.DB.prepare('SELECT * FROM leads WHERE id = ?').bind(leadId).first();
+  const utmCompra = utmDaSessao(sessao) || utmDoPayloadEduzz(d.utm) || utmDaAtribuicao(leadCompleto?.atribuicao);
+
   let compraNova = false;
   try {
     await env.DB.prepare(`
-      INSERT INTO compras (lead_id, produto, valor, status, transacao_id, origem, criado_em)
-      VALUES (?, ?, ?, 'aprovada', ?, 'eduzz', ?)
-    `).bind(leadId, produto, valor, transacaoId, quando).run();
+      INSERT INTO compras (
+        lead_id, produto, valor, status, transacao_id, origem, criado_em,
+        utm_source, utm_medium, utm_campaign, utm_content, utm_term
+      )
+      VALUES (?, ?, ?, 'aprovada', ?, 'eduzz', ?, ?, ?, ?, ?, ?)
+    `).bind(
+      leadId, produto, valor, transacaoId, quando,
+      utmCompra?.utm_source ?? null, utmCompra?.utm_medium ?? null, utmCompra?.utm_campaign ?? null,
+      utmCompra?.utm_content ?? null, utmCompra?.utm_term ?? null,
+    ).run();
     compraNova = true;
   } catch {
     // UNIQUE(transacao_id): a Eduzz reentregou o mesmo evento. Ja processado
@@ -150,8 +204,6 @@ export async function onRequestPost({ request, env }) {
 
   if (compraNova) {
     try {
-      const leadCompleto = await env.DB.prepare('SELECT * FROM leads WHERE id = ?').bind(leadId).first();
-      const sessao = trk ? await env.DB.prepare('SELECT * FROM sessoes WHERE trk = ?').bind(trk).first() : null;
       const userData = await montarUserData({ lead: leadCompleto, sessao });
 
       await enviarEventoMeta(env, {

@@ -217,7 +217,10 @@ setInterval(pintarCheckout, 1000);
 // o checkout; antes disso, e o cadastro na lista de espera. Quem ja
 // preencheu nao ve o formulario de novo: a marca fica no localStorage e,
 // como ele se perde ao limpar o navegador, o servidor tambem devolve um
-// cookie de um ano e trata o WhatsApp como chave unica.
+// cookie de um ano. Terceira camada, mais confiavel que as duas: o cookie
+// `trk` que a borda seta (400 dias — functions/_middleware.js) e' checado
+// contra `leads.trk` via GET /api/lead/estado, cobrindo quem perdeu
+// localStorage E o cookie de um ano mas ainda tem o `trk` no navegador.
 const JA_CADASTRADO = 'impulso_lead_ok';
 
 const modal        = document.getElementById('lead-modal');
@@ -229,12 +232,43 @@ const sucessoLead  = document.getElementById('lead-sucesso');
 const sucessoTexto = document.getElementById('lead-sucesso-texto');
 
 const jaCadastrou = () => {
-  try { return localStorage.getItem(JA_CADASTRADO) === '1'; }
-  catch { return document.cookie.includes('impulso_lead=1'); }
+  try { if (localStorage.getItem(JA_CADASTRADO) === '1') return true; } catch { /* navegacao privada */ }
+  if (document.cookie.includes('impulso_lead=1')) return true;
+  return cadastradoServidor === true;
 };
 const marcarCadastrado = () => {
   try { localStorage.setItem(JA_CADASTRADO, '1'); } catch { /* navegacao privada */ }
 };
+
+// Confirmação do servidor pelo cookie `trk` (edge, 400 dias — ver
+// GET /api/lead/estado), pra cobrir quem já se cadastrou mas perdeu o
+// localStorage e o cookie `impulso_lead` (limpou dados do navegador, trocou
+// de navegador no mesmo aparelho, etc.) — casos em que as duas checagens
+// acima sozinhas mandavam a pessoa preencher o formulário de novo à toa.
+// `null` enquanto pendente: jaCadastrou() cai pra checagem local nesse meio
+// tempo, então um clique bem no instante do carregamento da página no pior
+// caso mostra o popup uma vez a mais, nunca de menos. Só consulta o servidor
+// quando as checagens locais (mais rápidas, sem rede) ainda não sabem —
+// quem já tem o localStorage ou o cookie não precisa da viagem ao D1.
+let cadastradoServidor = null;
+let cadastradoLocalmente = false;
+try { cadastradoLocalmente = localStorage.getItem(JA_CADASTRADO) === '1'; } catch { /* navegacao privada */ }
+cadastradoLocalmente = cadastradoLocalmente || document.cookie.includes('impulso_lead=1');
+
+if (cadastradoLocalmente) {
+  cadastradoServidor = true;
+} else {
+  (async () => {
+    try {
+      const r = await fetch('/api/lead/estado');
+      const corpo = await r.json().catch(() => ({}));
+      cadastradoServidor = !!corpo.cadastrado;
+      if (cadastradoServidor) marcarCadastrado();
+    } catch {
+      cadastradoServidor = false; // falha de rede: segue só com localStorage/cookie
+    }
+  })();
+}
 
 if (modal && formLead) {
   const botaoLead = formLead.querySelector('button[type="submit"]');
