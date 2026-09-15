@@ -21,6 +21,23 @@ const pausaAleatoria = () => PAUSA_MIN_MS + Math.random() * (PAUSA_MAX_MS - PAUS
 
 const dorme = (ms) => new Promise(r => setTimeout(r, ms));
 
+// Janela de envio: 8h as 20h, horario de Brasilia. Existe porque mensagem de
+// WhatsApp automatica de madrugada incomoda o lead e chama atencao numa
+// instancia Baileys (API nao-oficial). A mensagem tipo 'data' ja nascia
+// dentro da janela (enviar_em comeca as 10h, ver mensagens.js), mas a tipo
+// 'atraso' so' depende de quando o lead se cadastrou ou comprou. Sem esta
+// checagem, um cadastro as 23h com atraso de 1h virava mensagem enviada
+// as 0h. Por isso o corte fica aqui, num unico lugar, valendo pros dois tipos.
+const JANELA_INICIO_H = 8;
+const JANELA_FIM_H = 20;
+
+function horaBrasilia() {
+  const partes = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'America/Sao_Paulo', hour: 'numeric', hourCycle: 'h23',
+  }).formatToParts(new Date());
+  return Number(partes.find(p => p.type === 'hour')?.value ?? 0);
+}
+
 /**
  * Monta a fila da rodada: pares (lead, mensagem) que ja venceram e ainda
  * nao foram enviados.
@@ -100,7 +117,12 @@ async function montarFila(db, limite) {
   return [...(porData.results || []), ...(porAtraso.results || [])].slice(0, limite);
 }
 
-async function rodar(env) {
+async function rodar(env, forcarForaDaJanela = false) {
+  const hora = horaBrasilia();
+  if (!forcarForaDaJanela && (hora < JANELA_INICIO_H || hora >= JANELA_FIM_H)) {
+    return { fila: 0, enviados: 0, erros: 0, fora_da_janela: true, hora_brasilia: hora };
+  }
+
   // Conta todo status, inclusive 'erro': mesmo uma tentativa que falhou e'
   // trafego que saiu em direcao ao WhatsApp, e o teto e' sobre trafego, nao
   // so sobre sucesso.
@@ -152,6 +174,9 @@ export default {
     if (request.headers.get('X-Admin-Senha') !== env.ADMIN_SENHA) {
       return new Response('Nao autorizado', { status: 401 });
     }
-    return Response.json(await rodar(env));
+    // ?forcar=1 ignora a janela de horario — so' pra testar de madrugada
+    // sem esperar o dia seguinte; o cron nunca manda essa flag.
+    const forcar = url.searchParams.get('forcar') === '1';
+    return Response.json(await rodar(env, forcar));
   },
 };
