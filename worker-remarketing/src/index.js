@@ -1,9 +1,10 @@
 import { agora, enviarWhatsapp, renderizar, escolherVariante } from '../../functions/_lib.js';
 
-// Teto por rodada. O cron roda de 5 em 5 minutos: 30/rodada da ~360
-// mensagens/hora no pior caso, o que so importa se o teto diario abaixo
-// nao cortar antes.
-const MAX_POR_RODADA = 30;
+// Teto por rodada. O cron roda de 5 em 5 minutos: 4/rodada da no maximo 48
+// mensagens/hora. E' de proposito bem baixo: quando entra uma leva de leads
+// de uma vez (importacao de lista, por exemplo), todos vencem no mesmo
+// instante, e o ritmo daqui e' o que impede a rajada que derruba o numero.
+const MAX_POR_RODADA = 4;
 
 // Teto diario, somando todas as mensagens e os dois publicos. Existe porque
 // o limite por rodada sozinho so trava rajada — nao evita que o numero
@@ -14,9 +15,10 @@ const MAX_POR_DIA = 250;
 
 // Intervalo entre envios, aleatorio em vez de fixo: cadencia perfeitamente
 // regular (sempre X ms entre mensagens) e, ela mesma, uma assinatura de
-// automacao. 30 envios no pior caso ainda cabem folgados nos 5 min do cron.
-const PAUSA_MIN_MS = 1200;
-const PAUSA_MAX_MS = 4200;
+// automacao. Com 4 envios por rodada e pausa media de 50 s, a rodada dura uns
+// 3 min e cabe nos 5 min do cron sem emendar na seguinte.
+const PAUSA_MIN_MS = 25000;
+const PAUSA_MAX_MS = 75000;
 const pausaAleatoria = () => PAUSA_MIN_MS + Math.random() * (PAUSA_MAX_MS - PAUSA_MIN_MS);
 
 const dorme = (ms) => new Promise(r => setTimeout(r, ms));
@@ -83,7 +85,7 @@ async function montarFila(db, limite) {
            ) <= datetime('now')
        AND NOT EXISTS (SELECT 1 FROM envios e
                         WHERE e.lead_id = l.id AND e.mensagem_id = m.id)
-     ORDER BY l.criado_em
+     ORDER BY CASE WHEN m.publico = 'compradores' THEN 0 ELSE 1 END, l.criado_em
      LIMIT ?
   `).bind(limite).all();
 
