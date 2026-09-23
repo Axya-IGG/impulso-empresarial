@@ -11,6 +11,11 @@ const MAX_POR_RODADA = 4;
 // mande, por exemplo, 300 mensagens em 3 horas de um dia parado, o que
 // tambem chama atencao numa instancia Baileys (API nao-oficial). Ajustar
 // pra cima com cautela e so depois de a base de leads justificar.
+//
+// COMPARTILHADO com o worker de entrega de certificados
+// (impulso-certificados/worker-envio), que usa o mesmo numero e o mesmo
+// teto. Mudar o valor aqui sem mudar la faz os dois discordarem sobre
+// quanto ainda cabe, e o maior dos dois vence na pratica.
 const MAX_POR_DIA = 250;
 
 // Intervalo entre envios, aleatorio em vez de fixo: cadencia perfeitamente
@@ -131,7 +136,34 @@ async function rodar(env, forcarForaDaJanela = false) {
   const jaHoje = await env.DB.prepare(
     `SELECT COUNT(*) AS n FROM envios WHERE enviado_em > datetime('now','-1 day')`
   ).first();
-  const limite = Math.max(0, Math.min(MAX_POR_RODADA, MAX_POR_DIA - (jaHoje?.n ?? 0)));
+
+  // Soma tambem `cert_entregas`, a fila do app de certificados
+  // (C:\Claude Code\impulso-certificados), que vive no MESMO banco. Os dois
+  // workers disparam pelo MESMO numero da instancia `axya`: sem esta soma,
+  // cada um gastaria 250 por dia e o numero levaria 500, o dobro do teto que
+  // este arquivo inteiro existe para respeitar. O worker de la faz a mesma
+  // conta, na mesma janela de 24h corridas.
+  //
+  // Em consulta separada com try/catch, e nao como subconsulta na de cima,
+  // porque num banco sem a tabela (outro ambiente, banco novo) o SQLite
+  // falha ao preparar a instrucao INTEIRA — nao devolve NULL, e nenhum
+  // COALESCE salvaria. Junto, um app de certificados ausente derrubaria o
+  // remarketing, que esta no ar com trafego pago. Separado, ele so' nao
+  // soma nada.
+  let certificadosHoje = 0;
+  try {
+    const r = await env.DB.prepare(
+      `SELECT COUNT(*) AS n FROM cert_entregas
+        WHERE status IN ('enviado','falha','enviando')
+          AND enviado_em > datetime('now','-1 day')`
+    ).first();
+    certificadosHoje = r?.n ?? 0;
+  } catch (e) {
+    console.log('[remarketing] cert_entregas indisponivel, teto sem ela:', String(e).slice(0, 120));
+  }
+
+  const gasto = (jaHoje?.n ?? 0) + certificadosHoje;
+  const limite = Math.max(0, Math.min(MAX_POR_RODADA, MAX_POR_DIA - gasto));
 
   if (limite === 0) return { fila: 0, enviados: 0, erros: 0, teto_diario_atingido: true };
 
