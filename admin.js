@@ -621,9 +621,28 @@ async function carregarEnvios() {
           <td>${esc(e.mensagem_titulo || '—')}</td>
           <td><span class="selo ${selo[e.status] || 'selo-off'}">${esc(e.status)}</span></td>
           <td>${esc((e.detalhe || '').slice(0, 90))}</td>
+          <td>${e.status === 'erro' ? `<button class="btn-mini" data-reenviar="${e.id}">Reenviar</button>` : ''}</td>
         </tr>`).join('')
-    : `<tr><td colspan="5" class="vazio">${filtrouAlgo ? 'Nenhum envio bate com esse filtro.' : 'Nenhum envio ainda.'}</td></tr>`;
+    : `<tr><td colspan="6" class="vazio">${filtrouAlgo ? 'Nenhum envio bate com esse filtro.' : 'Nenhum envio ainda.'}</td></tr>`;
 }
+
+$('#corpo-envios').addEventListener('click', async e => {
+  const bt = e.target.closest('[data-reenviar]');
+  if (!bt) return;
+
+  bt.disabled = true;
+  bt.textContent = 'Enviando...';
+  try {
+    await api('/api/admin/reenviar', {
+      method: 'POST',
+      body: JSON.stringify({ id: Number(bt.dataset.reenviar) }),
+    });
+    toast('Mensagem reenviada.');
+  } catch (err) {
+    toast(err.message);
+  }
+  carregarEnvios();
+});
 
 let buscaEnviosTimer;
 $('#busca-envios').addEventListener('input', () => {

@@ -238,6 +238,20 @@ input:focus, select:focus, textarea:focus {
   border: 1px solid var(--border);
   border-radius: var(--radius);
 }
+/* Mostra só as ~15 primeiras linhas e rola por dentro da caixa: com a base
+   de leads crescendo (importações de lista, por exemplo), a tabela inteira
+   empurrava o resto do painel pra baixo da tela. O cabeçalho fica fixo
+   (sticky) pra não perder de vista qual coluna é qual ao rolar. */
+.tabela-wrap-rolavel {
+  max-height: 620px;
+  overflow-y: auto;
+}
+.tabela-wrap-rolavel thead th {
+  position: sticky;
+  top: 0;
+  background: var(--dark-2);
+  z-index: 1;
+}
 .tabela { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
 .tabela th, .tabela td {
   text-align: left;
