@@ -104,6 +104,14 @@ async function montarFila(db, limite) {
   // ao longo do dia, que e' o ponto: uma rajada de centenas de mensagens no
   // mesmo minuto e' um dos sinais mais fortes de automacao que derrubam um
   // numero.
+  // O filtro abaixo (m.enviar_em >= referencia) e' o que impede mensagem
+  // "antiga" pra quem so' entrou no publico DEPOIS que a janela dela passou.
+  // Sem ele, alguem que compra hoje mas vira "comprador" depois do dia de um
+  // Spotlight ja' agendado (ex.: mensagem de 21/09, compra em 23/09) recebia
+  // esse aquecimento vencido — e podia chegar antes ate' da Confirmacao
+  // imediata, porque os dois ficavam "devidos" na mesma rodada. Referencia e'
+  // a data da COMPRA pra mensagem de 'compradores' (mesma logica do
+  // 'atraso' acima) e o cadastro pros demais publicos.
   const porData = await db.prepare(`
     SELECT l.id AS lead_id, l.nome, l.whatsapp, m.id AS mensagem_id, m.texto
       FROM leads l
@@ -115,13 +123,22 @@ async function montarFila(db, limite) {
              m.enviar_em,
              '+' || ((l.rowid * 2654435761 + m.id * 40503) % 600) || ' minutes'
            ) <= datetime('now')
+       AND datetime(m.enviar_em) >= datetime(
+             CASE WHEN m.publico = 'compradores'
+                  THEN (SELECT MAX(c.criado_em) FROM compras c
+                         WHERE c.lead_id = l.id AND c.status = 'aprovada')
+                  ELSE l.criado_em END
+           )
        AND NOT EXISTS (SELECT 1 FROM envios e
                         WHERE e.lead_id = l.id AND e.mensagem_id = m.id)
      ORDER BY m.enviar_em, l.criado_em
      LIMIT ?
   `).bind(limite).all();
 
-  return [...(porData.results || []), ...(porAtraso.results || [])].slice(0, limite);
+  // Atraso primeiro (Confirmacao imediata inclusa): pra quem acabou de
+  // comprar, a confirmacao e' a primeira coisa que devia chegar, nunca um
+  // aquecimento que por acaso tambem ficou devido na mesma rodada.
+  return [...(porAtraso.results || []), ...(porData.results || [])].slice(0, limite);
 }
 
 async function rodar(env, forcarForaDaJanela = false) {
