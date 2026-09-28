@@ -142,6 +142,24 @@ CREATE TABLE IF NOT EXISTS envios (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_envios_unico ON envios(lead_id, mensagem_id);
 CREATE INDEX IF NOT EXISTS idx_envios_data ON envios(enviado_em);
 
+-- ---------------------------------------------------- mensagens_recebidas
+-- Toda mensagem que um lead manda de volta, recebida pelos dois webhooks
+-- (Evolution e API oficial da Meta). `canal` guarda por qual API chegou,
+-- porque a resposta tem que sair pela MESMA API (sao dois numeros
+-- diferentes) pra continuar a mesma conversa.
+CREATE TABLE IF NOT EXISTS mensagens_recebidas (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  lead_id      TEXT,
+  whatsapp     TEXT NOT NULL,
+  texto        TEXT NOT NULL,
+  canal        TEXT NOT NULL CHECK (canal IN ('evolution','meta')),
+  recebido_em  TEXT NOT NULL,
+  lida         INTEGER NOT NULL DEFAULT 0,
+  FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE SET NULL
+);
+CREATE INDEX IF NOT EXISTS idx_recebidas_recebido ON mensagens_recebidas(recebido_em);
+CREATE INDEX IF NOT EXISTS idx_recebidas_lead ON mensagens_recebidas(lead_id);
+
 -- --------------------------------------------------- tentativas de login
 -- O painel inteiro e protegido por uma senha unica compartilhada, entao
 -- adivinha-la e a unica barreira entre a internet e os dados pessoais dos

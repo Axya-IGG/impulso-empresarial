@@ -169,6 +169,35 @@ export async function enviarWhatsappMeta(env, numero, templateNome, primeiroNome
 }
 
 /**
+ * Resposta em texto livre pela API oficial — diferente de enviarWhatsappMeta
+ * (que so' manda template), isto so' funciona dentro da janela de 24h desde
+ * a ultima mensagem que o lead mandou pra gente (regra da propria Meta pra
+ * mensagem iniciada pelo negocio sem template). Usado so' pelo painel, pra
+ * responder quem interagiu — nunca pelo disparo em massa.
+ */
+export async function enviarWhatsappMetaTexto(env, numero, texto) {
+  try {
+    const r = await fetch(`https://graph.facebook.com/v21.0/${env.WHATSAPP_PHONE_NUMBER_ID}/messages`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${env.WHATSAPP_ACCESS_TOKEN}`,
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        to: numero,
+        type: 'text',
+        text: { body: texto },
+      }),
+    });
+    const corpo = await r.text();
+    return { ok: r.ok, detalhe: corpo.slice(0, 400) };
+  } catch (e) {
+    return { ok: false, detalhe: String(e).slice(0, 400) };
+  }
+}
+
+/**
  * Mensagens podem trazer variações de texto separadas por uma linha só com
  * "---", para não mandar o mesmo texto idêntico pra todo mundo — texto
  * idêntico em massa é um dos sinais que fazem o WhatsApp suspeitar de

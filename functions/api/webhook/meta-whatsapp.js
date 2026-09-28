@@ -14,12 +14,15 @@ import { json, agora, normalizarWhatsapp } from '../../_lib.js';
  *
  *   POST — evento de verdade: mensagem recebida (`value.messages[]`) ou
  *          atualização de status de uma mensagem enviada (`value.statuses[]`,
- *          ex.: "delivered", "read", "failed" — ainda não usado aqui porque
- *          o envio pela Cloud API não está ligado ainda; ver [[project_impulso_empresarial]]).
+ *          ex.: "delivered", "read", "failed" — ainda não usado aqui; sem
+ *          nada gravado em `envios` com o wamid retornado no envio, não há
+ *          linha pra atualizar com o status).
  *
- * Mesmas palavras de saída do webhook da Evolution (functions/api/webhook/
- * evolution.js) — o texto "responda SAIR" do formulário vale pros dois
- * numeros/APIs enquanto a migração não termina.
+ * Toda mensagem recebida é guardada em `mensagens_recebidas`, pra aparecer
+ * na caixa de entrada do painel e dar pra responder (ver
+ * functions/api/admin/recebidas.js). Mesmas palavras de saída do webhook da
+ * Evolution (functions/api/webhook/evolution.js) — o texto "responda SAIR"
+ * do formulário vale pros dois números/APIs enquanto a migração não termina.
  */
 const PALAVRAS_SAIDA = ['sair', 'parar', 'pare', 'remover', 'descadastrar', 'cancelar', 'stop'];
 
@@ -76,20 +79,25 @@ export async function onRequestPost({ request, env }) {
   for (const mudanca of mudancas) {
     const mensagens = mudanca?.value?.messages || [];
     for (const msg of mensagens) {
-      const texto = (msg?.text?.body || '').trim().toLowerCase();
-      const semPontuacao = texto.replace(/[.!,;:]/g, '').trim();
-      if (!PALAVRAS_SAIDA.includes(semPontuacao)) continue;
+      const textoOriginal = (msg?.text?.body || '').trim();
+      if (!textoOriginal) continue;   // sem texto (audio, figurinha...): nada pra guardar
 
       const numero = normalizarWhatsapp(msg?.from);
       if (!numero) continue;
+
+      const lead = await env.DB.prepare('SELECT id FROM leads WHERE whatsapp = ?').bind(numero).first();
+      await env.DB.prepare(
+        'INSERT INTO mensagens_recebidas (lead_id, whatsapp, texto, canal, recebido_em) VALUES (?, ?, ?, ?, ?)'
+      ).bind(lead?.id ?? null, numero, textoOriginal, 'meta', agora()).run();
+
+      const semPontuacao = textoOriginal.toLowerCase().replace(/[.!,;:]/g, '').trim();
+      if (!PALAVRAS_SAIDA.includes(semPontuacao)) continue;
 
       await env.DB.prepare(
         'UPDATE leads SET optout = 1, optout_em = ? WHERE whatsapp = ? AND optout = 0'
       ).bind(agora(), numero).run();
     }
-    // value.statuses[] (delivered/read/failed) fica pra quando o envio pela
-    // Cloud API estiver ligado — sem isso ainda gravado em `envios`, nao ha'
-    // linha pra atualizar.
+    // value.statuses[] fica pra depois - ver comentario no topo do arquivo.
   }
 
   return json({ ok: true });

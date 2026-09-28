@@ -63,12 +63,15 @@ function mostrarPainel() {
   $('#tela-login').hidden = true;
   $('#tela-painel').hidden = false;
   carregarLeads();
+  // So' o contador (nao a lista inteira) pra badge aparecer sem precisar
+  // abrir a aba - e' o que avisa que chegou resposta nova.
+  atualizarContadorRecebidas();
 }
 
 $$('.aba').forEach(aba => aba.addEventListener('click', () => {
   $$('.aba').forEach(a => a.classList.toggle('ativa', a === aba));
   $$('.painel-aba').forEach(p => { p.hidden = p.dataset.painel !== aba.dataset.aba; });
-  ({ leads: carregarLeads, mensagens: carregarMensagens, envios: carregarEnvios })[aba.dataset.aba]();
+  ({ leads: carregarLeads, mensagens: carregarMensagens, envios: carregarEnvios, recebidas: carregarRecebidas })[aba.dataset.aba]();
 }));
 
 // --------------------------------------------------------------- login
@@ -654,6 +657,88 @@ $('#filtro-envio-mensagem').addEventListener('change', carregarEnvios);
 $('#filtro-envio-status').addEventListener('change', carregarEnvios);
 $('#filtro-envio-de').addEventListener('change', carregarEnvios);
 $('#filtro-envio-ate').addEventListener('change', carregarEnvios);
+
+// ----------------------------------------------------------- recebidas
+const CANAIS = { evolution: 'Evolution', meta: 'API oficial' };
+
+async function atualizarContadorRecebidas() {
+  const el = $('#contador-recebidas');
+  try {
+    const { nao_lidas } = await api('/api/admin/recebidas');
+    el.textContent = nao_lidas;
+    el.hidden = nao_lidas === 0;
+  } catch {
+    el.hidden = true;
+  }
+}
+
+async function carregarRecebidas() {
+  const { recebidas, nao_lidas } = await api('/api/admin/recebidas');
+
+  const el = $('#contador-recebidas');
+  el.textContent = nao_lidas;
+  el.hidden = nao_lidas === 0;
+
+  $('#corpo-recebidas').innerHTML = recebidas.length
+    ? recebidas.map(r => `
+        <tr class="${r.lida ? '' : 'recebida-nova'}">
+          <td>${esc(dataBR(r.recebido_em))}</td>
+          <td>${esc(r.lead_nome || '—')}<br><small>${esc(telBR(r.whatsapp))}</small></td>
+          <td>${esc(r.texto)}</td>
+          <td>${esc(CANAIS[r.canal] || r.canal)}</td>
+          <td>
+            <button class="btn-mini" data-responder="${r.id}" data-contexto="${esc(r.lead_nome || telBR(r.whatsapp))}">Responder</button>
+            ${r.lida
+              ? `<button class="btn-mini" data-marcar="${r.id}" data-valor="0">Marcar não lida</button>`
+              : `<button class="btn-mini" data-marcar="${r.id}" data-valor="1">Marcar lida</button>`}
+          </td>
+        </tr>`).join('')
+    : '<tr><td colspan="5" class="vazio">Nenhuma mensagem recebida ainda.</td></tr>';
+}
+
+$('#corpo-recebidas').addEventListener('click', async e => {
+  const btResponder = e.target.closest('[data-responder]');
+  const btMarcar = e.target.closest('[data-marcar]');
+
+  if (btResponder) {
+    formResponder.reset();
+    formResponder.id.value = btResponder.dataset.responder;
+    $('#responder-contexto').textContent = `Responde pro WhatsApp de ${btResponder.dataset.contexto}.`;
+    $('#responder-erro').hidden = true;
+    modalResponder.hidden = false;
+    formResponder.texto.focus();
+  }
+
+  if (btMarcar) {
+    await api(`/api/admin/recebidas/${btMarcar.dataset.marcar}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ lida: btMarcar.dataset.valor === '1' }),
+    });
+    carregarRecebidas();
+  }
+});
+
+const modalResponder = $('#modal-responder');
+const formResponder = $('#form-responder');
+
+formResponder.addEventListener('submit', async e => {
+  e.preventDefault();
+  const erroEl = $('#responder-erro');
+  erroEl.hidden = true;
+
+  try {
+    await api(`/api/admin/recebidas/${formResponder.id.value}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ responder: formResponder.texto.value }),
+    });
+    modalResponder.hidden = true;
+    toast('Resposta enviada.');
+    carregarRecebidas();
+  } catch (err) {
+    erroEl.textContent = err.message;
+    erroEl.hidden = false;
+  }
+});
 
 // -------------------------------------------------------------- arranque
 // Uma chamada protegida decide a tela inicial: com cookie válido o painel

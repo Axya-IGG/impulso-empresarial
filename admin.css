@@ -182,6 +182,29 @@ input:focus, select:focus, textarea:focus {
 }
 .aba:hover { color: var(--text); }
 .aba.ativa { background: var(--dark-3); color: var(--primary); }
+.aba-contador {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--navy);
+  background: var(--primary);
+}
+
+/* Linha ainda nao lida na caixa de entrada - some assim que marcada como
+   lida ou respondida, pra nao acumular destaque em mensagem ja tratada. */
+.recebida-nova td:first-child { position: relative; padding-left: 20px; }
+.recebida-nova td:first-child::before {
+  content: '';
+  position: absolute;
+  left: 6px; top: 50%;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--primary);
+  transform: translateY(-50%);
+}
 
 .conteudo { padding: 24px 22px 60px; max-width: 1180px; margin: 0 auto; }
 

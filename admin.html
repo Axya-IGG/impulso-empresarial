@@ -45,6 +45,7 @@
       <button class="aba ativa" data-aba="leads">Leads</button>
       <button class="aba" data-aba="mensagens">Mensagens</button>
       <button class="aba" data-aba="envios">Envios</button>
+      <button class="aba" data-aba="recebidas">Caixa de entrada<span class="aba-contador" id="contador-recebidas" hidden></span></button>
     </nav>
     <button class="btn btn-fantasma" id="btn-sair">Sair</button>
   </header>
@@ -145,6 +146,24 @@
             <tr><th>Quando</th><th>Lead</th><th>Mensagem</th><th>Status</th><th>Detalhe</th><th></th></tr>
           </thead>
           <tbody id="corpo-envios"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ----------------------- CAIXA DE ENTRADA ---------------------- -->
+    <section class="painel-aba" data-painel="recebidas" hidden>
+      <p class="dica">
+        Mensagens que os leads mandaram de volta pelo WhatsApp. A resposta
+        sai pelo mesmo número que recebeu — Evolution ou API oficial,
+        conforme a coluna Canal. Pela API oficial só dá pra responder em
+        texto livre dentro de 24h da última mensagem da pessoa.
+      </p>
+      <div class="tabela-wrap tabela-wrap-rolavel">
+        <table class="tabela">
+          <thead>
+            <tr><th>Quando</th><th>De</th><th>Mensagem</th><th>Canal</th><th></th></tr>
+          </thead>
+          <tbody id="corpo-recebidas"></tbody>
         </table>
       </div>
     </section>
@@ -304,6 +323,27 @@
         <input type="tel" name="whatsapp" required placeholder="(12) 99999-9999" />
       </label>
       <p class="alerta" id="teste-aviso" role="alert" hidden></p>
+      <div class="modal-acoes">
+        <button type="submit" class="btn btn-primario">Enviar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= MODAL DE RESPOSTA (caixa de entrada) ================= -->
+<div class="modal" id="modal-responder" hidden>
+  <div class="modal-fundo" data-fechar></div>
+  <div class="modal-caixa modal-estreito" role="dialog" aria-modal="true" aria-labelledby="responder-titulo">
+    <button type="button" class="modal-fechar" data-fechar aria-label="Fechar">&times;</button>
+    <h2 id="responder-titulo">Responder</h2>
+    <p class="dica" id="responder-contexto"></p>
+    <form id="form-responder">
+      <input type="hidden" name="id" />
+      <label>
+        <span>Resposta</span>
+        <textarea name="texto" rows="5" required></textarea>
+      </label>
+      <p class="alerta alerta-erro" id="responder-erro" role="alert" hidden></p>
       <div class="modal-acoes">
         <button type="submit" class="btn btn-primario">Enviar</button>
       </div>

@@ -6,11 +6,13 @@ import { json, agora, normalizarWhatsapp } from '../../_lib.js';
 const PALAVRAS_SAIDA = ['sair', 'parar', 'pare', 'remover', 'descadastrar', 'cancelar', 'stop'];
 
 /**
- * Recebe as mensagens que chegam na instancia da Evolution e desliga o
- * remarketing de quem pediu para sair.
+ * Recebe as mensagens que chegam na instancia da Evolution: desliga o
+ * remarketing de quem pediu para sair e guarda toda mensagem recebida em
+ * `mensagens_recebidas`, pra aparecer na caixa de entrada do painel e dar
+ * pra responder (ver functions/api/admin/recebidas.js).
  *
- * Sem isto, o "responda SAIR" do formulario seria promessa vazia — e uma
- * promessa de descadastro que nao funciona e pior do que nao ter feito.
+ * Sem o opt-out, o "responda SAIR" do formulario seria promessa vazia — e
+ * uma promessa de descadastro que nao funciona e pior do que nao ter feito.
  *
  * A URL carrega um token porque o endpoint e publico: sem ele, qualquer um
  * poderia postar um JSON forjado e descadastrar a base inteira.
@@ -32,19 +34,25 @@ export async function onRequestPost({ request, env }) {
   const jid = dados?.key?.remoteJid || '';
   if (jid.includes('@g.us')) return json({ ok: true });   // grupo, nao lead
 
-  const texto = (
+  const textoOriginal = (
     dados?.message?.conversation ||
     dados?.message?.extendedTextMessage?.text ||
     ''
-  ).trim().toLowerCase();
-
-  // Compara a mensagem inteira, nao um "includes": "nao quero sair da lista"
-  // nao pode descadastrar ninguem.
-  const semPontuacao = texto.replace(/[.!,;:]/g, '').trim();
-  if (!PALAVRAS_SAIDA.includes(semPontuacao)) return json({ ok: true });
+  ).trim();
+  if (!textoOriginal) return json({ ok: true });   // sem texto (audio, figurinha...): nada pra guardar
 
   const numero = normalizarWhatsapp(jid.split('@')[0]);
   if (!numero) return json({ ok: true });
+
+  const lead = await env.DB.prepare('SELECT id FROM leads WHERE whatsapp = ?').bind(numero).first();
+  await env.DB.prepare(
+    'INSERT INTO mensagens_recebidas (lead_id, whatsapp, texto, canal, recebido_em) VALUES (?, ?, ?, ?, ?)'
+  ).bind(lead?.id ?? null, numero, textoOriginal, 'evolution', agora()).run();
+
+  // Compara a mensagem inteira, nao um "includes": "nao quero sair da lista"
+  // nao pode descadastrar ninguem.
+  const semPontuacao = textoOriginal.toLowerCase().replace(/[.!,;:]/g, '').trim();
+  if (!PALAVRAS_SAIDA.includes(semPontuacao)) return json({ ok: true });
 
   const r = await env.DB.prepare(
     'UPDATE leads SET optout = 1, optout_em = ? WHERE whatsapp = ? AND optout = 0'
