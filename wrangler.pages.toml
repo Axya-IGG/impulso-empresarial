@@ -25,21 +25,38 @@ EVOLUTION_INSTANCIA = "axya"
 # Pixel ID nao e segredo (fica visivel no HTML de qualquer pagina com o
 # Pixel instalado) — so o token da Conversions API abaixo e que e secret.
 META_PIXEL_ID = "1478085317261876"
+# Numero real (producao) na API oficial do WhatsApp (Cloud API), registrado
+# em 28/09 — nao confundir com o numero de teste que a Meta da de brinde.
+# So o ID, nao e segredo (equivalente ao META_PIXEL_ID acima); quem autentica
+# e o WHATSAPP_ACCESS_TOKEN, esse sim secret.
+WHATSAPP_PHONE_NUMBER_ID = "1303927066142421"
+WHATSAPP_WABA_ID = "4474965946059660"
 
-# ADMIN_SENHA, SESSION_SECRET, EVOLUTION_APIKEY, EDUZZ_WEBHOOK_SECRET e
-# META_CAPI_TOKEN sao secrets e ficam fora daqui — vars entram no
+# ADMIN_SENHA, SESSION_SECRET, EVOLUTION_APIKEY, EDUZZ_WEBHOOK_SECRET,
+# META_CAPI_TOKEN, WHATSAPP_VERIFY_TOKEN, WHATSAPP_APP_SECRET e
+# WHATSAPP_ACCESS_TOKEN sao secrets e ficam fora daqui — vars entram no
 # repositorio e aparecem no painel da Cloudflare. Definir uma vez com
 # (bash, nunca PowerShell — o pipe do PowerShell corrompe o valor gravado):
-#   printf '%s' "$valor" | npx wrangler pages secret put ADMIN_SENHA          --project-name=impulso-empresarial
-#   printf '%s' "$valor" | npx wrangler pages secret put SESSION_SECRET       --project-name=impulso-empresarial
-#   printf '%s' "$valor" | npx wrangler pages secret put EVOLUTION_APIKEY     --project-name=impulso-empresarial
-#   printf '%s' "$valor" | npx wrangler pages secret put EDUZZ_WEBHOOK_SECRET --project-name=impulso-empresarial
-#   printf '%s' "$valor" | npx wrangler pages secret put META_CAPI_TOKEN      --project-name=impulso-empresarial
+#   printf '%s' "$valor" | npx wrangler pages secret put ADMIN_SENHA           --project-name=impulso-empresarial
+#   printf '%s' "$valor" | npx wrangler pages secret put SESSION_SECRET        --project-name=impulso-empresarial
+#   printf '%s' "$valor" | npx wrangler pages secret put EVOLUTION_APIKEY      --project-name=impulso-empresarial
+#   printf '%s' "$valor" | npx wrangler pages secret put EDUZZ_WEBHOOK_SECRET  --project-name=impulso-empresarial
+#   printf '%s' "$valor" | npx wrangler pages secret put META_CAPI_TOKEN       --project-name=impulso-empresarial
+#   printf '%s' "$valor" | npx wrangler pages secret put WHATSAPP_VERIFY_TOKEN --project-name=impulso-empresarial
+#   printf '%s' "$valor" | npx wrangler pages secret put WHATSAPP_APP_SECRET   --project-name=impulso-empresarial
+#   printf '%s' "$valor" | npx wrangler pages secret put WHATSAPP_ACCESS_TOKEN --project-name=impulso-empresarial
 # EDUZZ_WEBHOOK_SECRET valida o header x-signature em functions/api/webhook/eduzz.js
 # (hmac-sha256, ver developers.eduzz.com/docs/webhook/security).
 # META_CAPI_TOKEN autentica o envio de eventos de servidor pra Meta (Conversions
 # API) em functions/api/webhook/eduzz.js — gerado em Gerenciador de Eventos →
 # Pixel → Configuracoes → API de Conversoes → Gerar token de acesso.
+# WHATSAPP_VERIFY_TOKEN e o segredo combinado no handshake do webhook (GET);
+# WHATSAPP_APP_SECRET valida a assinatura x-hub-signature-256 dos eventos
+# (POST) — ambos em functions/api/webhook/meta-whatsapp.js. WHATSAPP_ACCESS_TOKEN
+# e o token permanente do usuario de sistema (Configuracoes do Negocio →
+# Usuarios do sistema → Gerar novo token, com whatsapp_business_messaging e
+# whatsapp_business_management) — ainda nao usado no codigo: falta escrever
+# o envio pela Cloud API (ver [[project_impulso_empresarial]]).
 
 # O preview compartilha o banco, mas NAO recebe os secrets: o
 # `wrangler pages secret put` nao aceita --environment e grava so em
