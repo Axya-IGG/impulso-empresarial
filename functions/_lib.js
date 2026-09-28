@@ -12,7 +12,7 @@ export const agora = () => new Date().toISOString();
 
 /**
  * Normaliza o telefone para E.164 sem o '+' (ex.: 5512997205261), que e o
- * formato que a Evolution espera e a chave de identidade do lead.
+ * formato que a WhatsApp Cloud API espera e a chave de identidade do lead.
  *
  * O que chega do formulario e digitacao livre: "(12) 99720-5261",
  * "+55 12 99720 5261", "12997205261". Sem normalizar, a mesma pessoa
@@ -108,39 +108,17 @@ export const cookieSessao = (token) =>
 export const cookieSessaoExpirado = () =>
   `${NOME_COOKIE}=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0`;
 
-// -------------------------------------------------------------- Evolution
-/**
- * Envia uma mensagem de texto pela Evolution API.
- * Retorna { ok, detalhe } — nunca lanca, para que uma falha num lead nao
- * derrube a rodada inteira do cron.
- */
-export async function enviarWhatsapp(env, numero, texto) {
-  const base = (env.EVOLUTION_URL || '').replace(/\/+$/, '');
-  const instancia = env.EVOLUTION_INSTANCIA;
-  try {
-    const r = await fetch(`${base}/message/sendText/${instancia}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', apikey: env.EVOLUTION_APIKEY },
-      body: JSON.stringify({ number: numero, text: texto }),
-    });
-    const corpo = await r.text();
-    return { ok: r.ok, detalhe: corpo.slice(0, 400) };
-  } catch (e) {
-    return { ok: false, detalhe: String(e).slice(0, 400) };
-  }
-}
-
 // ----------------------------------------------------- WhatsApp Cloud API
 /**
  * Envia um template aprovado pela API oficial do WhatsApp (Meta Cloud API).
- * Mesmo contrato de retorno de enviarWhatsapp ({ ok, detalhe }), pra quem
- * chama poder trocar de uma pra outra sem mudar o resto do fluxo.
+ * Retorna { ok, detalhe } — nunca lanca, para que uma falha num lead nao
+ * derrube a rodada inteira do cron.
  *
- * Diferente da Evolution, aqui nao da pra mandar texto livre fora da janela
- * de 24h de conversa — so' um template ja aprovado pela Meta, referenciado
- * pelo nome. primeiroNome preenche o unico {{1}} que os templates de hoje
- * usam; se um template sem variavel for adicionado no futuro, primeiroNome
- * vira sem uso (nao quebra, so' nao e' referenciado no corpo).
+ * So' da pra mandar um template ja aprovado pela Meta, referenciado pelo
+ * nome — nao ha envio de texto livre fora da janela de 24h de conversa.
+ * primeiroNome preenche o unico {{1}} que os templates de hoje usam; se um
+ * template sem variavel for adicionado no futuro, primeiroNome vira sem
+ * uso (nao quebra, so' nao e' referenciado no corpo).
  */
 export async function enviarWhatsappMeta(env, numero, templateNome, primeiroNome) {
   try {
@@ -195,31 +173,6 @@ export async function enviarWhatsappMetaTexto(env, numero, texto) {
   } catch (e) {
     return { ok: false, detalhe: String(e).slice(0, 400) };
   }
-}
-
-/**
- * Mensagens podem trazer variações de texto separadas por uma linha só com
- * "---", para não mandar o mesmo texto idêntico pra todo mundo — texto
- * idêntico em massa é um dos sinais que fazem o WhatsApp suspeitar de
- * automação numa API não-oficial. Sorteia uma variação por envio; sem
- * separador, o texto inteiro é a única variação (comportamento de sempre).
- */
-export function escolherVariante(texto) {
-  const partes = String(texto || '').split(/\r?\n-{3,}\r?\n/).map(p => p.trim()).filter(Boolean);
-  if (partes.length <= 1) return String(texto || '');
-  return partes[Math.floor(Math.random() * partes.length)];
-}
-
-/**
- * Troca {{nome}} e {{primeiro_nome}} pelos dados do lead.
- * Sem isso as mensagens ficam impessoais e o WhatsApp trata melhor
- * conversas que parecem escritas para a pessoa.
- */
-export function renderizar(texto, lead) {
-  const primeiro = String(lead.nome || '').trim().split(/\s+/)[0] || '';
-  return String(texto)
-    .replaceAll('{{nome}}', lead.nome || '')
-    .replaceAll('{{primeiro_nome}}', primeiro);
 }
 
 // -------------------------------------------------------- Meta Conversions API

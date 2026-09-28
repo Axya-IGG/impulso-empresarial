@@ -20,9 +20,7 @@ import { json, agora, normalizarWhatsapp } from '../../_lib.js';
  *
  * Toda mensagem recebida é guardada em `mensagens_recebidas`, pra aparecer
  * na caixa de entrada do painel e dar pra responder (ver
- * functions/api/admin/recebidas.js). Mesmas palavras de saída do webhook da
- * Evolution (functions/api/webhook/evolution.js) — o texto "responda SAIR"
- * do formulário vale pros dois números/APIs enquanto a migração não termina.
+ * functions/api/admin/recebidas.js).
  */
 const PALAVRAS_SAIDA = ['sair', 'parar', 'pare', 'remover', 'descadastrar', 'cancelar', 'stop'];
 
@@ -87,8 +85,8 @@ export async function onRequestPost({ request, env }) {
 
       const lead = await env.DB.prepare('SELECT id FROM leads WHERE whatsapp = ?').bind(numero).first();
       await env.DB.prepare(
-        'INSERT INTO mensagens_recebidas (lead_id, whatsapp, texto, canal, recebido_em) VALUES (?, ?, ?, ?, ?)'
-      ).bind(lead?.id ?? null, numero, textoOriginal, 'meta', agora()).run();
+        'INSERT INTO mensagens_recebidas (lead_id, whatsapp, texto, recebido_em) VALUES (?, ?, ?, ?)'
+      ).bind(lead?.id ?? null, numero, textoOriginal, agora()).run();
 
       const semPontuacao = textoOriginal.toLowerCase().replace(/[.!,;:]/g, '').trim();
       if (!PALAVRAS_SAIDA.includes(semPontuacao)) continue;

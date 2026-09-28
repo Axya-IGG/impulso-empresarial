@@ -193,18 +193,63 @@ input:focus, select:focus, textarea:focus {
   background: var(--primary);
 }
 
-/* Linha ainda nao lida na caixa de entrada - some assim que marcada como
-   lida ou respondida, pra nao acumular destaque em mensagem ja tratada. */
-.recebida-nova td:first-child { position: relative; padding-left: 20px; }
-.recebida-nova td:first-child::before {
-  content: '';
-  position: absolute;
-  left: 6px; top: 50%;
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  background: var(--primary);
-  transform: translateY(-50%);
+/* ----------------------------------------------- caixa de entrada (chat) */
+/* Lista solta, sem tabela: cada mensagem recebida vira uma bolha de chat,
+   mais recente no topo — mesma leitura de uma conversa de WhatsApp. */
+.chat-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 640px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
+.chat-item {
+  display: flex;
+  gap: 12px;
+  background: var(--dark-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+}
+/* Ainda nao lida - some assim que marcada como lida ou respondida, pra nao
+   acumular destaque em mensagem ja tratada. */
+.chat-item.nao-lida { border-color: rgba(74,222,128,0.4); background: rgba(74,222,128,0.06); }
+.chat-avatar {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--dark-3);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+.chat-corpo { flex: 1; min-width: 0; }
+.chat-topo {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 5px;
+}
+.chat-nome { font-weight: 600; font-size: 0.88rem; }
+.chat-quando { font-size: 0.72rem; color: var(--text-muted); flex-shrink: 0; white-space: nowrap; }
+.chat-bolha {
+  display: inline-block;
+  max-width: 100%;
+  background: var(--dark-3);
+  border-radius: 4px 12px 12px 12px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  color: var(--text);
+  white-space: pre-wrap;
+  margin-bottom: 8px;
+}
+.chat-acoes { display: flex; gap: 6px; flex-wrap: wrap; }
 
 .conteudo { padding: 24px 22px 60px; max-width: 1180px; margin: 0 auto; }
 
@@ -306,9 +351,10 @@ input:focus, select:focus, textarea:focus {
 .selo-erro     { color: var(--vermelho); background: rgba(255,139,139,0.14); }
 .selo-andamento{ color: var(--amarelo);  background: rgba(251,191,36,0.14); }
 .selo-off      { color: var(--text-muted); background: rgba(163,185,198,0.12); }
-/* Mensagem ja migrada da Evolution pra API oficial do WhatsApp (ver
-   migrations/006_mensagens_template.sql) — cor propria pra nao confundir
-   com os selos de status (ativa/pausada) que ficam ao lado dele. */
+/* Mensagem com template ja aprovado pela Meta, pronta pra entrar na fila
+   de envio (ver migrations/006_mensagens_template.sql) — cor propria pra
+   nao confundir com os selos de status (ativa/pausada) que ficam ao lado
+   dele. */
 .selo-oficial  { color: var(--primary);    background: rgba(119,203,245,0.14); }
 
 /* ----------------------------------------------------------- mensagens */

@@ -59,20 +59,32 @@ function mostrarLogin() {
   $('#tela-painel').hidden = true;
 }
 
+// Cada aba tem sua propria URL (#leads, #recebidas...), pra dar pra
+// favoritar uma aba especifica em vez de sempre cair na de Leads.
+const ABAS_VALIDAS = ['leads', 'mensagens', 'envios', 'recebidas'];
+const CARREGAR_ABA = { leads: carregarLeads, mensagens: carregarMensagens, envios: carregarEnvios, recebidas: carregarRecebidas };
+
+function mostrarAba(nome) {
+  if (!ABAS_VALIDAS.includes(nome)) nome = 'leads';
+  $$('.aba').forEach(a => a.classList.toggle('ativa', a.dataset.aba === nome));
+  $$('.painel-aba').forEach(p => { p.hidden = p.dataset.painel !== nome; });
+  history.replaceState(null, '', `#${nome}`);
+  CARREGAR_ABA[nome]();
+}
+
 function mostrarPainel() {
   $('#tela-login').hidden = true;
   $('#tela-painel').hidden = false;
-  carregarLeads();
+  const aba = location.hash.slice(1);
+  mostrarAba(aba);
   // So' o contador (nao a lista inteira) pra badge aparecer sem precisar
-  // abrir a aba - e' o que avisa que chegou resposta nova.
-  atualizarContadorRecebidas();
+  // abrir a aba - e' o que avisa que chegou resposta nova. Se a aba que
+  // abriu ja e' a propria caixa de entrada, ela mesma ja atualizou o
+  // contador ao carregar a lista inteira.
+  if (aba !== 'recebidas') atualizarContadorRecebidas();
 }
 
-$$('.aba').forEach(aba => aba.addEventListener('click', () => {
-  $$('.aba').forEach(a => a.classList.toggle('ativa', a === aba));
-  $$('.painel-aba').forEach(p => { p.hidden = p.dataset.painel !== aba.dataset.aba; });
-  ({ leads: carregarLeads, mensagens: carregarMensagens, envios: carregarEnvios, recebidas: carregarRecebidas })[aba.dataset.aba]();
-}));
+$$('.aba').forEach(aba => aba.addEventListener('click', () => mostrarAba(aba.dataset.aba)));
 
 // --------------------------------------------------------------- login
 $('#form-login').addEventListener('submit', async e => {
@@ -328,7 +340,9 @@ function renderizarMensagens() {
               <h3>${esc(m.titulo)}</h3>
               ${dataTopo ? `<span class="msg-data-topo">${esc(dataTopo)}</span>` : ''}
               <span class="selo ${m.ativo ? 'selo-ok' : 'selo-off'}">${m.ativo ? 'ativa' : 'pausada'}</span>
-              ${m.template_nome ? `<span class="selo selo-oficial" title="Template: ${esc(m.template_nome)}">API oficial</span>` : ''}
+              ${m.template_nome
+                ? `<span class="selo selo-oficial" title="Template: ${esc(m.template_nome)}">Template ativo</span>`
+                : '<span class="selo selo-off" title="Sem template aprovado pela Meta, nao entra na fila de envio">Sem template</span>'}
             </div>
             <div class="msg-quando">
               ${esc(descreverQuando(m))} · ${esc(PUBLICOS[m.publico] || PUBLICOS.todos)}
@@ -439,10 +453,16 @@ function decompor(min) {
   return [min ?? 0, 1];
 }
 
+// Guarda o template da mensagem aberta no modal, pra "Enviar teste" saber o
+// que mandar — o formulario nao tem campo pra isso (template_nome so' e'
+// setado direto no banco depois do teste, ver plano da migracao).
+let mensagemEmEdicaoTemplate = null;
+
 function abrirModalMensagem(m) {
   formMsg.reset();
   $('#msg-erro').hidden = true;
   $('#modal-titulo').textContent = m ? 'Editar mensagem' : 'Nova mensagem';
+  mensagemEmEdicaoTemplate = m?.template_nome || null;
 
   formMsg.id.value = m?.id || '';
   formMsg.titulo.value = m?.titulo || '';
@@ -474,7 +494,7 @@ $('#btn-nova').addEventListener('click', () => abrirModalMensagem(null));
 
 // ------------------------------------------------- formatação (WhatsApp)
 // Envolve a seleção com o símbolo (*negrito*, _itálico_, ~tachado~) — texto
-// puro, sem HTML: é literalmente assim que a Evolution/WhatsApp reconhece a
+// puro, sem HTML: é literalmente assim que o WhatsApp reconhece a
 // formatação, então o que fica no textarea é exatamente o que chega pra
 // quem recebe. Clicar de novo em cima de um trecho já marcado desfaz, pra
 // dar pra alternar sem precisar apagar os símbolos na mão.
@@ -549,8 +569,8 @@ formMsg.addEventListener('submit', async e => {
 
 // ---------------------------------------------------------- envio teste
 $('#btn-testar').addEventListener('click', () => {
-  if (!formMsg.texto.value.trim()) {
-    $('#msg-erro').textContent = 'Escreva o texto antes de testar.';
+  if (!mensagemEmEdicaoTemplate) {
+    $('#msg-erro').textContent = 'Essa mensagem ainda não tem um template aprovado pela Meta — não dá pra testar antes disso.';
     $('#msg-erro').hidden = false;
     return;
   }
@@ -570,8 +590,8 @@ $('#form-teste').addEventListener('submit', async e => {
       method: 'POST',
       body: JSON.stringify({
         whatsapp: e.target.whatsapp.value,
-        texto: formMsg.texto.value,
-        nome: 'Teste Impulso',
+        template_nome: mensagemEmEdicaoTemplate,
+        nome: 'Teste',
       }),
     });
     aviso.className = 'alerta alerta-ok';
@@ -659,8 +679,6 @@ $('#filtro-envio-de').addEventListener('change', carregarEnvios);
 $('#filtro-envio-ate').addEventListener('change', carregarEnvios);
 
 // ----------------------------------------------------------- recebidas
-const CANAIS = { evolution: 'Evolution', meta: 'API oficial' };
-
 async function atualizarContadorRecebidas() {
   const el = $('#contador-recebidas');
   try {
@@ -680,20 +698,27 @@ async function carregarRecebidas() {
   el.hidden = nao_lidas === 0;
 
   $('#corpo-recebidas').innerHTML = recebidas.length
-    ? recebidas.map(r => `
-        <tr class="${r.lida ? '' : 'recebida-nova'}">
-          <td>${esc(dataBR(r.recebido_em))}</td>
-          <td>${esc(r.lead_nome || '—')}<br><small>${esc(telBR(r.whatsapp))}</small></td>
-          <td>${esc(r.texto)}</td>
-          <td>${esc(CANAIS[r.canal] || r.canal)}</td>
-          <td>
-            <button class="btn-mini" data-responder="${r.id}" data-contexto="${esc(r.lead_nome || telBR(r.whatsapp))}">Responder</button>
-            ${r.lida
-              ? `<button class="btn-mini" data-marcar="${r.id}" data-valor="0">Marcar não lida</button>`
-              : `<button class="btn-mini" data-marcar="${r.id}" data-valor="1">Marcar lida</button>`}
-          </td>
-        </tr>`).join('')
-    : '<tr><td colspan="5" class="vazio">Nenhuma mensagem recebida ainda.</td></tr>';
+    ? recebidas.map(r => {
+        const nome = r.lead_nome || telBR(r.whatsapp);
+        return `
+        <div class="chat-item ${r.lida ? '' : 'nao-lida'}">
+          <div class="chat-avatar">${esc(nome.slice(0, 1).toUpperCase())}</div>
+          <div class="chat-corpo">
+            <div class="chat-topo">
+              <span class="chat-nome">${esc(nome)}</span>
+              <span class="chat-quando">${esc(dataBR(r.recebido_em))}</span>
+            </div>
+            <div class="chat-bolha">${esc(r.texto)}</div>
+            <div class="chat-acoes">
+              <button class="btn-mini" data-responder="${r.id}" data-contexto="${esc(nome)}">Responder</button>
+              ${r.lida
+                ? `<button class="btn-mini" data-marcar="${r.id}" data-valor="0">Marcar não lida</button>`
+                : `<button class="btn-mini" data-marcar="${r.id}" data-valor="1">Marcar lida</button>`}
+            </div>
+          </div>
+        </div>`;
+      }).join('')
+    : '<div class="vazio">Nenhuma mensagem recebida ainda.</div>';
 }
 
 $('#corpo-recebidas').addEventListener('click', async e => {

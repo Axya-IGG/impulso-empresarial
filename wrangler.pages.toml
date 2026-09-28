@@ -20,8 +20,6 @@ database_name = "impulso-db"
 database_id = "0685aff2-e875-432f-af5b-eeb848c42b73"
 
 [vars]
-EVOLUTION_URL = "https://zap.ardassessoria.com.br"
-EVOLUTION_INSTANCIA = "axya"
 # Pixel ID nao e segredo (fica visivel no HTML de qualquer pagina com o
 # Pixel instalado) — so o token da Conversions API abaixo e que e secret.
 META_PIXEL_ID = "1478085317261876"
@@ -32,14 +30,13 @@ META_PIXEL_ID = "1478085317261876"
 WHATSAPP_PHONE_NUMBER_ID = "1303927066142421"
 WHATSAPP_WABA_ID = "4474965946059660"
 
-# ADMIN_SENHA, SESSION_SECRET, EVOLUTION_APIKEY, EDUZZ_WEBHOOK_SECRET,
-# META_CAPI_TOKEN, WHATSAPP_VERIFY_TOKEN, WHATSAPP_APP_SECRET e
-# WHATSAPP_ACCESS_TOKEN sao secrets e ficam fora daqui — vars entram no
-# repositorio e aparecem no painel da Cloudflare. Definir uma vez com
-# (bash, nunca PowerShell — o pipe do PowerShell corrompe o valor gravado):
+# ADMIN_SENHA, SESSION_SECRET, EDUZZ_WEBHOOK_SECRET, META_CAPI_TOKEN,
+# WHATSAPP_VERIFY_TOKEN, WHATSAPP_APP_SECRET e WHATSAPP_ACCESS_TOKEN sao
+# secrets e ficam fora daqui — vars entram no repositorio e aparecem no
+# painel da Cloudflare. Definir uma vez com (bash, nunca PowerShell — o pipe
+# do PowerShell corrompe o valor gravado):
 #   printf '%s' "$valor" | npx wrangler pages secret put ADMIN_SENHA           --project-name=impulso-empresarial
 #   printf '%s' "$valor" | npx wrangler pages secret put SESSION_SECRET        --project-name=impulso-empresarial
-#   printf '%s' "$valor" | npx wrangler pages secret put EVOLUTION_APIKEY      --project-name=impulso-empresarial
 #   printf '%s' "$valor" | npx wrangler pages secret put EDUZZ_WEBHOOK_SECRET  --project-name=impulso-empresarial
 #   printf '%s' "$valor" | npx wrangler pages secret put META_CAPI_TOKEN       --project-name=impulso-empresarial
 #   printf '%s' "$valor" | npx wrangler pages secret put WHATSAPP_VERIFY_TOKEN --project-name=impulso-empresarial
@@ -55,8 +52,8 @@ WHATSAPP_WABA_ID = "4474965946059660"
 # (POST) — ambos em functions/api/webhook/meta-whatsapp.js. WHATSAPP_ACCESS_TOKEN
 # e o token permanente do usuario de sistema (Configuracoes do Negocio →
 # Usuarios do sistema → Gerar novo token, com whatsapp_business_messaging e
-# whatsapp_business_management) — ainda nao usado no codigo: falta escrever
-# o envio pela Cloud API (ver [[project_impulso_empresarial]]).
+# whatsapp_business_management), usado por enviarWhatsappMeta e
+# enviarWhatsappMetaTexto em functions/_lib.js.
 
 # O preview compartilha o banco, mas NAO recebe os secrets: o
 # `wrangler pages secret put` nao aceita --environment e grava so em
@@ -70,5 +67,3 @@ database_name = "impulso-db"
 database_id = "0685aff2-e875-432f-af5b-eeb848c42b73"
 
 [env.preview.vars]
-EVOLUTION_URL = "https://zap.ardassessoria.com.br"
-EVOLUTION_INSTANCIA = "axya"

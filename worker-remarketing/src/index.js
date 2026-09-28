@@ -1,16 +1,15 @@
-import { agora, enviarWhatsapp, enviarWhatsappMeta, renderizar, escolherVariante, separarNome } from '../../functions/_lib.js';
+import { agora, enviarWhatsappMeta, separarNome } from '../../functions/_lib.js';
 
 // Teto por rodada. O cron roda de 5 em 5 minutos: 4/rodada da no maximo 48
-// mensagens/hora. E' de proposito bem baixo: quando entra uma leva de leads
-// de uma vez (importacao de lista, por exemplo), todos vencem no mesmo
-// instante, e o ritmo daqui e' o que impede a rajada que derruba o numero.
+// mensagens/hora. Bem baixo de proposito: quando entra uma leva de leads de
+// uma vez (importacao de lista, por exemplo), todos vencem no mesmo
+// instante, e o ritmo daqui e' o que impede a rajada de sair tudo junto.
 const MAX_POR_RODADA = 4;
 
 // Teto diario, somando todas as mensagens e os dois publicos. Existe porque
 // o limite por rodada sozinho so trava rajada — nao evita que o numero
-// mande, por exemplo, 300 mensagens em 3 horas de um dia parado, o que
-// tambem chama atencao numa instancia Baileys (API nao-oficial). Ajustar
-// pra cima com cautela e so depois de a base de leads justificar.
+// mande, por exemplo, 300 mensagens em 3 horas de um dia parado. Ajustar pra
+// cima com cautela e so depois de a base de leads justificar.
 //
 // COMPARTILHADO com o worker de entrega de certificados
 // (impulso-certificados/worker-envio), que usa o mesmo numero e o mesmo
@@ -18,10 +17,10 @@ const MAX_POR_RODADA = 4;
 // quanto ainda cabe, e o maior dos dois vence na pratica.
 const MAX_POR_DIA = 250;
 
-// Intervalo entre envios, aleatorio em vez de fixo: cadencia perfeitamente
-// regular (sempre X ms entre mensagens) e, ela mesma, uma assinatura de
-// automacao. Com 4 envios por rodada e pausa media de 50 s, a rodada dura uns
-// 3 min e cabe nos 5 min do cron sem emendar na seguinte.
+// Intervalo entre envios, aleatorio em vez de fixo: mantem o ritmo
+// espalhado em vez de uma rajada compacta. Com 4 envios por rodada e pausa
+// media de 50 s, a rodada dura uns 3 min e cabe nos 5 min do cron sem
+// emendar na seguinte.
 const PAUSA_MIN_MS = 25000;
 const PAUSA_MAX_MS = 75000;
 const pausaAleatoria = () => PAUSA_MIN_MS + Math.random() * (PAUSA_MAX_MS - PAUSA_MIN_MS);
@@ -29,12 +28,12 @@ const pausaAleatoria = () => PAUSA_MIN_MS + Math.random() * (PAUSA_MAX_MS - PAUS
 const dorme = (ms) => new Promise(r => setTimeout(r, ms));
 
 // Janela de envio: 8h as 20h, horario de Brasilia. Existe porque mensagem de
-// WhatsApp automatica de madrugada incomoda o lead e chama atencao numa
-// instancia Baileys (API nao-oficial). A mensagem tipo 'data' ja nascia
-// dentro da janela (enviar_em comeca as 10h, ver mensagens.js), mas a tipo
-// 'atraso' so' depende de quando o lead se cadastrou ou comprou. Sem esta
-// checagem, um cadastro as 23h com atraso de 1h virava mensagem enviada
-// as 0h. Por isso o corte fica aqui, num unico lugar, valendo pros dois tipos.
+// WhatsApp automatica de madrugada incomoda o lead. A mensagem tipo 'data'
+// ja nascia dentro da janela (enviar_em comeca as 10h, ver mensagens.js),
+// mas a tipo 'atraso' so' depende de quando o lead se cadastrou ou comprou.
+// Sem esta checagem, um cadastro as 23h com atraso de 1h virava mensagem
+// enviada as 0h. Por isso o corte fica aqui, num unico lugar, valendo pros
+// dois tipos.
 const JANELA_INICIO_H = 8;
 const JANELA_FIM_H = 20;
 
@@ -48,6 +47,12 @@ function horaBrasilia() {
 /**
  * Monta a fila da rodada: pares (lead, mensagem) que ja venceram e ainda
  * nao foram enviados.
+ *
+ * `m.template_nome IS NOT NULL` filtra fora qualquer mensagem sem um
+ * template ja aprovado pela Meta — o envio so' sai pela API oficial (ver
+ * enviarWhatsappMeta em functions/_lib.js), que so' aceita template. Uma
+ * mensagem sem template_nome fica parada, nunca entra na fila, ate' o
+ * template dela ser criado e aprovado e o campo ser setado no banco.
  *
  * O `NOT EXISTS` sobre `envios` e o que impede reenvio. Ele e redundante
  * com o UNIQUE(lead_id, mensagem_id) de proposito: o UNIQUE e a garantia
@@ -75,10 +80,10 @@ async function montarFila(db, limite) {
   `;
 
   const porAtraso = await db.prepare(`
-    SELECT l.id AS lead_id, l.nome, l.whatsapp, m.id AS mensagem_id, m.texto, m.template_nome
+    SELECT l.id AS lead_id, l.nome, l.whatsapp, m.id AS mensagem_id, m.template_nome
       FROM leads l
       JOIN mensagens m
-        ON m.ativo = 1 AND m.arquivado = 0 AND m.tipo = 'atraso'
+        ON m.ativo = 1 AND m.arquivado = 0 AND m.tipo = 'atraso' AND m.template_nome IS NOT NULL
      WHERE l.optout = 0
        ${condPublico}
        AND datetime(
@@ -113,10 +118,10 @@ async function montarFila(db, limite) {
   // a data da COMPRA pra mensagem de 'compradores' (mesma logica do
   // 'atraso' acima) e o cadastro pros demais publicos.
   const porData = await db.prepare(`
-    SELECT l.id AS lead_id, l.nome, l.whatsapp, m.id AS mensagem_id, m.texto, m.template_nome
+    SELECT l.id AS lead_id, l.nome, l.whatsapp, m.id AS mensagem_id, m.template_nome
       FROM leads l
       JOIN mensagens m
-        ON m.ativo = 1 AND m.arquivado = 0 AND m.tipo = 'data'
+        ON m.ativo = 1 AND m.arquivado = 0 AND m.tipo = 'data' AND m.template_nome IS NOT NULL
      WHERE l.optout = 0
        ${condPublico}
        AND datetime(
@@ -199,12 +204,7 @@ async function rodar(env, forcarForaDaJanela = false) {
       continue; // ja reservado por outra rodada — o UNIQUE barrou
     }
 
-    // template_nome presente = mensagem ja migrada pra API oficial (ver
-    // migrations/006_mensagens_template.sql); ausente = continua saindo
-    // pela Evolution, exatamente como sempre saiu.
-    const r = item.template_nome
-      ? await enviarWhatsappMeta(env, item.whatsapp, item.template_nome, separarNome(item.nome).fn)
-      : await enviarWhatsapp(env, item.whatsapp, renderizar(escolherVariante(item.texto), item));
+    const r = await enviarWhatsappMeta(env, item.whatsapp, item.template_nome, separarNome(item.nome).fn);
     await env.DB.prepare(
       'UPDATE envios SET status = ?, detalhe = ?, enviado_em = ? WHERE lead_id = ? AND mensagem_id = ?'
     ).bind(r.ok ? 'enviado' : 'erro', r.detalhe, agora(), item.lead_id, item.mensagem_id).run();

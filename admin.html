@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="admin.css?v=20260910a" />
+  <link rel="stylesheet" href="admin.css?v=20260928a" />
 </head>
 <body>
 
@@ -153,19 +153,11 @@
     <!-- ----------------------- CAIXA DE ENTRADA ---------------------- -->
     <section class="painel-aba" data-painel="recebidas" hidden>
       <p class="dica">
-        Mensagens que os leads mandaram de volta pelo WhatsApp. A resposta
-        sai pelo mesmo número que recebeu — Evolution ou API oficial,
-        conforme a coluna Canal. Pela API oficial só dá pra responder em
-        texto livre dentro de 24h da última mensagem da pessoa.
+        Mensagens que os leads mandaram de volta pelo WhatsApp, mais
+        recente no topo. Só dá pra responder em texto livre dentro de 24h
+        da última mensagem da pessoa — é a regra da própria Meta.
       </p>
-      <div class="tabela-wrap tabela-wrap-rolavel">
-        <table class="tabela">
-          <thead>
-            <tr><th>Quando</th><th>De</th><th>Mensagem</th><th>Canal</th><th></th></tr>
-          </thead>
-          <tbody id="corpo-recebidas"></tbody>
-        </table>
-      </div>
+      <div id="corpo-recebidas" class="chat-lista"></div>
     </section>
 
   </main>
@@ -233,9 +225,9 @@
         <span>Texto da mensagem</span>
         <!-- Marca o texto puro com os símbolos que o WhatsApp já reconhece
              (*negrito*, _itálico_, ~tachado~) — não é HTML nem um editor
-             rico, então o que aparece aqui é exatamente o que a Evolution
-             manda pra frente. Sem sublinhado porque o WhatsApp não tem essa
-             formatação; tachado é a alternativa mais próxima. -->
+             rico, então o que fica aqui é o texto de referência pro
+             template que a Meta aprova. Sem sublinhado porque o WhatsApp
+             não tem essa formatação; tachado é a alternativa mais próxima. -->
         <div class="msg-formatacao" role="toolbar" aria-label="Formatação do texto para o WhatsApp">
           <button type="button" class="btn-mini" data-formatar="*" title="Negrito"><strong>N</strong></button>
           <button type="button" class="btn-mini" data-formatar="_" title="Itálico"><em>I</em></button>
@@ -353,6 +345,6 @@
 
 <div class="aviso-flutuante" id="toast" hidden></div>
 
-<script src="admin.js?v=20260910a"></script>
+<script src="admin.js?v=20260928a"></script>
 </body>
 </html>

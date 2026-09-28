@@ -9,7 +9,7 @@
 -- em migrations/NNN_descricao.sql e roda so uma vez, na mao.
 
 -- ---------------------------------------------------------------- leads
--- O whatsapp e a identidade real do lead: e por ele que a Evolution envia,
+-- O whatsapp e a identidade real do lead: e por ele que o WhatsApp envia,
 -- e e nele que esta o UNIQUE. Guardamos normalizado em E.164 sem o '+'
 -- (5512997205261) para que "(12) 99720-5261" e "+55 12 99720-5261" nao
 -- virem dois leads e duas sequencias de mensagem para a mesma pessoa.
@@ -85,8 +85,10 @@ CREATE TABLE IF NOT EXISTS mensagens (
                    CHECK (publico IN ('todos','compradores','nao_compradores')),
   criado_em      TEXT NOT NULL,
   atualizado_em  TEXT NOT NULL,
-  -- Nulo = envia pela Evolution (como sempre); preenchido = envia pela API
-  -- oficial do WhatsApp com este nome de template (ver migrations/006).
+  -- Nome do template ja aprovado pela Meta pra essa mensagem (ver
+  -- migrations/006). Nulo = ainda sem template, e a mensagem nao entra na
+  -- fila de envio (ver montarFila em worker-remarketing/src/index.js) ate'
+  -- ser setado.
   template_nome  TEXT,
   -- Cada tipo so faz sentido com o seu proprio campo de agendamento.
   CHECK ((tipo = 'atraso' AND atraso_minutos IS NOT NULL)
@@ -143,16 +145,13 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_envios_unico ON envios(lead_id, mensagem_i
 CREATE INDEX IF NOT EXISTS idx_envios_data ON envios(enviado_em);
 
 -- ---------------------------------------------------- mensagens_recebidas
--- Toda mensagem que um lead manda de volta, recebida pelos dois webhooks
--- (Evolution e API oficial da Meta). `canal` guarda por qual API chegou,
--- porque a resposta tem que sair pela MESMA API (sao dois numeros
--- diferentes) pra continuar a mesma conversa.
+-- Toda mensagem que um lead manda de volta pelo WhatsApp, recebida pelo
+-- webhook da API oficial da Meta (functions/api/webhook/meta-whatsapp.js).
 CREATE TABLE IF NOT EXISTS mensagens_recebidas (
   id           INTEGER PRIMARY KEY AUTOINCREMENT,
   lead_id      TEXT,
   whatsapp     TEXT NOT NULL,
   texto        TEXT NOT NULL,
-  canal        TEXT NOT NULL CHECK (canal IN ('evolution','meta')),
   recebido_em  TEXT NOT NULL,
   lida         INTEGER NOT NULL DEFAULT 0,
   FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE SET NULL
