@@ -1,4 +1,4 @@
-import { agora, enviarWhatsapp, renderizar, escolherVariante } from '../../functions/_lib.js';
+import { agora, enviarWhatsapp, enviarWhatsappMeta, renderizar, escolherVariante, separarNome } from '../../functions/_lib.js';
 
 // Teto por rodada. O cron roda de 5 em 5 minutos: 4/rodada da no maximo 48
 // mensagens/hora. E' de proposito bem baixo: quando entra uma leva de leads
@@ -75,7 +75,7 @@ async function montarFila(db, limite) {
   `;
 
   const porAtraso = await db.prepare(`
-    SELECT l.id AS lead_id, l.nome, l.whatsapp, m.id AS mensagem_id, m.texto
+    SELECT l.id AS lead_id, l.nome, l.whatsapp, m.id AS mensagem_id, m.texto, m.template_nome
       FROM leads l
       JOIN mensagens m
         ON m.ativo = 1 AND m.arquivado = 0 AND m.tipo = 'atraso'
@@ -113,7 +113,7 @@ async function montarFila(db, limite) {
   // a data da COMPRA pra mensagem de 'compradores' (mesma logica do
   // 'atraso' acima) e o cadastro pros demais publicos.
   const porData = await db.prepare(`
-    SELECT l.id AS lead_id, l.nome, l.whatsapp, m.id AS mensagem_id, m.texto
+    SELECT l.id AS lead_id, l.nome, l.whatsapp, m.id AS mensagem_id, m.texto, m.template_nome
       FROM leads l
       JOIN mensagens m
         ON m.ativo = 1 AND m.arquivado = 0 AND m.tipo = 'data'
@@ -199,8 +199,12 @@ async function rodar(env, forcarForaDaJanela = false) {
       continue; // ja reservado por outra rodada — o UNIQUE barrou
     }
 
-    const texto = renderizar(escolherVariante(item.texto), item);
-    const r = await enviarWhatsapp(env, item.whatsapp, texto);
+    // template_nome presente = mensagem ja migrada pra API oficial (ver
+    // migrations/006_mensagens_template.sql); ausente = continua saindo
+    // pela Evolution, exatamente como sempre saiu.
+    const r = item.template_nome
+      ? await enviarWhatsappMeta(env, item.whatsapp, item.template_nome, separarNome(item.nome).fn)
+      : await enviarWhatsapp(env, item.whatsapp, renderizar(escolherVariante(item.texto), item));
     await env.DB.prepare(
       'UPDATE envios SET status = ?, detalhe = ?, enviado_em = ? WHERE lead_id = ? AND mensagem_id = ?'
     ).bind(r.ok ? 'enviado' : 'erro', r.detalhe, agora(), item.lead_id, item.mensagem_id).run();

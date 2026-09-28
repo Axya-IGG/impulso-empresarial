@@ -15,13 +15,19 @@ database_id = "0685aff2-e875-432f-af5b-eeb848c42b73"
 [vars]
 EVOLUTION_URL = "https://zap.ardassessoria.com.br"
 EVOLUTION_INSTANCIA = "axya"
+# Numero real na API oficial do WhatsApp (Cloud API) — mesmo ID que ja esta
+# em wrangler.pages.toml, copiado aqui porque este Worker e' um projeto
+# Cloudflare separado, com seu proprio cofre de vars/secrets.
+WHATSAPP_PHONE_NUMBER_ID = "1303927066142421"
 
 # A cada 5 minutos. MAX_POR_RODADA em src/index.js supõe essa cadência
 # (4/rodada * 12 rodadas/hora = 48 mensagens/hora no máximo).
 [triggers]
 crons = ["*/5 * * * *"]
 
-# EVOLUTION_APIKEY e ADMIN_SENHA são secrets e ficam fora daqui (mesmo valor
-# já usado pelas Pages Functions — não precisa gerar de novo, só copiar):
-#   printf '%s' "$valor" | npx wrangler secret put EVOLUTION_APIKEY --name impulso-remarketing
-#   printf '%s' "$valor" | npx wrangler secret put ADMIN_SENHA      --name impulso-remarketing
+# EVOLUTION_APIKEY, ADMIN_SENHA e WHATSAPP_ACCESS_TOKEN são secrets e ficam
+# fora daqui (mesmo valor já usado pelas Pages Functions — não precisa gerar
+# de novo, só copiar):
+#   printf '%s' "$valor" | npx wrangler secret put EVOLUTION_APIKEY      --name impulso-remarketing
+#   printf '%s' "$valor" | npx wrangler secret put ADMIN_SENHA           --name impulso-remarketing
+#   printf '%s' "$valor" | npx wrangler secret put WHATSAPP_ACCESS_TOKEN --name impulso-remarketing

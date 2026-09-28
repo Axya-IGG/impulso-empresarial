@@ -283,6 +283,10 @@ input:focus, select:focus, textarea:focus {
 .selo-erro     { color: var(--vermelho); background: rgba(255,139,139,0.14); }
 .selo-andamento{ color: var(--amarelo);  background: rgba(251,191,36,0.14); }
 .selo-off      { color: var(--text-muted); background: rgba(163,185,198,0.12); }
+/* Mensagem ja migrada da Evolution pra API oficial do WhatsApp (ver
+   migrations/006_mensagens_template.sql) — cor propria pra nao confundir
+   com os selos de status (ativa/pausada) que ficam ao lado dele. */
+.selo-oficial  { color: var(--primary);    background: rgba(119,203,245,0.14); }
 
 /* ----------------------------------------------------------- mensagens */
 .lista-mensagens { display: flex; flex-direction: column; gap: 12px; }

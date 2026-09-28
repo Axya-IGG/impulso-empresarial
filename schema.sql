@@ -85,6 +85,9 @@ CREATE TABLE IF NOT EXISTS mensagens (
                    CHECK (publico IN ('todos','compradores','nao_compradores')),
   criado_em      TEXT NOT NULL,
   atualizado_em  TEXT NOT NULL,
+  -- Nulo = envia pela Evolution (como sempre); preenchido = envia pela API
+  -- oficial do WhatsApp com este nome de template (ver migrations/006).
+  template_nome  TEXT,
   -- Cada tipo so faz sentido com o seu proprio campo de agendamento.
   CHECK ((tipo = 'atraso' AND atraso_minutos IS NOT NULL)
       OR (tipo = 'data'   AND enviar_em IS NOT NULL))

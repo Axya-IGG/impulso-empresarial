@@ -325,6 +325,7 @@ function renderizarMensagens() {
               <h3>${esc(m.titulo)}</h3>
               ${dataTopo ? `<span class="msg-data-topo">${esc(dataTopo)}</span>` : ''}
               <span class="selo ${m.ativo ? 'selo-ok' : 'selo-off'}">${m.ativo ? 'ativa' : 'pausada'}</span>
+              ${m.template_nome ? `<span class="selo selo-oficial" title="Template: ${esc(m.template_nome)}">API oficial</span>` : ''}
             </div>
             <div class="msg-quando">
               ${esc(descreverQuando(m))} · ${esc(PUBLICOS[m.publico] || PUBLICOS.todos)}

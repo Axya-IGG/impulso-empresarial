@@ -1,0 +1,11 @@
+-- Liga o envio de uma mensagem pela API oficial do WhatsApp (Cloud API, Meta)
+-- em vez da Evolution. Nula em toda linha existente: enquanto for nula, o
+-- comportamento nao muda em nada (continua saindo pela Evolution). Setar
+-- este campo e' o interruptor por mensagem, pra migrar uma de cada vez em
+-- vez de trocar a regua inteira no mesmo instante.
+--
+-- O nome carrega sufixo de versao (ex.: spotlight_fabi_v1) porque o texto
+-- de um template aprovado pela Meta e' imutavel: editar o conteudo depois
+-- exige criar um template NOVO (v2), nao da pra sobrescrever este campo
+-- sozinho sem re-submeter e reaprovar.
+ALTER TABLE mensagens ADD COLUMN template_nome TEXT;

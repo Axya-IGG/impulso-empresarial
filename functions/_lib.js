@@ -130,6 +130,44 @@ export async function enviarWhatsapp(env, numero, texto) {
   }
 }
 
+// ----------------------------------------------------- WhatsApp Cloud API
+/**
+ * Envia um template aprovado pela API oficial do WhatsApp (Meta Cloud API).
+ * Mesmo contrato de retorno de enviarWhatsapp ({ ok, detalhe }), pra quem
+ * chama poder trocar de uma pra outra sem mudar o resto do fluxo.
+ *
+ * Diferente da Evolution, aqui nao da pra mandar texto livre fora da janela
+ * de 24h de conversa — so' um template ja aprovado pela Meta, referenciado
+ * pelo nome. primeiroNome preenche o unico {{1}} que os templates de hoje
+ * usam; se um template sem variavel for adicionado no futuro, primeiroNome
+ * vira sem uso (nao quebra, so' nao e' referenciado no corpo).
+ */
+export async function enviarWhatsappMeta(env, numero, templateNome, primeiroNome) {
+  try {
+    const r = await fetch(`https://graph.facebook.com/v21.0/${env.WHATSAPP_PHONE_NUMBER_ID}/messages`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${env.WHATSAPP_ACCESS_TOKEN}`,
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        to: numero,
+        type: 'template',
+        template: {
+          name: templateNome,
+          language: { code: 'pt_BR' },
+          components: [{ type: 'body', parameters: [{ type: 'text', text: primeiroNome }] }],
+        },
+      }),
+    });
+    const corpo = await r.text();
+    return { ok: r.ok, detalhe: corpo.slice(0, 400) };
+  } catch (e) {
+    return { ok: false, detalhe: String(e).slice(0, 400) };
+  }
+}
+
 /**
  * Mensagens podem trazer variações de texto separadas por uma linha só com
  * "---", para não mandar o mesmo texto idêntico pra todo mundo — texto
