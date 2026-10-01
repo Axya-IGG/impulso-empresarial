@@ -213,7 +213,7 @@ input:focus, select:focus, textarea:focus {
 
   display: grid;
   grid-template-columns: minmax(300px, 30%) 1fr;
-  height: calc(100vh - 100px);
+  height: calc(100vh - 110px);
   min-height: 460px;
   background: var(--wa-fundo);
   border: 1px solid var(--wa-linha);
@@ -224,7 +224,7 @@ input:focus, select:focus, textarea:focus {
 .wa svg { width: 22px; height: 22px; fill: currentColor; flex-shrink: 0; }
 /* Na caixa de entrada o conteudo ocupa a tela inteira, como o WhatsApp Web;
    as outras abas continuam centralizadas em 1180px. */
-.conteudo:has(> [data-painel="recebidas"]:not([hidden])) { max-width: none; padding: 16px clamp(16px, 3vw, 48px); }
+.conteudo:has(> [data-painel="recebidas"]:not([hidden])) { max-width: none; padding: 20px clamp(16px, 7vw, 160px); }
 .wa-bolha a { color: #53bdeb; }
 
 /* ---- coluna da esquerda */
