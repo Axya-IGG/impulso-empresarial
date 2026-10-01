@@ -308,9 +308,14 @@ async function rodarEmergencia(env) {
   const gasto = await contarGastoHoje(env);
   if (gasto >= MAX_POR_DIA) return { teto_diario_atingido: true };
 
-  const mensagem = await env.DB.prepare('SELECT texto FROM mensagens WHERE id = ?')
+  const mensagem = await env.DB.prepare('SELECT texto, ativo, arquivado FROM mensagens WHERE id = ?')
     .bind(EMERGENCIA_MENSAGEM_ID).first();
   if (!mensagem) return { mensagem_nao_encontrada: true };
+  // Pausar ou arquivar a mensagem no painel tem que parar esta fila tambem:
+  // antes, rodarEmergencia buscava so' o texto pelo ID fixo e ignorava os
+  // dois campos, entao a campanha continuava mandando mesmo depois do
+  // usuario pausar e arquivar (lote ja virou em 01/10).
+  if (!mensagem.ativo || mensagem.arquivado) return { mensagem_pausada_ou_arquivada: true };
 
   const proximo = await env.DB.prepare(`
     SELECT l.id AS lead_id, l.nome, l.whatsapp
