@@ -164,6 +164,28 @@ export function renderizar(texto, lead) {
     .replaceAll('{{primeiro_nome}}', primeiro);
 }
 
+/**
+ * Grava no mesmo log da caixa de entrada (mensagens_recebidas) toda
+ * mensagem que A GENTE manda — envio automatico do worker, reenvio manual
+ * ou resposta do operador — com direcao='saida'. Sem isso, a caixa de
+ * entrada so' mostrava quem respondia: um lead que so' recebeu e nunca
+ * respondeu nunca aparecia na lista, diferente do WhatsApp Web, onde toda
+ * conversa que voce comeca ja aparece na hora. `lida` nao importa pra
+ * 'saida' (o contador de nao lidas so' olha 'entrada'), fica 1 por
+ * limpeza. Nunca lanca — um erro aqui nao pode derrubar o envio em si,
+ * que ja aconteceu quando esta funcao e chamada.
+ */
+export async function registrarMensagemSaida(env, leadId, whatsapp, texto) {
+  try {
+    await env.DB.prepare(
+      `INSERT INTO mensagens_recebidas (lead_id, whatsapp, texto, recebido_em, lida, direcao)
+       VALUES (?, ?, ?, ?, 1, 'saida')`
+    ).bind(leadId ?? null, whatsapp, texto, agora()).run();
+  } catch (e) {
+    console.log('[recebidas] falha ao registrar mensagem de saida:', String(e).slice(0, 200));
+  }
+}
+
 // ----------------------------------------------------- WhatsApp Cloud API
 /**
  * Envia um template aprovado pela API oficial do WhatsApp (Meta Cloud API).

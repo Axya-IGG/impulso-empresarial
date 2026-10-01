@@ -153,9 +153,10 @@
     <!-- ----------------------- CAIXA DE ENTRADA ---------------------- -->
     <section class="painel-aba" data-painel="recebidas" hidden>
       <p class="dica">
-        Mensagens que os leads mandaram de volta pelo WhatsApp, mais
-        recente no topo. Só dá pra responder em texto livre dentro de 24h
-        da última mensagem da pessoa — é a regra da própria Meta.
+        Toda conversa por WhatsApp, mais recente no topo — inclusive quem
+        só recebeu e ainda não respondeu. Clique numa conversa pra ver o
+        histórico inteiro e responder. Só dá pra responder em texto livre
+        dentro de 24h da última mensagem da pessoa — é a regra da própria Meta.
       </p>
       <div id="corpo-recebidas" class="chat-lista"></div>
     </section>
@@ -322,23 +323,20 @@
   </div>
 </div>
 
-<!-- ================= MODAL DE RESPOSTA (caixa de entrada) ================= -->
-<div class="modal" id="modal-responder" hidden>
+<!-- ================= MODAL DE CONVERSA (caixa de entrada) ================= -->
+<div class="modal" id="modal-conversa" hidden>
   <div class="modal-fundo" data-fechar></div>
-  <div class="modal-caixa modal-estreito" role="dialog" aria-modal="true" aria-labelledby="responder-titulo">
+  <div class="modal-caixa modal-conversa-caixa" role="dialog" aria-modal="true" aria-labelledby="conversa-titulo">
     <button type="button" class="modal-fechar" data-fechar aria-label="Fechar">&times;</button>
-    <h2 id="responder-titulo">Responder</h2>
-    <p class="dica" id="responder-contexto"></p>
-    <form id="form-responder">
-      <input type="hidden" name="id" />
-      <label>
-        <span>Resposta</span>
-        <textarea name="texto" rows="5" required></textarea>
-      </label>
-      <p class="alerta alerta-erro" id="responder-erro" role="alert" hidden></p>
-      <div class="modal-acoes">
+    <h2 id="conversa-titulo">Conversa</h2>
+    <div id="conversa-thread" class="thread-lista"></div>
+    <form id="form-conversa">
+      <input type="hidden" name="whatsapp" />
+      <div class="thread-compor">
+        <textarea name="texto" rows="2" placeholder="Digite uma mensagem" required></textarea>
         <button type="submit" class="btn btn-primario">Enviar</button>
       </div>
+      <p class="alerta alerta-erro" id="conversa-erro" role="alert" hidden></p>
     </form>
   </div>
 </div>

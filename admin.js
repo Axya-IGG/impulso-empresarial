@@ -685,74 +685,85 @@ async function atualizarContadorRecebidas() {
 }
 
 async function carregarRecebidas() {
-  const { recebidas, nao_lidas } = await api('/api/admin/recebidas');
+  const { conversas, nao_lidas } = await api('/api/admin/recebidas');
 
   const el = $('#contador-recebidas');
   el.textContent = nao_lidas;
   el.hidden = nao_lidas === 0;
 
-  $('#corpo-recebidas').innerHTML = recebidas.length
-    ? recebidas.map(r => {
-        const nome = r.lead_nome || telBR(r.whatsapp);
+  $('#corpo-recebidas').innerHTML = conversas.length
+    ? conversas.map(c => {
+        const nome = c.lead_nome || telBR(c.whatsapp);
+        // "Você: " na pre-visualizacao quando a ultima mensagem foi nossa,
+        // igual ao WhatsApp Web — sem isso parece que o lead escreveu algo
+        // que na verdade a gente mandou pra ele.
+        const prefixo = c.direcao === 'saida' ? '<span class="chat-prefixo-eu">Você: </span>' : '';
         return `
-        <div class="chat-item ${r.lida ? '' : 'nao-lida'}">
+        <button type="button" class="chat-item ${c.nao_lidas > 0 ? 'nao-lida' : ''}" data-abrir="${esc(c.whatsapp)}" data-contexto="${esc(nome)}">
           <div class="chat-avatar">${esc(nome.slice(0, 1).toUpperCase())}</div>
           <div class="chat-corpo">
             <div class="chat-topo">
               <span class="chat-nome">${esc(nome)}</span>
-              <span class="chat-quando">${esc(dataBR(r.recebido_em))}</span>
+              <span class="chat-quando">${esc(dataBR(c.recebido_em))}</span>
             </div>
-            <div class="chat-bolha">${esc(r.texto)}</div>
-            <div class="chat-acoes">
-              <button class="btn-mini" data-responder="${r.id}" data-contexto="${esc(nome)}">Responder</button>
-              ${r.lida
-                ? `<button class="btn-mini" data-marcar="${r.id}" data-valor="0">Marcar não lida</button>`
-                : `<button class="btn-mini" data-marcar="${r.id}" data-valor="1">Marcar lida</button>`}
-            </div>
+            <div class="chat-bolha">${prefixo}${esc(c.texto)}</div>
           </div>
-        </div>`;
+        </button>`;
       }).join('')
-    : '<div class="vazio">Nenhuma mensagem recebida ainda.</div>';
+    : '<div class="vazio">Nenhuma conversa ainda.</div>';
 }
 
-$('#corpo-recebidas').addEventListener('click', async e => {
-  const btResponder = e.target.closest('[data-responder]');
-  const btMarcar = e.target.closest('[data-marcar]');
-
-  if (btResponder) {
-    formResponder.reset();
-    formResponder.id.value = btResponder.dataset.responder;
-    $('#responder-contexto').textContent = `Responde pro WhatsApp de ${btResponder.dataset.contexto}.`;
-    $('#responder-erro').hidden = true;
-    modalResponder.hidden = false;
-    formResponder.texto.focus();
-  }
-
-  if (btMarcar) {
-    await api(`/api/admin/recebidas/${btMarcar.dataset.marcar}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ lida: btMarcar.dataset.valor === '1' }),
-    });
-    carregarRecebidas();
-  }
+$('#corpo-recebidas').addEventListener('click', e => {
+  const bt = e.target.closest('[data-abrir]');
+  if (bt) abrirConversa(bt.dataset.abrir, bt.dataset.contexto);
 });
 
-const modalResponder = $('#modal-responder');
-const formResponder = $('#form-responder');
+const modalConversa = $('#modal-conversa');
+const formConversa = $('#form-conversa');
 
-formResponder.addEventListener('submit', async e => {
+const horaBR = (iso) => {
+  const d = new Date(iso.includes('T') ? iso : iso.replace(' ', 'T') + 'Z');
+  return isNaN(d) ? '' : d.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
+};
+
+async function abrirConversa(whatsapp, contexto) {
+  $('#conversa-titulo').textContent = contexto || telBR(whatsapp);
+  $('#conversa-erro').hidden = true;
+  formConversa.reset();
+  formConversa.whatsapp.value = whatsapp;
+  modalConversa.hidden = false;
+
+  const { mensagens } = await api(`/api/admin/conversa?whatsapp=${encodeURIComponent(whatsapp)}`);
+  $('#conversa-thread').innerHTML = mensagens.length
+    ? mensagens.map(m => `
+        <div class="thread-bolha ${m.direcao}">
+          ${esc(m.texto)}
+          <span class="thread-hora">${esc(horaBR(m.recebido_em))}</span>
+        </div>`).join('')
+    : '<div class="vazio">Nenhuma mensagem ainda.</div>';
+
+  const thread = $('#conversa-thread');
+  thread.scrollTop = thread.scrollHeight;
+  formConversa.texto.focus();
+
+  // A conversa foi marcada como lida no servidor ao buscar a thread acima;
+  // atualiza a lista pra tirar o destaque e o contador sem esperar reabrir a aba.
+  carregarRecebidas();
+}
+
+formConversa.addEventListener('submit', async e => {
   e.preventDefault();
-  const erroEl = $('#responder-erro');
+  const erroEl = $('#conversa-erro');
   erroEl.hidden = true;
 
   try {
-    await api(`/api/admin/recebidas/${formResponder.id.value}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ responder: formResponder.texto.value }),
+    await api('/api/admin/conversa', {
+      method: 'POST',
+      body: JSON.stringify({ whatsapp: formConversa.whatsapp.value, texto: formConversa.texto.value }),
     });
-    modalResponder.hidden = true;
+    formConversa.texto.value = '';
     toast('Resposta enviada.');
-    carregarRecebidas();
+    await abrirConversa(formConversa.whatsapp.value, $('#conversa-titulo').textContent);
   } catch (err) {
     erroEl.textContent = err.message;
     erroEl.hidden = false;

@@ -1,4 +1,4 @@
-import { json, erro, agora, enviarWhatsapp, enviarWhatsappMeta, separarNome, renderizar, escolherVariante } from '../../_lib.js';
+import { json, erro, agora, enviarWhatsapp, enviarWhatsappMeta, separarNome, renderizar, escolherVariante, registrarMensagemSaida } from '../../_lib.js';
 
 /**
  * Reenvio manual de um envio com erro, disparado pelo operador na aba
@@ -22,7 +22,7 @@ export async function onRequestPost({ request, env }) {
   if (!Number.isInteger(id)) return erro('Envio inválido.');
 
   const envio = await env.DB.prepare(`
-    SELECT e.id, e.status, l.nome, l.whatsapp, l.optout,
+    SELECT e.id, e.status, e.lead_id, l.nome, l.whatsapp, l.optout,
            m.texto AS mensagem_texto, m.template_nome
       FROM envios e
       JOIN leads l     ON l.id = e.lead_id
@@ -47,6 +47,8 @@ export async function onRequestPost({ request, env }) {
   await env.DB.prepare(
     'UPDATE envios SET status = ?, detalhe = ?, enviado_em = ? WHERE id = ?'
   ).bind(r.ok ? 'enviado' : 'erro', r.detalhe, agora(), id).run();
+
+  if (r.ok) await registrarMensagemSaida(env, envio.lead_id, envio.whatsapp, texto);
 
   return r.ok ? json({ ok: true }) : erro(`O reenvio falhou: ${r.detalhe}`, 422);
 }

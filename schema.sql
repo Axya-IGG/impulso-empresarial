@@ -145,8 +145,12 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_envios_unico ON envios(lead_id, mensagem_i
 CREATE INDEX IF NOT EXISTS idx_envios_data ON envios(enviado_em);
 
 -- ---------------------------------------------------- mensagens_recebidas
--- Toda mensagem que um lead manda de volta pelo WhatsApp, recebida pelo
--- webhook da API oficial da Meta (functions/api/webhook/meta-whatsapp.js).
+-- Log das duas direcoes da conversa por WhatsApp: 'entrada' e o que o lead
+-- manda de volta (webhook da API oficial, functions/api/webhook/meta-whatsapp.js)
+-- e 'saida' e toda mensagem que a gente manda (worker de remarketing, reenvio
+-- manual, resposta do operador) — ver registrarMensagemSaida em _lib.js. As
+-- duas juntas é o que faz a caixa de entrada do painel mostrar toda conversa,
+-- nao so' quem respondeu.
 CREATE TABLE IF NOT EXISTS mensagens_recebidas (
   id           INTEGER PRIMARY KEY AUTOINCREMENT,
   lead_id      TEXT,
@@ -154,10 +158,12 @@ CREATE TABLE IF NOT EXISTS mensagens_recebidas (
   texto        TEXT NOT NULL,
   recebido_em  TEXT NOT NULL,
   lida         INTEGER NOT NULL DEFAULT 0,
+  direcao      TEXT NOT NULL DEFAULT 'entrada',
   FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE SET NULL
 );
 CREATE INDEX IF NOT EXISTS idx_recebidas_recebido ON mensagens_recebidas(recebido_em);
 CREATE INDEX IF NOT EXISTS idx_recebidas_lead ON mensagens_recebidas(lead_id);
+CREATE INDEX IF NOT EXISTS idx_recebidas_whatsapp ON mensagens_recebidas(whatsapp);
 
 -- --------------------------------------------------- tentativas de login
 -- O painel inteiro e protegido por uma senha unica compartilhada, entao

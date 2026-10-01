@@ -1,4 +1,4 @@
-import { agora, enviarWhatsapp, enviarWhatsappMeta, separarNome, dividirVariantes, renderizar } from '../../functions/_lib.js';
+import { agora, enviarWhatsapp, enviarWhatsappMeta, separarNome, dividirVariantes, renderizar, registrarMensagemSaida } from '../../functions/_lib.js';
 
 // Os dois canais ficam ativos ao mesmo tempo desde 01/10: a Evolution caiu
 // de novo (disparo manual feito fora deste sistema, nao tem relacao com o
@@ -263,6 +263,10 @@ async function rodar(env, forcarForaDaJanela = false) {
       'UPDATE envios SET status = ?, detalhe = ?, enviado_em = ? WHERE lead_id = ? AND mensagem_id = ?'
     ).bind(r.ok ? 'enviado' : 'erro', r.detalhe, agora(), item.lead_id, item.mensagem_id).run();
 
+    // So' entra na caixa de entrada quando realmente saiu — falha ja fica
+    // visivel na aba Envios, nao precisa duplicar aqui.
+    if (r.ok) await registrarMensagemSaida(env, item.lead_id, item.whatsapp, renderizar(variante, item));
+
     r.ok ? enviados++ : erros++;
     if (fila.length > 1) await dorme(pausaAleatoria());
   }
@@ -346,6 +350,8 @@ async function rodarEmergencia(env) {
   await env.DB.prepare(
     `UPDATE envios SET status = ?, detalhe = ?, enviado_em = ? WHERE lead_id = ? AND mensagem_id = ?`
   ).bind(r.ok ? 'enviado' : 'erro', r.detalhe, agora(), proximo.lead_id, EMERGENCIA_MENSAGEM_ID).run();
+
+  if (r.ok) await registrarMensagemSaida(env, proximo.lead_id, proximo.whatsapp, renderizar(variante, proximo));
 
   return { enviado: r.ok, lead_id: proximo.lead_id, detalhe: r.detalhe };
 }
