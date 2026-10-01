@@ -143,6 +143,23 @@ export async function onRequestPost({ request, env }) {
   let lead = trk
     ? await env.DB.prepare('SELECT * FROM leads WHERE trk = ?').bind(trk).first()
     : null;
+
+  // trk identifica o NAVEGADOR, nao a pessoa: link de checkout copiado e
+  // repassado, ou compra feita no computador de outra pessoa, chega com o
+  // trk de quem abriu o site. Em 01/10 a compra do Wladimir entrou no lead
+  // da Kathleen assim e ele nunca apareceu no painel. Se o comprador trouxe
+  // e-mail ou telefone e nenhum dos dois bate com o lead do trk, e' outra
+  // pessoa: descarta o casamento por trk e segue pelos outros criterios.
+  let trkDeOutraPessoa = false;
+  if (lead && (email || whatsapp)) {
+    const mesmoEmail = email && String(lead.email || '').toLowerCase() === email;
+    const mesmoWhats = whatsapp && lead.whatsapp === whatsapp;
+    if (!mesmoEmail && !mesmoWhats) {
+      lead = null;
+      trkDeOutraPessoa = true;
+    }
+  }
+
   if (!lead && whatsapp) {
     lead = await env.DB.prepare('SELECT * FROM leads WHERE whatsapp = ?').bind(whatsapp).first();
   }
@@ -156,7 +173,7 @@ export async function onRequestPost({ request, env }) {
     // Se achou por whatsapp/e-mail mas o lead ainda nao tinha trk (cadastro
     // anterior a esta migracao, ou cookie bloqueado no cadastro), grava
     // agora — proximas compras da mesma pessoa passam a casar direto.
-    if (trk && !lead.trk) {
+    if (trk && !lead.trk && !trkDeOutraPessoa) {
       await env.DB.prepare('UPDATE leads SET trk = ? WHERE id = ?').bind(trk, leadId).run();
     }
   } else {
@@ -165,7 +182,7 @@ export async function onRequestPost({ request, env }) {
     await env.DB.prepare(`
       INSERT INTO leads (id, nome, email, whatsapp, origem, criado_em, trk)
       VALUES (?, ?, ?, ?, 'compra-eduzz', ?, ?)
-    `).bind(leadId, nome, email || null, whatsapp, agora(), trk).run();
+    `).bind(leadId, nome, email || null, whatsapp, agora(), trkDeOutraPessoa ? null : trk).run();
   }
 
   const produto = (d.items || []).map(i => i?.name).filter(Boolean).join(', ') || null;
