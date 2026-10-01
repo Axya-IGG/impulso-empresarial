@@ -673,6 +673,8 @@ $('#filtro-envio-de').addEventListener('change', carregarEnvios);
 $('#filtro-envio-ate').addEventListener('change', carregarEnvios);
 
 // ----------------------------------------------------------- recebidas
+// Layout do WhatsApp Web: lista de conversas fixa a esquerda (mais recente
+// no topo) e a conversa aberta a direita, com historico e caixa de texto.
 async function atualizarContadorRecebidas() {
   const el = $('#contador-recebidas');
   try {
@@ -684,91 +686,227 @@ async function atualizarContadorRecebidas() {
   }
 }
 
+const ICONE_LIDO = '<svg viewBox="0 0 16 11" aria-hidden="true"><path d="M11.07.65 10.4.1a.37.37 0 0 0-.52.06L4.95 6.17 2.07 3.84a.37.37 0 0 0-.52.06l-.53.65a.37.37 0 0 0 .06.52l3.6 2.92c.16.13.4.1.52-.06L11.13 1.17a.37.37 0 0 0-.06-.52zm3.56 0-.67-.55a.37.37 0 0 0-.52.06L8.51 6.17l-.62-.5-.94 1.17 1.33 1.08c.16.13.4.1.52-.06l6.28-7.75a.37.37 0 0 0-.06-.52z"/></svg>';
+
+const caixa = { conversas: [], aberta: null, filtro: 'tudo', totalThread: 0 };
+const formConversa = $('#form-conversa');
+
+const paraData = (iso) => new Date(iso.includes('T') ? iso : iso.replace(' ', 'T') + 'Z');
+const diaSP = (d) => d.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+const horaSP = (d) => d.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
+
+function rotuloDia(d) {
+  const hoje = new Date();
+  const ontem = new Date(Date.now() - 864e5);
+  if (diaSP(d) === diaSP(hoje)) return 'Hoje';
+  if (diaSP(d) === diaSP(ontem)) return 'Ontem';
+  return d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+}
+
+// Mesma regra da lista do WhatsApp: hoje mostra a hora, ontem "Ontem",
+// a ultima semana o dia da semana, e antes disso a data.
+function quandoLista(iso) {
+  const d = paraData(iso);
+  if (isNaN(d)) return '';
+  const rotulo = rotuloDia(d);
+  if (rotulo === 'Hoje') return horaSP(d);
+  if (rotulo === 'Ontem') return 'Ontem';
+  if (Date.now() - d < 6 * 864e5) {
+    const dia = d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', weekday: 'long' });
+    return dia.charAt(0).toUpperCase() + dia.slice(1);
+  }
+  return rotulo;
+}
+
+// Mesma marcacao do WhatsApp (*negrito*, _italico_, ~riscado~) e link
+// clicavel. Roda DEPOIS do esc(), entao so' gera as tags daqui — nada do
+// texto do lead vira HTML.
+function formatarWhats(texto) {
+  return esc(texto)
+    .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>')
+    .replace(/(^|[\s(])\*([^*\n]+)\*(?=$|[\s).,!?:;])/g, '$1<strong>$2</strong>')
+    .replace(/(^|[\s(])_([^_\n]+)_(?=$|[\s).,!?:;])/g, '$1<em>$2</em>')
+    .replace(/(^|[\s(])~([^~\n]+)~(?=$|[\s).,!?:;])/g, '$1<s>$2</s>');
+}
+// Na previa da lista o WhatsApp mostra o texto sem os simbolos de marcacao.
+const semMarcacao = (t) => String(t || '').replace(/[*_~]/g, '');
+
+const nomeDe = (c) => c.lead_nome || telBR(c.whatsapp);
+const inicial = (nome) => esc(String(nome).trim().charAt(0).toUpperCase() || '?');
+
+function renderLista() {
+  const busca = $('#wa-busca').value.trim().toLowerCase();
+  const naoLidas = caixa.conversas.filter(c => c.nao_lidas > 0).length;
+  $('#wa-filtro-contador').textContent = naoLidas || '';
+
+  const lista = caixa.conversas.filter(c => {
+    if (caixa.filtro === 'nao-lidas' && !(c.nao_lidas > 0)) return false;
+    if (!busca) return true;
+    return nomeDe(c).toLowerCase().includes(busca) || String(c.whatsapp).includes(busca.replace(/\D/g, '') || '\u0000');
+  });
+
+  $('#corpo-recebidas').innerHTML = lista.length
+    ? lista.map(c => {
+        const nome = nomeDe(c);
+        const previa = semMarcacao(c.texto).split('\n')[0];
+        return `
+        <button type="button" class="wa-item ${c.nao_lidas > 0 ? 'nao-lida' : ''} ${c.whatsapp === caixa.aberta ? 'ativo' : ''}" data-abrir="${esc(c.whatsapp)}">
+          <div class="wa-avatar">${inicial(nome)}</div>
+          <div class="wa-item-corpo">
+            <div class="wa-item-linha">
+              <span class="wa-item-nome">${esc(nome)}</span>
+              <span class="wa-item-quando">${esc(quandoLista(c.recebido_em))}</span>
+            </div>
+            <div class="wa-item-linha">
+              <span class="wa-item-previa">${c.direcao === 'saida' ? ICONE_LIDO : ''}<span>${esc(previa)}</span></span>
+              ${c.nao_lidas > 0 ? `<span class="wa-badge">${c.nao_lidas}</span>` : ''}
+            </div>
+          </div>
+        </button>`;
+      }).join('')
+    : `<div class="wa-lista-vazia">${caixa.conversas.length ? 'Nenhuma conversa encontrada.' : 'Nenhuma conversa ainda.'}</div>`;
+}
+
 async function carregarRecebidas() {
   const { conversas, nao_lidas } = await api('/api/admin/recebidas');
+  caixa.conversas = conversas;
 
   const el = $('#contador-recebidas');
   el.textContent = nao_lidas;
   el.hidden = nao_lidas === 0;
 
-  $('#corpo-recebidas').innerHTML = conversas.length
-    ? conversas.map(c => {
-        const nome = c.lead_nome || telBR(c.whatsapp);
-        // "Você: " na pre-visualizacao quando a ultima mensagem foi nossa,
-        // igual ao WhatsApp Web — sem isso parece que o lead escreveu algo
-        // que na verdade a gente mandou pra ele.
-        const prefixo = c.direcao === 'saida' ? '<span class="chat-prefixo-eu">Você: </span>' : '';
-        return `
-        <button type="button" class="chat-item ${c.nao_lidas > 0 ? 'nao-lida' : ''}" data-abrir="${esc(c.whatsapp)}" data-contexto="${esc(nome)}">
-          <div class="chat-avatar">${esc(nome.slice(0, 1).toUpperCase())}</div>
-          <div class="chat-corpo">
-            <div class="chat-topo">
-              <span class="chat-nome">${esc(nome)}</span>
-              <span class="chat-quando">${esc(dataBR(c.recebido_em))}</span>
-            </div>
-            <div class="chat-bolha">${prefixo}${esc(c.texto)}</div>
-          </div>
-        </button>`;
-      }).join('')
-    : '<div class="vazio">Nenhuma conversa ainda.</div>';
+  renderLista();
+}
+
+function renderThread(mensagens) {
+  let diaAnterior = '';
+  let direcaoAnterior = '';
+  $('#conversa-thread').innerHTML = mensagens.map(m => {
+    const d = paraData(m.recebido_em);
+    const dia = diaSP(d);
+    let html = '';
+    if (dia !== diaAnterior) {
+      html += `<div class="wa-dia">${esc(rotuloDia(d))}</div>`;
+      direcaoAnterior = '';
+    }
+    const inicio = m.direcao !== direcaoAnterior ? 'inicio' : '';
+    diaAnterior = dia;
+    direcaoAnterior = m.direcao;
+    return html + `
+      <div class="wa-bolha ${m.direcao} ${inicio}">${formatarWhats(m.texto)}<span class="wa-bolha-meta">${esc(horaSP(d))}${m.direcao === 'saida' ? ICONE_LIDO : ''}</span></div>`;
+  }).join('');
+  const thread = $('#conversa-thread');
+  thread.scrollTop = thread.scrollHeight;
+}
+
+async function abrirConversa(whatsapp) {
+  const c = caixa.conversas.find(x => x.whatsapp === whatsapp);
+  const nome = c ? nomeDe(c) : telBR(whatsapp);
+
+  caixa.aberta = whatsapp;
+  caixa.totalThread = 0;
+  $('#wa').classList.add('com-conversa');
+  $('#wa-vazio').hidden = true;
+  $('#wa-aberta').hidden = false;
+  $('#wa-topo-avatar').innerHTML = inicial(nome);
+  $('#wa-topo-nome').textContent = nome;
+  $('#wa-topo-numero').textContent = c?.lead_nome ? telBR(whatsapp) : '';
+  $('#conversa-erro').hidden = true;
+  $('#conversa-thread').innerHTML = '';
+  if (formConversa.whatsapp.value !== whatsapp) formConversa.texto.value = '';
+  formConversa.whatsapp.value = whatsapp;
+  renderLista();
+
+  await recarregarThread(true);
+  formConversa.texto.focus();
+
+  // Buscar a thread marca a conversa como lida no servidor; recarrega a
+  // lista pra tirar o badge na hora.
+  carregarRecebidas();
+}
+
+async function recarregarThread(forcar = false) {
+  const whatsapp = caixa.aberta;
+  if (!whatsapp) return;
+  const { mensagens } = await api(`/api/admin/conversa?whatsapp=${encodeURIComponent(whatsapp)}`);
+  // Trocou de conversa enquanto a resposta vinha: descarta, senao a thread
+  // de um contato apareceria debaixo do nome de outro.
+  if (caixa.aberta !== whatsapp) return;
+  if (!forcar && mensagens.length === caixa.totalThread) return;
+  caixa.totalThread = mensagens.length;
+  renderThread(mensagens);
 }
 
 $('#corpo-recebidas').addEventListener('click', e => {
   const bt = e.target.closest('[data-abrir]');
-  if (bt) abrirConversa(bt.dataset.abrir, bt.dataset.contexto);
+  if (bt) abrirConversa(bt.dataset.abrir);
 });
 
-const modalConversa = $('#modal-conversa');
-const formConversa = $('#form-conversa');
+$('#wa-busca').addEventListener('input', renderLista);
 
-const horaBR = (iso) => {
-  const d = new Date(iso.includes('T') ? iso : iso.replace(' ', 'T') + 'Z');
-  return isNaN(d) ? '' : d.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
-};
+$$('.wa-filtro').forEach(bt => bt.addEventListener('click', () => {
+  caixa.filtro = bt.dataset.filtro;
+  $$('.wa-filtro').forEach(b => b.classList.toggle('ativo', b === bt));
+  renderLista();
+}));
 
-async function abrirConversa(whatsapp, contexto) {
-  $('#conversa-titulo').textContent = contexto || telBR(whatsapp);
-  $('#conversa-erro').hidden = true;
-  formConversa.reset();
-  formConversa.whatsapp.value = whatsapp;
-  modalConversa.hidden = false;
+$('#wa-voltar').addEventListener('click', () => {
+  caixa.aberta = null;
+  $('#wa').classList.remove('com-conversa');
+  $('#wa-aberta').hidden = true;
+  $('#wa-vazio').hidden = false;
+  renderLista();
+});
 
-  const { mensagens } = await api(`/api/admin/conversa?whatsapp=${encodeURIComponent(whatsapp)}`);
-  $('#conversa-thread').innerHTML = mensagens.length
-    ? mensagens.map(m => `
-        <div class="thread-bolha ${m.direcao}">
-          ${esc(m.texto)}
-          <span class="thread-hora">${esc(horaBR(m.recebido_em))}</span>
-        </div>`).join('')
-    : '<div class="vazio">Nenhuma mensagem ainda.</div>';
-
-  const thread = $('#conversa-thread');
-  thread.scrollTop = thread.scrollHeight;
-  formConversa.texto.focus();
-
-  // A conversa foi marcada como lida no servidor ao buscar a thread acima;
-  // atualiza a lista pra tirar o destaque e o contador sem esperar reabrir a aba.
-  carregarRecebidas();
-}
+// Enter envia e Shift+Enter quebra linha, igual ao WhatsApp Web; a caixa
+// cresce com o texto ate um limite e depois rola.
+formConversa.texto.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+    e.preventDefault();
+    formConversa.requestSubmit();
+  }
+});
+formConversa.texto.addEventListener('input', () => {
+  const t = formConversa.texto;
+  t.style.height = 'auto';
+  t.style.height = `${Math.min(t.scrollHeight, 140)}px`;
+});
 
 formConversa.addEventListener('submit', async e => {
   e.preventDefault();
+  const texto = formConversa.texto.value.trim();
+  if (!texto) return;
   const erroEl = $('#conversa-erro');
+  const botao = formConversa.querySelector('.wa-enviar');
   erroEl.hidden = true;
+  botao.disabled = true;
 
   try {
     await api('/api/admin/conversa', {
       method: 'POST',
-      body: JSON.stringify({ whatsapp: formConversa.whatsapp.value, texto: formConversa.texto.value }),
+      body: JSON.stringify({ whatsapp: formConversa.whatsapp.value, texto }),
     });
     formConversa.texto.value = '';
-    toast('Resposta enviada.');
-    await abrirConversa(formConversa.whatsapp.value, $('#conversa-titulo').textContent);
+    formConversa.texto.style.height = '';
+    await recarregarThread(true);
+    carregarRecebidas();
   } catch (err) {
     erroEl.textContent = err.message;
     erroEl.hidden = false;
+  } finally {
+    botao.disabled = false;
+    formConversa.texto.focus();
   }
 });
+
+// Atualiza sozinho enquanto a aba esta aberta, pra resposta nova aparecer
+// sem recarregar a pagina, como no WhatsApp Web.
+setInterval(() => {
+  const abaAberta = !$('#tela-painel').hidden && !$('[data-painel="recebidas"]').hidden;
+  if (!abaAberta || document.hidden) return;
+  carregarRecebidas().catch(() => {});
+  recarregarThread().catch(() => {});
+}, 15000);
 
 // -------------------------------------------------------------- arranque
 // Uma chamada protegida decide a tela inicial: com cookie válido o painel

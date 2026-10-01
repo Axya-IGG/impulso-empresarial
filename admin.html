@@ -152,13 +152,55 @@
 
     <!-- ----------------------- CAIXA DE ENTRADA ---------------------- -->
     <section class="painel-aba" data-painel="recebidas" hidden>
-      <p class="dica">
-        Toda conversa por WhatsApp, mais recente no topo — inclusive quem
-        só recebeu e ainda não respondeu. Clique numa conversa pra ver o
-        histórico inteiro e responder. Só dá pra responder em texto livre
-        dentro de 24h da última mensagem da pessoa — é a regra da própria Meta.
-      </p>
-      <div id="corpo-recebidas" class="chat-lista"></div>
+      <div class="wa" id="wa">
+        <aside class="wa-lateral">
+          <header class="wa-lateral-topo">
+            <h2>Conversas</h2>
+          </header>
+          <div class="wa-busca">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+            <input type="search" id="wa-busca" placeholder="Pesquisar conversa" autocomplete="off" />
+          </div>
+          <div class="wa-filtros">
+            <button type="button" class="wa-filtro ativo" data-filtro="tudo">Tudo</button>
+            <button type="button" class="wa-filtro" data-filtro="nao-lidas">Não lidas <span id="wa-filtro-contador"></span></button>
+          </div>
+          <div class="wa-lista" id="corpo-recebidas"></div>
+        </aside>
+
+        <section class="wa-conversa" id="wa-conversa">
+          <div class="wa-vazio" id="wa-vazio">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/></svg>
+            <h3>Caixa de entrada do Impulso</h3>
+            <p>Escolha uma conversa à esquerda pra ver o histórico e responder.<br />
+              Resposta em texto livre só vale até 24h depois da última mensagem da pessoa (regra da Meta).</p>
+          </div>
+
+          <div class="wa-aberta" id="wa-aberta" hidden>
+            <header class="wa-conversa-topo">
+              <button type="button" class="wa-voltar" id="wa-voltar" aria-label="Voltar para a lista">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+              </button>
+              <div class="wa-avatar" id="wa-topo-avatar"></div>
+              <div class="wa-topo-info">
+                <span class="wa-topo-nome" id="wa-topo-nome"></span>
+                <span class="wa-topo-numero" id="wa-topo-numero"></span>
+              </div>
+            </header>
+            <div class="wa-thread" id="conversa-thread"></div>
+            <form class="wa-compor" id="form-conversa">
+              <input type="hidden" name="whatsapp" />
+              <p class="wa-erro" id="conversa-erro" role="alert" hidden></p>
+              <div class="wa-compor-linha">
+                <textarea name="texto" rows="1" placeholder="Digite uma mensagem" required></textarea>
+                <button type="submit" class="wa-enviar" aria-label="Enviar">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.01 21 23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                </button>
+              </div>
+            </form>
+          </div>
+        </section>
+      </div>
     </section>
 
   </main>
@@ -319,24 +361,6 @@
       <div class="modal-acoes">
         <button type="submit" class="btn btn-primario">Enviar</button>
       </div>
-    </form>
-  </div>
-</div>
-
-<!-- ================= MODAL DE CONVERSA (caixa de entrada) ================= -->
-<div class="modal" id="modal-conversa" hidden>
-  <div class="modal-fundo" data-fechar></div>
-  <div class="modal-caixa modal-conversa-caixa" role="dialog" aria-modal="true" aria-labelledby="conversa-titulo">
-    <button type="button" class="modal-fechar" data-fechar aria-label="Fechar">&times;</button>
-    <h2 id="conversa-titulo">Conversa</h2>
-    <div id="conversa-thread" class="thread-lista"></div>
-    <form id="form-conversa">
-      <input type="hidden" name="whatsapp" />
-      <div class="thread-compor">
-        <textarea name="texto" rows="2" placeholder="Digite uma mensagem" required></textarea>
-        <button type="submit" class="btn btn-primario">Enviar</button>
-      </div>
-      <p class="alerta alerta-erro" id="conversa-erro" role="alert" hidden></p>
     </form>
   </div>
 </div>
