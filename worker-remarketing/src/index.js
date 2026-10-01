@@ -1,4 +1,13 @@
-import { agora, enviarWhatsappMeta, separarNome } from '../../functions/_lib.js';
+import { agora, enviarWhatsapp, enviarWhatsappMeta, separarNome, dividirVariantes, renderizar } from '../../functions/_lib.js';
+
+// Os dois canais ficam ativos ao mesmo tempo desde 01/10: a Evolution caiu
+// de novo (disparo manual feito fora deste sistema, nao tem relacao com o
+// ritmo daqui) e a API oficial, mesmo com o nome de exibicao ainda
+// PENDING_REVIEW na Meta, vem aceitando parte dos envios. Mensagem com
+// `template_nome` tenta a API oficial primeiro; se recusar, cai pra
+// Evolution no mesmo envio (ver enviarComFallback). Mensagem sem
+// template_nome continua so' na Evolution, por nao ter template aprovado
+// pra tentar na Meta.
 
 // Teto por rodada. O cron roda de 5 em 5 minutos: 4/rodada da no maximo 48
 // mensagens/hora. Bem baixo de proposito: quando entra uma leva de leads de
@@ -44,15 +53,55 @@ function horaBrasilia() {
   return Number(partes.find(p => p.type === 'hour')?.value ?? 0);
 }
 
+// DISPARO EMERGENCIAL da virada de lote (30/09) — ver bloco proprio mais
+// abaixo (rodarEmergencia). Fica aqui em cima porque montarFila tambem
+// precisa excluir esta mensagem da fila normal (ver comentario dela).
+const EMERGENCIA_MENSAGEM_ID = 26; // "Última chamada do lote"
+
+/**
+ * Escolhe a proxima variacao de uma mensagem numa fila fixa (nao sorteio):
+ * cada tentativa de envio (sucesso ou erro) avanca uma posicao, ciclando
+ * pelas variacoes na ordem em que estao no texto. Evita que o acaso
+ * concentre uma variacao mais que as outras numa campanha longa — mesma
+ * regra pedida pra mensagem 26, aplicada a qualquer mensagem.
+ */
+async function proximaVariante(env, mensagemId, texto) {
+  const jaTentados = await env.DB.prepare(
+    'SELECT COUNT(*) AS n FROM envios WHERE mensagem_id = ?'
+  ).bind(mensagemId).first();
+  const variantes = dividirVariantes(texto);
+  return variantes[(jaTentados?.n ?? 0) % variantes.length];
+}
+
+/**
+ * Tenta a API oficial primeiro (so' se a mensagem tiver template_nome);
+ * se recusar, cai pra Evolution no mesmo envio, sem esperar a proxima
+ * rodada. Sem template_nome, vai direto pra Evolution — nao ha template
+ * aprovado pra tentar na Meta. O detalhe guarda os dois erros quando as
+ * duas falham, pra dar pra diagnosticar qual canal (e por que) recusou.
+ */
+async function enviarComFallback(env, item, variante) {
+  if (item.template_nome) {
+    const rMeta = await enviarWhatsappMeta(env, item.whatsapp, item.template_nome, separarNome(item.nome).fn);
+    if (rMeta.ok) return rMeta;
+    const rEvo = await enviarWhatsapp(env, item.whatsapp, renderizar(variante, item));
+    if (rEvo.ok) return rEvo;
+    return { ok: false, detalhe: `Meta: ${rMeta.detalhe} | Evolution: ${rEvo.detalhe}` };
+  }
+  return enviarWhatsapp(env, item.whatsapp, renderizar(variante, item));
+}
+
 /**
  * Monta a fila da rodada: pares (lead, mensagem) que ja venceram e ainda
  * nao foram enviados.
  *
- * `m.template_nome IS NOT NULL` filtra fora qualquer mensagem sem um
- * template ja aprovado pela Meta — o envio so' sai pela API oficial (ver
- * enviarWhatsappMeta em functions/_lib.js), que so' aceita template. Uma
- * mensagem sem template_nome fica parada, nunca entra na fila, ate' o
- * template dela ser criado e aprovado e o campo ser setado no banco.
+ * `m.id != ?` (EMERGENCIA_MENSAGEM_ID) exclui a mensagem da campanha de
+ * virada de lote: ela ja' tem sua propria fila dedicada, mais rapida, em
+ * rodarEmergencia — deixa-la tambem elegivel aqui so' geraria disputa pela
+ * mesma vaga (o UNIQUE de `envios` ate' evitaria envio duplicado, mas
+ * gastaria cota da rodada em tentativas que iam falhar por ja' reservado).
+ * Tirar esta exclusao quando a campanha acabar e o bloco emergencial for
+ * removido.
  *
  * O `NOT EXISTS` sobre `envios` e o que impede reenvio. Ele e redundante
  * com o UNIQUE(lead_id, mensagem_id) de proposito: o UNIQUE e a garantia
@@ -80,10 +129,10 @@ async function montarFila(db, limite) {
   `;
 
   const porAtraso = await db.prepare(`
-    SELECT l.id AS lead_id, l.nome, l.whatsapp, m.id AS mensagem_id, m.template_nome
+    SELECT l.id AS lead_id, l.nome, l.whatsapp, m.id AS mensagem_id, m.texto, m.template_nome
       FROM leads l
       JOIN mensagens m
-        ON m.ativo = 1 AND m.arquivado = 0 AND m.tipo = 'atraso' AND m.template_nome IS NOT NULL
+        ON m.ativo = 1 AND m.arquivado = 0 AND m.tipo = 'atraso' AND m.id != ?
      WHERE l.optout = 0
        ${condPublico}
        AND datetime(
@@ -97,7 +146,7 @@ async function montarFila(db, limite) {
                         WHERE e.lead_id = l.id AND e.mensagem_id = m.id)
      ORDER BY CASE WHEN m.publico = 'compradores' THEN 0 ELSE 1 END, l.criado_em
      LIMIT ?
-  `).bind(limite).all();
+  `).bind(EMERGENCIA_MENSAGEM_ID, limite).all();
 
   // 'data': vence num dia especifico, mas nao dispara pra base inteira no
   // mesmo instante — enviar_em guarda o INICIO de uma janela de 10h (10h as
@@ -118,10 +167,10 @@ async function montarFila(db, limite) {
   // a data da COMPRA pra mensagem de 'compradores' (mesma logica do
   // 'atraso' acima) e o cadastro pros demais publicos.
   const porData = await db.prepare(`
-    SELECT l.id AS lead_id, l.nome, l.whatsapp, m.id AS mensagem_id, m.template_nome
+    SELECT l.id AS lead_id, l.nome, l.whatsapp, m.id AS mensagem_id, m.texto, m.template_nome
       FROM leads l
       JOIN mensagens m
-        ON m.ativo = 1 AND m.arquivado = 0 AND m.tipo = 'data' AND m.template_nome IS NOT NULL
+        ON m.ativo = 1 AND m.arquivado = 0 AND m.tipo = 'data' AND m.id != ?
      WHERE l.optout = 0
        ${condPublico}
        AND datetime(
@@ -138,7 +187,7 @@ async function montarFila(db, limite) {
                         WHERE e.lead_id = l.id AND e.mensagem_id = m.id)
      ORDER BY m.enviar_em, l.criado_em
      LIMIT ?
-  `).bind(limite).all();
+  `).bind(EMERGENCIA_MENSAGEM_ID, limite).all();
 
   // Atraso primeiro (Confirmacao imediata inclusa): pra quem acabou de
   // comprar, a confirmacao e' a primeira coisa que devia chegar, nunca um
@@ -146,26 +195,18 @@ async function montarFila(db, limite) {
   return [...(porAtraso.results || []), ...(porData.results || [])].slice(0, limite);
 }
 
-async function rodar(env, forcarForaDaJanela = false) {
-  const hora = horaBrasilia();
-  if (!forcarForaDaJanela && (hora < JANELA_INICIO_H || hora >= JANELA_FIM_H)) {
-    return { fila: 0, enviados: 0, erros: 0, fora_da_janela: true, hora_brasilia: hora };
-  }
-
-  // Conta todo status, inclusive 'erro': mesmo uma tentativa que falhou e'
-  // trafego que saiu em direcao ao WhatsApp, e o teto e' sobre trafego, nao
-  // so sobre sucesso.
+// Quanto trafego ja' saiu pelo numero da Evolution ('axya') nas ultimas 24h,
+// somando `envios` (esta) e `cert_entregas` (impulso-certificados), que usa
+// o MESMO numero — ver comentario de MAX_POR_DIA. Contar todo status,
+// inclusive 'erro': mesmo uma tentativa que falhou e' trafego que saiu em
+// direcao ao WhatsApp, e o teto e' sobre trafego, nao so' sobre sucesso.
+// Compartilhada por `rodar` e `rodarEmergencia` porque as duas gastam da
+// MESMA cota diaria do MESMO numero.
+async function contarGastoHoje(env) {
   const jaHoje = await env.DB.prepare(
     `SELECT COUNT(*) AS n FROM envios WHERE enviado_em > datetime('now','-1 day')`
   ).first();
 
-  // Soma tambem `cert_entregas`, a fila do app de certificados
-  // (C:\Claude Code\impulso-certificados), que vive no MESMO banco. Os dois
-  // workers disparam pelo MESMO numero da instancia `axya`: sem esta soma,
-  // cada um gastaria 250 por dia e o numero levaria 500, o dobro do teto que
-  // este arquivo inteiro existe para respeitar. O worker de la faz a mesma
-  // conta, na mesma janela de 24h corridas.
-  //
   // Em consulta separada com try/catch, e nao como subconsulta na de cima,
   // porque num banco sem a tabela (outro ambiente, banco novo) o SQLite
   // falha ao preparar a instrucao INTEIRA — nao devolve NULL, e nenhum
@@ -184,7 +225,16 @@ async function rodar(env, forcarForaDaJanela = false) {
     console.log('[remarketing] cert_entregas indisponivel, teto sem ela:', String(e).slice(0, 120));
   }
 
-  const gasto = (jaHoje?.n ?? 0) + certificadosHoje;
+  return (jaHoje?.n ?? 0) + certificadosHoje;
+}
+
+async function rodar(env, forcarForaDaJanela = false) {
+  const hora = horaBrasilia();
+  if (!forcarForaDaJanela && (hora < JANELA_INICIO_H || hora >= JANELA_FIM_H)) {
+    return { fila: 0, enviados: 0, erros: 0, fora_da_janela: true, hora_brasilia: hora };
+  }
+
+  const gasto = await contarGastoHoje(env);
   const limite = Math.max(0, Math.min(MAX_POR_RODADA, MAX_POR_DIA - gasto));
 
   if (limite === 0) return { fila: 0, enviados: 0, erros: 0, teto_diario_atingido: true };
@@ -193,6 +243,10 @@ async function rodar(env, forcarForaDaJanela = false) {
   let enviados = 0, erros = 0;
 
   for (const item of fila) {
+    // Calculada ANTES da reserva: proximaVariante conta envios ja'
+    // existentes desta mensagem, e a reserva abaixo cria mais um.
+    const variante = await proximaVariante(env, item.mensagem_id, item.texto);
+
     // Reserva a vaga ANTES de enviar. Se o Worker morrer no meio da rodada,
     // o pior caso e uma mensagem marcada como enviada que nao saiu — melhor
     // do que a pessoa receber a mesma mensagem duas vezes.
@@ -204,7 +258,7 @@ async function rodar(env, forcarForaDaJanela = false) {
       continue; // ja reservado por outra rodada — o UNIQUE barrou
     }
 
-    const r = await enviarWhatsappMeta(env, item.whatsapp, item.template_nome, separarNome(item.nome).fn);
+    const r = await enviarComFallback(env, item, variante);
     await env.DB.prepare(
       'UPDATE envios SET status = ?, detalhe = ?, enviado_em = ? WHERE lead_id = ? AND mensagem_id = ?'
     ).bind(r.ok ? 'enviado' : 'erro', r.detalhe, agora(), item.lead_id, item.mensagem_id).run();
@@ -216,19 +270,96 @@ async function rodar(env, forcarForaDaJanela = false) {
   return { fila: fila.length, enviados, erros };
 }
 
+// ==================================================================
+// DISPARO EMERGENCIAL — virada de lote (30/09), so' enquanto durar
+// ==================================================================
+// Fila dedicada, mais rapida que o ritmo normal de rodar() — pedido
+// explicito do usuario pra cobrir os leads restantes antes das 20h de hoje.
+// Remover este bloco (aqui e em functions/_lib.js) quando a campanha
+// acabar; a exclusao de EMERGENCIA_MENSAGEM_ID em montarFila tambem sai
+// junto.
+// 5min30s em vez de 6min: com 76 leads restantes e a janela fechando as 20h,
+// 6 em 6 deixaria uns 2 leads de fora hoje: nesse ritmo cabem ~81 envios ate
+// la, com folga.
+const EMERGENCIA_INTERVALO_MS = 5.5 * 60 * 1000;
+
+/**
+ * No maximo 1 envio por chamada — e' o que garante o ritmo de 1 a cada 6
+ * min mesmo rodando junto de um cron de 5 em 5: a maioria das rodadas ve
+ * que o intervalo ainda nao passou e nao faz nada. Publico e' sempre
+ * "quem nao comprou, nao pediu pra sair, e ainda nao recebeu esta mensagem
+ * especifica" — igual ao filtro de publico 'nao_compradores' de montarFila,
+ * so' que fixo nesta unica mensagem em vez de variar por linha da tabela.
+ */
+async function rodarEmergencia(env) {
+  const hora = horaBrasilia();
+  if (hora < JANELA_INICIO_H || hora >= JANELA_FIM_H) {
+    return { fora_da_janela: true, hora_brasilia: hora };
+  }
+
+  const ultimo = await env.DB.prepare(
+    `SELECT MAX(enviado_em) AS em FROM envios WHERE mensagem_id = ?`
+  ).bind(EMERGENCIA_MENSAGEM_ID).first();
+
+  if (ultimo?.em && Date.now() - new Date(ultimo.em).getTime() < EMERGENCIA_INTERVALO_MS) {
+    return { aguardando_intervalo: true };
+  }
+
+  const gasto = await contarGastoHoje(env);
+  if (gasto >= MAX_POR_DIA) return { teto_diario_atingido: true };
+
+  const mensagem = await env.DB.prepare('SELECT texto FROM mensagens WHERE id = ?')
+    .bind(EMERGENCIA_MENSAGEM_ID).first();
+  if (!mensagem) return { mensagem_nao_encontrada: true };
+
+  const proximo = await env.DB.prepare(`
+    SELECT l.id AS lead_id, l.nome, l.whatsapp
+      FROM leads l
+     WHERE l.optout = 0
+       AND NOT EXISTS (SELECT 1 FROM compras c WHERE c.lead_id = l.id AND c.status = 'aprovada')
+       AND NOT EXISTS (SELECT 1 FROM envios e WHERE e.lead_id = l.id AND e.mensagem_id = ?)
+     ORDER BY l.criado_em
+     LIMIT 1
+  `).bind(EMERGENCIA_MENSAGEM_ID).first();
+
+  if (!proximo) return { concluido: true };
+
+  // Fila, nao sorteio: pedido explicito do usuario pra distribuir as
+  // variacoes igualmente ao longo da campanha em vez de deixar o acaso
+  // concentrar uma mais que as outras (ver proximaVariante).
+  const variante = await proximaVariante(env, EMERGENCIA_MENSAGEM_ID, mensagem.texto);
+
+  try {
+    await env.DB.prepare(
+      `INSERT INTO envios (lead_id, mensagem_id, status, enviado_em) VALUES (?, ?, 'enviando', ?)`
+    ).bind(proximo.lead_id, EMERGENCIA_MENSAGEM_ID, agora()).run();
+  } catch {
+    return { ja_reservado: true }; // outra chamada pegou este lead primeiro
+  }
+
+  const r = await enviarWhatsapp(env, proximo.whatsapp, renderizar(variante, proximo));
+  await env.DB.prepare(
+    `UPDATE envios SET status = ?, detalhe = ?, enviado_em = ? WHERE lead_id = ? AND mensagem_id = ?`
+  ).bind(r.ok ? 'enviado' : 'erro', r.detalhe, agora(), proximo.lead_id, EMERGENCIA_MENSAGEM_ID).run();
+
+  return { enviado: r.ok, lead_id: proximo.lead_id, detalhe: r.detalhe };
+}
+
 export default {
   async scheduled(_evento, env, ctx) {
     ctx.waitUntil(rodar(env));
+    ctx.waitUntil(rodarEmergencia(env));
   },
 
   // Disparo manual, para testar sem esperar o cron. Protegido pelo mesmo
   // segredo do painel, senao qualquer um esvaziaria a fila na hora errada.
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (url.pathname !== '/rodar') return new Response('Not found', { status: 404 });
     if (request.headers.get('X-Admin-Senha') !== env.ADMIN_SENHA) {
       return new Response('Nao autorizado', { status: 401 });
     }
+    if (url.pathname === '/emergencia') return Response.json(await rodarEmergencia(env));
+    if (url.pathname !== '/rodar') return new Response('Not found', { status: 404 });
     // ?forcar=1 ignora a janela de horario — so' pra testar de madrugada
     // sem esperar o dia seguinte; o cron nunca manda essa flag.
     const forcar = url.searchParams.get('forcar') === '1';

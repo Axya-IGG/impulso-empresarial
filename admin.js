@@ -453,16 +453,10 @@ function decompor(min) {
   return [min ?? 0, 1];
 }
 
-// Guarda o template da mensagem aberta no modal, pra "Enviar teste" saber o
-// que mandar — o formulario nao tem campo pra isso (template_nome so' e'
-// setado direto no banco depois do teste, ver plano da migracao).
-let mensagemEmEdicaoTemplate = null;
-
 function abrirModalMensagem(m) {
   formMsg.reset();
   $('#msg-erro').hidden = true;
   $('#modal-titulo').textContent = m ? 'Editar mensagem' : 'Nova mensagem';
-  mensagemEmEdicaoTemplate = m?.template_nome || null;
 
   formMsg.id.value = m?.id || '';
   formMsg.titulo.value = m?.titulo || '';
@@ -569,8 +563,8 @@ formMsg.addEventListener('submit', async e => {
 
 // ---------------------------------------------------------- envio teste
 $('#btn-testar').addEventListener('click', () => {
-  if (!mensagemEmEdicaoTemplate) {
-    $('#msg-erro').textContent = 'Essa mensagem ainda não tem um template aprovado pela Meta — não dá pra testar antes disso.';
+  if (!formMsg.texto.value.trim()) {
+    $('#msg-erro').textContent = 'Escreva o texto antes de testar.';
     $('#msg-erro').hidden = false;
     return;
   }
@@ -590,8 +584,8 @@ $('#form-teste').addEventListener('submit', async e => {
       method: 'POST',
       body: JSON.stringify({
         whatsapp: e.target.whatsapp.value,
-        template_nome: mensagemEmEdicaoTemplate,
-        nome: 'Teste',
+        texto: formMsg.texto.value,
+        nome: 'Teste Impulso',
       }),
     });
     aviso.className = 'alerta alerta-ok';

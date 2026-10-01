@@ -108,6 +108,62 @@ export const cookieSessao = (token) =>
 export const cookieSessaoExpirado = () =>
   `${NOME_COOKIE}=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0`;
 
+// -------------------------------------------------------------- Evolution
+// Restaurada em 30/09 so' pro disparo emergencial de virada de lote: o nome
+// de exibicao do numero oficial ainda esta PENDING_REVIEW na Meta (erro
+// 131037 ao tentar template), e o lote vira hoje. Ver rodarEmergencia em
+// worker-remarketing/src/index.js — remover os dois de novo assim que a
+// Meta aprovar o nome e a campanha estiver concluida.
+/**
+ * Envia uma mensagem de texto pela Evolution API.
+ * Retorna { ok, detalhe } — nunca lanca, para que uma falha num lead nao
+ * derrube a rodada inteira do cron.
+ */
+export async function enviarWhatsapp(env, numero, texto) {
+  const base = (env.EVOLUTION_URL || '').replace(/\/+$/, '');
+  const instancia = env.EVOLUTION_INSTANCIA;
+  try {
+    const r = await fetch(`${base}/message/sendText/${instancia}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: env.EVOLUTION_APIKEY },
+      body: JSON.stringify({ number: numero, text: texto }),
+    });
+    const corpo = await r.text();
+    return { ok: r.ok, detalhe: corpo.slice(0, 400) };
+  } catch (e) {
+    return { ok: false, detalhe: String(e).slice(0, 400) };
+  }
+}
+
+/**
+ * Mensagens podem trazer variações de texto separadas por uma linha só com
+ * "---" (3+ hífens) — pra não mandar o mesmo texto idêntico pra todo mundo,
+ * um dos sinais que fazem o WhatsApp suspeitar de automação numa API
+ * não-oficial. Sem separador, o texto inteiro é a única variação.
+ */
+export function dividirVariantes(texto) {
+  const partes = String(texto || '').split(/\r?\n-{3,}\r?\n/).map(p => p.trim()).filter(Boolean);
+  return partes.length ? partes : [String(texto || '')];
+}
+
+/** Sorteia uma variação por envio (ver dividirVariantes). */
+export function escolherVariante(texto) {
+  const partes = dividirVariantes(texto);
+  return partes[Math.floor(Math.random() * partes.length)];
+}
+
+/**
+ * Troca {{nome}} e {{primeiro_nome}} pelos dados do lead.
+ * Sem isso as mensagens ficam impessoais e o WhatsApp trata melhor
+ * conversas que parecem escritas para a pessoa.
+ */
+export function renderizar(texto, lead) {
+  const primeiro = String(lead.nome || '').trim().split(/\s+/)[0] || '';
+  return String(texto)
+    .replaceAll('{{nome}}', lead.nome || '')
+    .replaceAll('{{primeiro_nome}}', primeiro);
+}
+
 // ----------------------------------------------------- WhatsApp Cloud API
 /**
  * Envia um template aprovado pela API oficial do WhatsApp (Meta Cloud API).
