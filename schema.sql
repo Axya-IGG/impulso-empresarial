@@ -29,7 +29,8 @@ CREATE TABLE IF NOT EXISTS leads (
   optout        INTEGER NOT NULL DEFAULT 0,
   optout_em     TEXT,
   atribuicao    TEXT,
-  trk           TEXT
+  trk           TEXT,
+  aceite_parceiros INTEGER
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_leads_whatsapp ON leads(whatsapp);
 CREATE INDEX IF NOT EXISTS idx_leads_criado ON leads(criado_em);

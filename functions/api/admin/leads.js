@@ -27,7 +27,7 @@ export async function onRequestGet({ request, env }) {
 
   if (url.searchParams.get('formato') === 'csv') {
     const { results } = await env.DB.prepare(`
-      SELECT l.nome, l.email, l.whatsapp, l.origem, l.criado_em, l.optout,
+      SELECT l.nome, l.email, l.whatsapp, l.origem, l.criado_em, l.optout, l.aceite_parceiros,
         EXISTS(SELECT 1 FROM compras c WHERE c.lead_id = l.id AND c.status = 'aprovada') AS comprou,
         cu.utm_source, cu.utm_medium, cu.utm_campaign, cu.utm_content, cu.utm_term
       FROM leads l ${JUNCAO_UTM_COMPRA}
@@ -36,11 +36,15 @@ export async function onRequestGet({ request, env }) {
 
     const cab = [
       'Nome', 'E-mail', 'WhatsApp', 'Origem', 'Cadastro', 'Descadastrado', 'Comprou',
+      'Aceita parceiros',
       'UTM Origem', 'UTM Meio', 'UTM Campanha', 'UTM Conteudo', 'UTM Termo',
     ];
+    // Sem registro: cadastro manual no painel, ou feito quando o aceite unico ja
+    // incluia os patrocinadores, antes do checkbox separado (migrations/010).
+    const aceite = (v) => v === 1 ? 'sim' : v === 0 ? 'nao' : 'termo antigo ou manual';
     const linhas = (results || []).map(l => [
       l.nome, l.email, l.whatsapp, l.origem || '', l.criado_em, l.optout ? 'sim' : 'nao',
-      l.comprou ? 'sim' : 'nao',
+      l.comprou ? 'sim' : 'nao', aceite(l.aceite_parceiros),
       l.utm_source || '', l.utm_medium || '', l.utm_campaign || '', l.utm_content || '', l.utm_term || '',
     ].map(csvCampo).join(','));
 

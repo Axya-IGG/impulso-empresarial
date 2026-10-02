@@ -225,6 +225,24 @@ setInterval(pintarCheckout, 1000);
 // localStorage E o cookie de um ano mas ainda tem o `trk` no navegador.
 const JA_CADASTRADO = 'impulso_lead_ok';
 
+// O checkout da Eduzz aceita nome, email e cel na URL e ja abre com os
+// campos preenchidos (ajuda.eduzz.com, "Parametros adicionais no link de
+// vendas"). Os parametros que ja estao no link (trk, utm_*) ficam como estao.
+// cel vai so com DDD + numero, sem o 55, que e o formato do exemplo deles.
+function comDadosPreenchidos(destino, dados) {
+  try {
+    const url = new URL(destino, window.location.href);
+    let cel = String(dados.whatsapp || '').replace(/\D/g, '');
+    if (cel.length > 11 && cel.startsWith('55')) cel = cel.slice(2);
+    if (dados.nome) url.searchParams.set('nome', String(dados.nome).trim());
+    if (dados.email) url.searchParams.set('email', String(dados.email).trim());
+    if (cel) url.searchParams.set('cel', cel);
+    return url.toString();
+  } catch {
+    return destino;
+  }
+}
+
 const modal        = document.getElementById('lead-modal');
 const formLead     = document.getElementById('lead-form');
 const erroLead     = document.getElementById('lead-erro');
@@ -359,6 +377,7 @@ if (modal && formLead) {
   formLead.addEventListener('submit', async e => {
     e.preventDefault();
     const dados = Object.fromEntries(new FormData(formLead));
+    dados.aceite_parceiros = dados.aceite_parceiros === '1';
     dados.origem = origemPendente;
     dados.atribuicao = JSON.stringify(dadosDeAtribuicaoAtuais());
     // Mesmo event_id no Pixel (abaixo) e no evento de servidor que
@@ -389,7 +408,7 @@ if (modal && formLead) {
       } else {
         // Navegacao direta, e nao window.open: o clique original ja foi
         // consumido pelo preventDefault, entao um popup seria bloqueado.
-        window.location.href = destinoPendente;
+        window.location.href = comDadosPreenchidos(destinoPendente, dados);
       }
     } catch (err) {
       erroLead.textContent = err.message;

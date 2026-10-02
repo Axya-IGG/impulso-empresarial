@@ -3122,3 +3122,22 @@ a { color: inherit; text-decoration: none; }
 /* --- Contador: sem fase ativa, o relogio some e fica so o rotulo --- */
 body.contador-encerrado .countdown,
 body.contador-encerrado .cta-final-timer { display: none; }
+
+/* --- Checkbox opcional de parceiros no popup de cadastro --- */
+.lead-form label.lead-check { flex-direction: row; align-items: flex-start; gap: 10px; cursor: pointer; }
+.lead-form label.lead-check input {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  margin-top: 1px;
+  flex-shrink: 0;
+  accent-color: var(--primary);
+}
+.lead-form label.lead-check span {
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-light);
+  line-height: 1.45;
+}

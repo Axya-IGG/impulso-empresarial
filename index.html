@@ -1222,22 +1222,27 @@
         <input type="tel" name="whatsapp" autocomplete="tel" inputmode="numeric" placeholder="(12) 99999-9999" required />
       </label>
 
+      <!-- Aceite opcional e separado (LGPD): contato de parceiros e
+           patrocinadores so com o checkbox marcado, e ele nasce desmarcado.
+           Vai para leads.aceite_parceiros (migrations/010). -->
+      <label class="lead-check">
+        <input type="checkbox" name="aceite_parceiros" value="1" />
+        <span>Quero receber comunicações de parceiros e patrocinadores do evento.</span>
+      </label>
+
       <p class="lead-erro" id="lead-erro" role="alert" hidden></p>
 
       <button type="submit" class="btn btn-primary btn-lg lead-submit">
         CONTINUAR PARA O CHECKOUT
       </button>
 
-      <!-- Aviso de LGPD: fica no ponto da coleta, não escondido na política,
-           porque é aqui que a pessoa entrega os dados. Precisa dizer as
-           quatro coisas — quem coleta, para quê, com quem compartilha (os
-           patrocinadores contatam direto, então isso não pode ficar
-           implícito num "protegido pela LGPD" genérico), e como sair. -->
+      <!-- Aviso de LGPD no ponto da coleta: quem coleta, para que, e como
+           sair. O compartilhamento com patrocinadores saiu deste aceite
+           obrigatorio e foi para o checkbox opcional acima. -->
       <p class="lead-consent">
-        Ao continuar, você concorda em receber <strong>comunicações de
-        marketing</strong> sobre o Impulso Empresarial por WhatsApp e e-mail,
-        inclusive de nossos patrocinadores, que podem entrar em contato
-        diretamente. Seus dados serão protegidos conforme a LGPD. Para sair
+        Ao continuar, você concorda com o tratamento dos seus dados para a
+        <strong>compra do ingresso e comunicações sobre o Impulso
+        Empresarial</strong> por WhatsApp e e-mail, conforme a LGPD. Para sair
         da lista, responda <strong>SAIR</strong> no WhatsApp
         (12) 9 9720-5261 a qualquer momento.
       </p>

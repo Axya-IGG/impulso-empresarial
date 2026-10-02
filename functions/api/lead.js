@@ -72,6 +72,9 @@ export async function onRequestPost(context) {
   // confiavel que qualquer coisa que o corpo do POST possa afirmar, porque
   // nao depende de JS ter rodado a tempo no navegador.
   const trk = lerCookie(request, 'trk') || null;
+  // Checkbox opcional, desmarcado por padrao: so' true explicito conta como
+  // aceite para contato de parceiros e patrocinadores (LGPD).
+  const aceiteParceiros = corpo?.aceite_parceiros === true ? 1 : 0;
 
   // ON CONFLICT: quem volta com o mesmo numero atualiza os dados e mantem
   // o criado_em original — se ele fosse reescrito, a sequencia de mensagens
@@ -81,15 +84,16 @@ export async function onRequestPost(context) {
   // ate' o checkout.
   const id = crypto.randomUUID();
   await env.DB.prepare(`
-    INSERT INTO leads (id, nome, email, whatsapp, origem, ip, user_agent, criado_em, atribuicao, trk)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO leads (id, nome, email, whatsapp, origem, ip, user_agent, criado_em, atribuicao, trk, aceite_parceiros)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(whatsapp) DO UPDATE SET
       nome = excluded.nome,
       email = excluded.email,
       origem = excluded.origem,
       atribuicao = COALESCE(excluded.atribuicao, leads.atribuicao),
-      trk = COALESCE(excluded.trk, leads.trk)
-  `).bind(id, nome, email, whatsapp, origem, ip, ua, quando, atribuicao, trk).run();
+      trk = COALESCE(excluded.trk, leads.trk),
+      aceite_parceiros = excluded.aceite_parceiros
+  `).bind(id, nome, email, whatsapp, origem, ip, ua, quando, atribuicao, trk, aceiteParceiros).run();
 
   const lead = await env.DB.prepare('SELECT * FROM leads WHERE whatsapp = ?')
     .bind(whatsapp).first();
