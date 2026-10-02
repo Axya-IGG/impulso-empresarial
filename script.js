@@ -360,7 +360,9 @@ if (modal && formLead) {
       abrirModal({ origem: 'espera-' + a.dataset.checkout, modo: 'espera', jaNaLista: jaCadastrou() });
       return;
     }
-    if (typeof fbq === 'function') fbq('track', 'InitiateCheckout');
+    if (typeof fbq === 'function') {
+      fbq('track', 'InitiateCheckout', a.dataset.posicao ? { content_name: a.dataset.posicao } : {});
+    }
     if (jaCadastrou()) return;          // segue direto para a Eduzz
     e.preventDefault();
     abrirModal({ destino: a.dataset.destino, origem: a.dataset.checkout });
@@ -1067,3 +1069,14 @@ document.querySelectorAll('.speakers-v2 .speaker-card').forEach(card => {
   conferir();
   window.addEventListener('resize', conferir, { passive: true });
 });
+
+// === CLIQUE POR POSICAO DO BOTAO ===
+// Cada botao relevante tem data-posicao (hero, ingressos-equipe,
+// barra-mobile, whatsapp-flutuante...). O clique vai para o Analytics como
+// evento "clique_cta", para o time de trafego saber qual botao converte.
+// gtag ja e uma funcao vazia fora do dominio oficial (ver o <head>).
+document.addEventListener('click', e => {
+  const alvo = e.target.closest('[data-posicao]');
+  if (!alvo || typeof gtag !== 'function') return;
+  gtag('event', 'clique_cta', { posicao: alvo.dataset.posicao });
+}, { capture: true });
