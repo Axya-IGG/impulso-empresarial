@@ -3141,3 +3141,27 @@ body.contador-encerrado .cta-final-timer { display: none; }
   color: var(--text-light);
   line-height: 1.45;
 }
+
+/* --- Ingressos: nota do plano de equipe e selo de nota fiscal --- */
+.ticket-nota {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.5;
+}
+.selo-nf {
+  display: flex;
+  width: fit-content;
+  align-items: center;
+  gap: 8px;
+  margin: 22px auto 0;
+  padding: 8px 16px;
+  border-radius: 100px;
+  border: 1px solid rgba(119, 203, 245, 0.35);
+  background: rgba(119, 203, 245, 0.08);
+  color: var(--primary);
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 600;
+}

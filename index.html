@@ -668,7 +668,7 @@
             <span class="ticket-barcode"></span>
           </div>
         </article>
-        <a href="https://chk.eduzz.com/6W4GGK1Y0Z" data-checkout="ate3" class="btn btn-primary btn-lg ticket-cta" target="_blank" rel="noopener">
+        <a href="https://chk.eduzz.com/6W4GGK1Y0Z" data-checkout="ate3" data-posicao="ingressos-individual" class="btn btn-primary btn-lg ticket-cta" target="_blank" rel="noopener">
           APROVEITAR AGORA
         </a>
         <!-- Só aparece enquanto as vendas não abriram: o JS mostra/esconde
@@ -679,8 +679,8 @@
       <div class="ticket-block">
         <article class="ticket ticket-bright">
           <div class="ticket-main">
-            <p class="ticket-qty">3 ou <strong>+ INGRESSOS</strong></p>
-            <p class="ticket-lote">Segundo Lote</p>
+            <p class="ticket-qty">Ingresso para <strong>equipe</strong></p>
+            <p class="ticket-lote">3 ou mais ingressos · Segundo Lote</p>
             <p class="ticket-from"><s>De R$ 147,00</s> Por</p>
             <p class="ticket-price" id="preco-4mais">R$ 87,00</p>
             <p class="ticket-per">POR PESSOA</p>
@@ -690,9 +690,10 @@
             <span class="ticket-barcode"></span>
           </div>
         </article>
-        <a href="https://chk.eduzz.com/R9JXX1EP0X" data-checkout="3mais" class="btn btn-gold btn-lg ticket-cta" target="_blank" rel="noopener">
+        <a href="https://chk.eduzz.com/R9JXX1EP0X" data-checkout="3mais" data-posicao="ingressos-equipe" class="btn btn-gold btn-lg ticket-cta" target="_blank" rel="noopener">
           GARANTIR MENOR PREÇO
         </a>
+        <p class="ticket-nota">Leve seu time de RH e liderança. Emitimos nota fiscal em nome da empresa.</p>
         <!-- Só aparece enquanto as vendas não abriram: o JS mostra/esconde
              junto com a troca do rótulo do botão. -->
         <p class="nota-espera" data-nota-espera hidden></p>
@@ -710,6 +711,11 @@
         <li><span class="feat-check"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span> Espaço para Networking</li>
       </ul>
     </div>
+
+    <p class="selo-nf">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><polyline points="9 15 11 17 15 13"/></svg>
+      Emitimos nota fiscal no CNPJ da empresa
+    </p>
 
     <div class="payment-methods">
       <p>Pagamento seguro via PIX, Boleto ou Cartão de crédito</p>
@@ -1020,11 +1026,11 @@
            "ENTRAR NA LISTA DE ESPERA". O JS esconde o segundo enquanto durar
            a espera e devolve os dois quando as vendas abrem. -->
       <div class="cta-final-buttons" data-espera-unico>
-        <a href="https://chk.eduzz.com/6W4GGK1Y0Z" data-checkout="ate3" class="btn btn-primary btn-xl" target="_blank" rel="noopener">
+        <a href="https://chk.eduzz.com/6W4GGK1Y0Z" data-checkout="ate3" data-posicao="cta-final-individual" class="btn btn-primary btn-xl" target="_blank" rel="noopener">
           INGRESSO INDIVIDUAL · R$ <span id="preco-cta-ate3">107,00</span>
         </a>
-        <a href="https://chk.eduzz.com/R9JXX1EP0X" data-checkout="3mais" class="btn btn-gold btn-xl" target="_blank" rel="noopener">
-          3 OU + INGRESSOS · R$ <span id="preco-cta-4mais">87,00</span> CADA
+        <a href="https://chk.eduzz.com/R9JXX1EP0X" data-checkout="3mais" data-posicao="cta-final-equipe" class="btn btn-gold btn-xl" target="_blank" rel="noopener">
+          EQUIPE, 3 OU + · R$ <span id="preco-cta-4mais">87,00</span> CADA
         </a>
       </div>
       <p class="nota-espera" data-nota-espera hidden></p>
