@@ -3165,3 +3165,33 @@ body.contador-encerrado .cta-final-timer { display: none; }
   font-size: 13px;
   font-weight: 600;
 }
+
+/* --- Kit "Convenca seu gestor" --- */
+.kit-gestor {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  max-width: 900px;
+  margin: 28px auto 0;
+  padding: 20px 24px;
+  border: 1px dashed rgba(119, 203, 245, 0.4);
+  border-radius: var(--radius-lg);
+  background: rgba(119, 203, 245, 0.05);
+}
+.kit-gestor h3 { font-family: var(--font-heading); font-size: 17px; color: var(--white); margin-bottom: 4px; }
+.kit-gestor p { font-size: 14px; color: var(--text-muted); }
+.kit-gestor-botoes { display: flex; gap: 10px; flex-wrap: wrap; }
+.kit-botao {
+  padding: 10px 16px;
+  font-size: 13px;
+  border: 1px solid rgba(119, 203, 245, 0.5);
+  color: var(--primary);
+  background: transparent;
+}
+.kit-botao:hover { background: rgba(119, 203, 245, 0.1); }
+@media (max-width: 560px) {
+  .kit-gestor-botoes { width: 100%; flex-direction: column; }
+  .kit-botao { width: 100%; justify-content: center; white-space: nowrap; }
+}
