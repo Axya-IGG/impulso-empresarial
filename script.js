@@ -1003,3 +1003,26 @@ buildCarousel('speakers-carousel', 'speakers-dots', {
   autoplayMs: 2000,
   perView: cardsPorVez,
 });
+
+// === BARRA FIXA DE COMPRA NO CELULAR ===
+// So aparece fora dos dois lugares em que a oferta ja esta na tela: a secao
+// de ingressos e o botao do hero. A visibilidade no celular e decidida pelo
+// CSS (a barra nem existe no layout acima de 768px).
+(function barraCta() {
+  const barra = document.getElementById('barra-cta');
+  const ingressos = document.getElementById('ingressos');
+  const heroCta = document.querySelector('.hero-cta-group');
+  if (!barra || !ingressos || !('IntersectionObserver' in window)) return;
+
+  const naTela = new Map();
+  const atualizar = () => {
+    const mostrar = ![...naTela.values()].some(Boolean);
+    barra.classList.toggle('visivel', mostrar);
+    document.body.classList.toggle('com-barra-cta', mostrar);
+  };
+  const obs = new IntersectionObserver(entradas => {
+    entradas.forEach(e => naTela.set(e.target, e.isIntersecting));
+    atualizar();
+  });
+  [ingressos, heroCta].filter(Boolean).forEach(el => { naTela.set(el, true); obs.observe(el); });
+})();
