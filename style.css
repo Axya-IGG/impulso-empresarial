@@ -2984,3 +2984,53 @@ a { color: inherit; text-decoration: none; }
 @media (max-width: 768px) {
   #acao-social .social-media { grid-template-columns: 1fr 1fr; gap: 14px; align-items: center; }
 }
+
+/* --- Marcador de conteudo pendente (so na pre-visualizacao) --- */
+.preencher {
+  display: inline-block;
+  padding: 2px 8px;
+  border: 1px dashed #fbbf24;
+  border-radius: 6px;
+  background: rgba(251, 191, 36, 0.12);
+  color: #fcd34d;
+  font-style: normal;
+  font-size: 0.92em;
+}
+
+/* --- O que voce leva --- */
+.leva-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+.leva-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px 22px;
+}
+.leva-icone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(119, 203, 245, 0.12);
+  color: var(--primary);
+  margin-bottom: 14px;
+}
+.leva-card h3 {
+  font-family: var(--font-heading);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--white);
+  margin-bottom: 6px;
+}
+.leva-card p { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
+@media (max-width: 900px) { .leva-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) {
+  .leva-grid { grid-template-columns: 1fr; gap: 12px; }
+  .leva-card { padding: 18px; display: grid; grid-template-columns: 44px 1fr; column-gap: 14px; }
+  .leva-icone { grid-row: span 2; margin-bottom: 0; }
+}
