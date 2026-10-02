@@ -2985,18 +2985,6 @@ a { color: inherit; text-decoration: none; }
   #acao-social .social-media { grid-template-columns: 1fr 1fr; gap: 14px; align-items: center; }
 }
 
-/* --- Marcador de conteudo pendente (so na pre-visualizacao) --- */
-.preencher {
-  display: inline-block;
-  padding: 2px 8px;
-  border: 1px dashed #fbbf24;
-  border-radius: 6px;
-  background: rgba(251, 191, 36, 0.12);
-  color: #fcd34d;
-  font-style: normal;
-  font-size: 0.92em;
-}
-
 /* --- O que voce leva --- */
 .leva-grid {
   display: grid;
@@ -3185,3 +3173,70 @@ body.contador-encerrado .cta-final-timer { display: none; }
 .aviso-nr1 strong { color: var(--white); }
 .kit-gestor + .section-cta-center { margin-top: 28px; }
 .faq-answer a { color: var(--primary); text-decoration: underline; }
+
+/* --- Programacao: palestrantes de cada sessao --- */
+.schedule-speakers {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+.sched-avatars { display: inline-flex; flex-shrink: 0; }
+.sched-avatars img {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: top center;
+  border: 2px solid var(--navy);
+  margin-left: -7px;
+}
+.sched-avatars img:first-child { margin-left: 0; }
+
+/* --- Depoimentos --- */
+.depoimentos { max-width: 1000px; text-align: left; }
+.depoimentos h3 { text-align: center; }
+.depoimentos-fonte { text-align: center; font-size: 13px; color: var(--text-muted); margin: -6px 0 22px; }
+.depoimentos-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px; align-items: start; }
+.depoimentos-curtos { display: grid; gap: 16px; }
+.depoimento {
+  margin: 0;
+  padding: 20px 22px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+}
+.depoimento p { font-size: 14px; line-height: 1.65; color: var(--text-light); font-style: italic; }
+.depoimento-destaque p { font-size: 15.5px; }
+.depoimento footer { margin-top: 12px; display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: var(--text-muted); }
+.depoimento footer strong { color: var(--white); font-family: var(--font-heading); font-size: 14px; }
+@media (max-width: 800px) { .depoimentos-grid { grid-template-columns: 1fr; } }
+/* Com a linha de palestrantes cada topico ficou mais alto: a roda usa altura
+   fixa por item (--roda-item-h), entao ela sobe junto. No celular os nomes
+   ficam numa linha so, com reticencias. */
+.schedule-track.is-wheel { --roda-item-h: 90px; }
+@media (max-width: 768px) {
+  .schedule-track.is-wheel { --roda-h: min(52svh, 420px); --roda-item-h: 118px; }
+  .schedule-track.is-wheel .schedule-content h3 { -webkit-line-clamp: 3; }
+  .schedule-track.is-wheel .schedule-content { min-width: 0; }
+  .schedule-track.is-wheel .schedule-speakers { font-size: 11.5px; min-width: 0; }
+  .schedule-track.is-wheel .schedule-speakers > span:last-child {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+  .schedule-track.is-wheel .schedule-desc {
+    font-size: 11.5px;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+  }
+}
+@media (max-width: 768px) {
+  .schedule-track.is-wheel .schedule-item.is-center .schedule-speakers > span:last-child { white-space: normal; }
+}
