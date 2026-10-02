@@ -14,12 +14,16 @@
     Uso:
       .\deploy.ps1              # publica em produção
       .\deploy.ps1 -Preview     # publica numa branch de preview (URL própria)
+      .\deploy.ps1 -Preview -Branch nova-pagina
+                                # preview com endereço fixo:
+                                # https://nova-pagina.impulso-empresarial.pages.dev
       .\deploy.ps1 -WhatIf      # só lista o que seria enviado
 #>
 
 [CmdletBinding()]
 param(
     [switch]$Preview,
+    [string]$Branch,
     [switch]$WhatIf
 )
 
@@ -194,7 +198,20 @@ if (Test-Path -LiteralPath (Join-Path $WranglerCfg '.wrangler\config\default.tom
 }
 $env:CLOUDFLARE_ACCOUNT_ID  = $AccountId
 
-$branch = if ($Preview) { "preview-$(Get-Date -Format 'yyyyMMdd-HHmm')" } else { 'master' }
+# Producao so' sai da branch master do git: o script publica a pasta de
+# trabalho como ela esta, entao rodar sem -Preview com outra branch aberta
+# (uma versao nova da pagina em teste, por exemplo) colocaria essa versao no
+# ar no dominio oficial.
+if (-not $Preview) {
+    $gitBranch = (git -C $RepoRoot rev-parse --abbrev-ref HEAD 2>$null)
+    if ($gitBranch -and $gitBranch -ne 'master') {
+        throw "Branch '$gitBranch' aberta. Producao so' sai da master: troque de branch ou use -Preview."
+    }
+}
+
+$branch = 'master'
+if ($Preview) { $branch = "preview-$(Get-Date -Format 'yyyyMMdd-HHmm')" }
+if ($Preview -and $Branch) { $branch = $Branch }
 
 # O wrangler é chamado via `node caminho\wrangler.js`, e não via `npx`: o
 # lançador do npx passa pelo cmd.exe, que quebra em perfis de usuário com '&'
@@ -246,4 +263,7 @@ finally {
 
 if (-not $Preview) {
     Write-Host "`nProducao: https://oimpulsoempresarial.com.br" -ForegroundColor Green
+}
+elseif ($Branch) {
+    Write-Host "`nPreview: https://$Branch.$ProjectName.pages.dev" -ForegroundColor Green
 }
