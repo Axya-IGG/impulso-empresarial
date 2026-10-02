@@ -1026,3 +1026,23 @@ buildCarousel('speakers-carousel', 'speakers-dots', {
   });
   [ingressos, heroCta].filter(Boolean).forEach(el => { naTela.set(el, true); obs.observe(el); });
 })();
+
+// === PALESTRANTES: "VER MAIS" NA BIO ===
+// A bio aparece cortada em duas linhas; o botao abre o texto inteiro. Se a
+// bio ja cabe nas duas linhas, o botao some.
+document.querySelectorAll('.speakers-v2 .speaker-card').forEach(card => {
+  const bio = card.querySelector('.speaker-bio');
+  const botao = card.querySelector('.speaker-mais');
+  if (!bio || !botao) return;
+  const conferir = () => {
+    if (card.classList.contains('aberto')) return;
+    botao.hidden = bio.scrollHeight <= bio.clientHeight + 1;
+  };
+  botao.addEventListener('click', () => {
+    const aberto = card.classList.toggle('aberto');
+    botao.textContent = aberto ? 'Ver menos' : 'Ver mais';
+    botao.setAttribute('aria-expanded', String(aberto));
+  });
+  conferir();
+  window.addEventListener('resize', conferir, { passive: true });
+});
