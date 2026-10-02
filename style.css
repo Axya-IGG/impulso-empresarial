@@ -2941,3 +2941,46 @@ a { color: inherit; text-decoration: none; }
   /* Com a barra na tela, o botao do WhatsApp sobe para nao ficar por cima. */
   body.com-barra-cta .whatsapp-float { bottom: 86px; transition: bottom 0.25s ease, transform 0.25s, box-shadow 0.25s; }
 }
+
+/* --- Patrocinadores: faixa unica de logos em escala de cinza --- */
+.faixa-apoio { padding: 40px 0 48px; }
+.faixa-apoio .section-header { margin-bottom: 22px; }
+.apoio-logos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 22px 38px;
+}
+.apoio-logos img {
+  height: 46px;
+  width: auto;
+  max-width: 140px;
+  object-fit: contain;
+  filter: grayscale(1);
+  opacity: 0.7;
+  transition: filter 0.2s, opacity 0.2s;
+}
+.apoio-logos li:hover img { filter: none; opacity: 1; }
+@media (max-width: 768px) {
+  .apoio-logos { gap: 18px 26px; }
+  .apoio-logos img { height: 36px; max-width: 110px; }
+}
+
+/* --- Acao social: bloco curto, uma foto e o video sob demanda --- */
+#acao-social { padding: 48px 0; }
+#acao-social .social-box { padding: 26px 30px; gap: 20px; }
+#acao-social .social-photos { width: 100%; grid-template-columns: 1fr; }
+#acao-social .social-photo img { width: 100%; height: auto; aspect-ratio: 1; }
+#acao-social .social-video-frame { max-width: none; }
+@media (min-width: 769px) {
+  #acao-social .social-box { flex-direction: row; align-items: center; max-width: 980px; }
+  #acao-social .social-content { flex: 1; text-align: left; }
+  #acao-social .social-media { grid-template-columns: 170px 135px; gap: 18px; flex-shrink: 0; }
+}
+@media (max-width: 768px) {
+  #acao-social .social-media { grid-template-columns: 1fr 1fr; gap: 14px; align-items: center; }
+}
