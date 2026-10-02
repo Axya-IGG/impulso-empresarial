@@ -209,9 +209,11 @@ if (-not $Preview) {
     }
 }
 
-$branch = 'master'
-if ($Preview) { $branch = "preview-$(Get-Date -Format 'yyyyMMdd-HHmm')" }
-if ($Preview -and $Branch) { $branch = $Branch }
+# Nome diferente de $Branch de proposito: variavel no PowerShell nao
+# diferencia maiuscula, e $branch sobrescreveria o parametro -Branch.
+$pagesBranch = 'master'
+if ($Preview) { $pagesBranch = "preview-$(Get-Date -Format 'yyyyMMdd-HHmm')" }
+if ($Preview -and $Branch) { $pagesBranch = $Branch }
 
 # O wrangler é chamado via `node caminho\wrangler.js`, e não via `npx`: o
 # lançador do npx passa pelo cmd.exe, que quebra em perfis de usuário com '&'
@@ -248,13 +250,19 @@ if ($whoami -notmatch [regex]::Escape($AccountId)) {
 }
 Write-Host "Conta Cloudflare confirmada: $AccountId" -ForegroundColor DarkGray
 
-Write-Host "`nPublicando em '$ProjectName' (branch: $branch)..." -ForegroundColor Cyan
+Write-Host "`nPublicando em '$ProjectName' (branch: $pagesBranch)..." -ForegroundColor Cyan
 Push-Location $Stage
 try {
     # Sem o diretório na linha de comando: quem manda é o pages_build_output_dir
     # do wrangler.toml. Passar "." aqui publicaria functions/ como arquivo
     # estático e deixaria o código da API baixável.
-    Invoke-Wrangler pages deploy "--project-name=$ProjectName" "--branch=$branch" --commit-dirty=true
+    # Aviso do wrangler vai para a stderr e, com o 'Stop' do topo, mataria o
+    # script no PowerShell 5.1 (mesmo motivo do whoami acima). Quem decide se
+    # deu certo e' o codigo de saida.
+    & {
+        $ErrorActionPreference = 'Continue'
+        Invoke-Wrangler pages deploy "--project-name=$ProjectName" "--branch=$pagesBranch" --commit-dirty=true 2>&1 | ForEach-Object { if ($_ -is [System.Management.Automation.ErrorRecord]) { $_.Exception.Message } else { $_ } }
+    }
     if ($LASTEXITCODE -ne 0) { throw "wrangler retornou codigo $LASTEXITCODE" }
 }
 finally {
