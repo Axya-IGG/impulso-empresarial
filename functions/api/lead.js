@@ -62,7 +62,10 @@ export async function onRequestPost(context) {
   const whatsapp = normalizarWhatsapp(corpo?.whatsapp);
 
   if (nome.length < 2)    return erro('Informe seu nome.');
-  if (!emailValido(email)) return erro('E-mail invalido.');
+  // E-mail saiu do formulario em 02/10 para encurtar o cadastro: a Eduzz
+  // pede no checkout e o webhook completa o lead na compra. So' valida se
+  // vier (versao antiga do script.js em cache ainda manda).
+  if (email && !emailValido(email)) return erro('E-mail invalido.');
   if (!whatsapp)          return erro('WhatsApp invalido. Use DDD + numero.');
 
   const ua = (request.headers.get('User-Agent') || '').slice(0, 300);
@@ -88,7 +91,7 @@ export async function onRequestPost(context) {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(whatsapp) DO UPDATE SET
       nome = excluded.nome,
-      email = excluded.email,
+      email = COALESCE(NULLIF(excluded.email, ''), leads.email),
       origem = excluded.origem,
       atribuicao = COALESCE(excluded.atribuicao, leads.atribuicao),
       trk = COALESCE(excluded.trk, leads.trk),

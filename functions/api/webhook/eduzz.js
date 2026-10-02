@@ -176,6 +176,11 @@ export async function onRequestPost({ request, env }) {
     if (trk && !lead.trk && !trkDeOutraPessoa) {
       await env.DB.prepare('UPDATE leads SET trk = ? WHERE id = ?').bind(trk, leadId).run();
     }
+    // O formulario da pagina nao pede mais e-mail (02/10): o da compra
+    // completa o cadastro de quem entrou sem ele.
+    if (email && !lead.email) {
+      await env.DB.prepare('UPDATE leads SET email = ? WHERE id = ?').bind(email, leadId).run();
+    }
   } else {
     if (!whatsapp) return erro('Comprador sem WhatsApp valido e sem lead correspondente.', 422);
     leadId = crypto.randomUUID();
