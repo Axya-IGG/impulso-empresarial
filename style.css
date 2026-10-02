@@ -3195,3 +3195,18 @@ body.contador-encerrado .cta-final-timer { display: none; }
   .kit-gestor-botoes { width: 100%; flex-direction: column; }
   .kit-botao { width: 100%; justify-content: center; white-space: nowrap; }
 }
+
+/* --- Aviso de obrigacao legal (NR-1) --- */
+.aviso-nr1 {
+  max-width: 760px;
+  margin: -8px auto 28px;
+  padding: 14px 20px;
+  border-left: 3px solid var(--primary);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  background: rgba(119, 203, 245, 0.06);
+  font-size: 16px;
+  color: var(--text-light);
+  line-height: 1.6;
+}
+.aviso-nr1 strong { color: var(--white); }
+.kit-gestor + .section-cta-center { margin-top: 28px; }
