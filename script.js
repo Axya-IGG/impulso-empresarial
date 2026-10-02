@@ -61,8 +61,10 @@ function updateCountdown() {
     setCountdownLabel(fase.label);
     paintCountdown(fase.ate - now);
   } else {
+    // Sem fase ativa nao ha o que contar: em vez de zeros ao lado de uma
+    // oferta ainda aberta, some o relogio e fica so o rotulo de encerrado.
     setCountdownLabel(countdownCfg.encerrado);
-    paintCountdown(0);
+    document.body.classList.add('contador-encerrado');
   }
 }
 
