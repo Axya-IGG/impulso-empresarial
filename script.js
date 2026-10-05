@@ -225,6 +225,13 @@ setInterval(pintarCheckout, 1000);
 // localStorage E o cookie de um ano mas ainda tem o `trk` no navegador.
 const JA_CADASTRADO = 'impulso_lead_ok';
 
+// Desligado em 05/10 a pedido do cliente, para medir se a compra sobe sem o
+// formulario no caminho. Com false, o botao de compra vai direto para a
+// Eduzz (o trk continua no link, entao a compra ainda casa com a sessao);
+// so' a lista de espera, que nao tem checkout, segue abrindo o formulario.
+// Para religar, basta voltar para true.
+const FORMULARIO_ATIVO = false;
+
 // O checkout da Eduzz aceita nome, email e cel na URL e ja abre com os
 // campos preenchidos (ajuda.eduzz.com, "Parametros adicionais no link de
 // vendas"). Os parametros que ja estao no link (trk, utm_*) ficam como estao.
@@ -363,7 +370,7 @@ if (modal && formLead) {
     if (typeof fbq === 'function') {
       fbq('track', 'InitiateCheckout', a.dataset.posicao ? { content_name: a.dataset.posicao } : {});
     }
-    if (jaCadastrou()) return;          // segue direto para a Eduzz
+    if (!FORMULARIO_ATIVO || jaCadastrou()) return;   // segue direto para a Eduzz
     e.preventDefault();
     abrirModal({ destino: a.dataset.destino, origem: a.dataset.checkout });
   }
