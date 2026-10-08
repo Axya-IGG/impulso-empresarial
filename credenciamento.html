@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Credenciamento · Impulso Empresarial</title>
+<!-- Link distribuido por WhatsApp para quem ja esta no evento: nao tem por
+     que estar em buscador. -->
+<meta name="robots" content="noindex, nofollow" />
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+<meta name="theme-color" content="#141c2f" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  [hidden] { display: none !important; }
+
+  :root {
+    --navy:  #141c2f;
+    --azul:  #77cbf5;
+    --azul-claro: #96d7f7;
+    --azul-escuro: #57b8e8;
+    --claro: #eff1f0;
+    --prata: #a3b9c6;
+  }
+
+  body {
+    font-family: 'Sora', system-ui, sans-serif;
+    background: var(--navy);
+    color: var(--claro);
+    min-height: 100svh;
+    line-height: 1.6;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Luz ambiente, recortada no body para nao criar barra de rolagem. */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: -20%;
+    pointer-events: none;
+    background:
+      radial-gradient(40% 44% at 20% 22%, rgba(119,203,245,0.16) 0%, transparent 70%),
+      radial-gradient(36% 40% at 82% 78%, rgba(163,185,198,0.12) 0%, transparent 72%);
+  }
+
+  .progresso {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: rgba(255,255,255,0.08);
+    z-index: 10;
+  }
+  .progresso-barra {
+    height: 100%;
+    width: 0;
+    background: linear-gradient(90deg, var(--azul-escuro), var(--azul), var(--claro));
+    transition: width 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .marca {
+    position: fixed;
+    top: max(18px, env(safe-area-inset-top));
+    left: 20px;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .marca img { height: 30px; width: auto; }
+
+  .palco {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100svh;
+    padding: 96px 24px 120px;
+    position: relative;
+    z-index: 1;
+  }
+  .caixa { width: 100%; max-width: 580px; }
+
+  .slide { transition: opacity 0.22s ease, transform 0.22s ease; }
+  .slide.saindo-frente { opacity: 0; transform: translateY(-28px); }
+  .slide.saindo-tras   { opacity: 0; transform: translateY(28px); }
+
+  .passo {
+    font-size: 13px;
+    letter-spacing: 1px;
+    color: var(--azul);
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+
+  h1 {
+    font-size: clamp(24px, 5.5vw, 34px);
+    font-weight: 800;
+    line-height: 1.25;
+    letter-spacing: -0.3px;
+    margin-bottom: 6px;
+  }
+  .obrigatorio { color: var(--azul); }
+  .ajuda { color: var(--prata); font-size: 15px; margin-bottom: 4px; }
+
+  .campo {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid rgba(163,185,198,0.4);
+    color: var(--claro);
+    font-family: inherit;
+    font-size: clamp(18px, 4.5vw, 22px);
+    padding: 10px 2px;
+    margin-top: 26px;
+    transition: border-color 0.2s;
+  }
+  .campo::placeholder { color: rgba(163,185,198,0.4); }
+  .campo:focus { outline: none; border-bottom-color: var(--azul); }
+
+  .opcoes { margin-top: 26px; display: flex; flex-direction: column; gap: 10px; }
+  .opcao {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    text-align: left;
+    padding: 15px 18px;
+    border-radius: 12px;
+    border: 1px solid rgba(163,185,198,0.25);
+    background: rgba(255,255,255,0.04);
+    color: rgba(239,241,240,0.9);
+    font-family: inherit;
+    font-size: 16px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s, color 0.2s, transform 0.2s;
+  }
+  .opcao:hover { border-color: rgba(119,203,245,0.5); transform: translateX(3px); }
+  .opcao.marcada {
+    border-color: var(--azul);
+    background: rgba(119,203,245,0.14);
+    color: var(--azul);
+  }
+  .opcao-letra {
+    flex-shrink: 0;
+    width: 28px; height: 28px;
+    display: grid; place-items: center;
+    border-radius: 7px;
+    border: 1px solid rgba(163,185,198,0.35);
+    font-size: 12px; font-weight: 700;
+    color: var(--prata);
+  }
+  .opcao.marcada .opcao-letra { border-color: var(--azul); color: var(--azul); }
+
+  .erro { margin-top: 14px; color: #fca5a5; font-size: 14px; }
+  .dica { margin-top: 18px; color: rgba(163,185,198,0.65); font-size: 12.5px; }
+
+  .btn {
+    margin-top: 26px;
+    padding: 14px 32px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--azul-claro), var(--azul) 45%, var(--azul-escuro));
+    color: var(--navy);
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+  }
+  .btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 26px rgba(119,203,245,0.4);
+  }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .navegacao {
+    position: fixed;
+    right: 20px;
+    bottom: max(24px, env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 10;
+  }
+  .nav-btn {
+    width: 42px; height: 42px;
+    display: grid; place-items: center;
+    border-radius: 11px;
+    border: 1px solid rgba(163,185,198,0.2);
+    background: rgba(255,255,255,0.07);
+    color: var(--claro);
+    cursor: pointer;
+    transition: background 0.2s, opacity 0.2s;
+  }
+  .nav-btn:hover:not(:disabled) { background: rgba(119,203,245,0.2); }
+  .nav-btn:disabled { opacity: 0.22; cursor: not-allowed; }
+
+  /* ----- conclusao ----- */
+  .selo {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    display: grid; place-items: center;
+    background: rgba(119,203,245,0.18);
+    border: 1px solid rgba(119,203,245,0.4);
+    margin-bottom: 22px;
+  }
+  .destaque {
+    margin-top: 26px;
+    padding: 20px 24px;
+    border-radius: 14px;
+    border: 1px solid rgba(119,203,245,0.3);
+    background: rgba(119,203,245,0.08);
+  }
+  .destaque strong {
+    display: block;
+    font-size: 34px;
+    font-weight: 800;
+    color: var(--azul);
+    line-height: 1.1;
+  }
+  .destaque span { color: var(--prata); font-size: 14px; }
+
+  .aviso {
+    min-height: 100svh;
+    display: grid;
+    place-items: center;
+    padding: 32px;
+    text-align: center;
+    position: relative;
+    z-index: 1;
+  }
+  .aviso p { color: var(--prata); max-width: 420px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .slide, .progresso-barra, .btn, .opcao { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="progresso"><div class="progresso-barra" id="barra"></div></div>
+
+<div class="marca">
+  <img src="/assets/logo-impulso-footer.png" alt="Impulso Empresarial" />
+</div>
+
+<!-- Sem token valido na URL nao ha formulario nenhum para mostrar. -->
+<div class="aviso" id="tela-bloqueado" hidden>
+  <div>
+    <h1>Link inválido</h1>
+    <p id="texto-bloqueado">Peça o endereço atualizado à organização do evento.</p>
+  </div>
+</div>
+
+<main class="palco" id="palco" hidden>
+  <div class="caixa">
+    <div class="slide" id="slide"></div>
+  </div>
+</main>
+
+<div class="navegacao" id="navegacao" hidden>
+  <button class="nav-btn" id="btn-voltar" aria-label="Pergunta anterior">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+  </button>
+  <button class="nav-btn" id="btn-avancar" aria-label="Próxima pergunta">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+  </button>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var TOKEN = new URLSearchParams(location.search).get('k') || '';
+
+  var PERGUNTAS = [
+    { id: 'nome',    titulo: 'Qual o seu nome completo?',        tipo: 'texto',  placeholder: 'Seu nome...' },
+    { id: 'empresa', titulo: 'Qual o nome da sua empresa?',      tipo: 'texto',  placeholder: 'Nome da empresa...' },
+    { id: 'cargo',   titulo: 'Qual o seu cargo?',                tipo: 'texto',  placeholder: 'Seu cargo...' },
+    { id: 'funcionarios', titulo: 'Quantos funcionários a empresa tem?', tipo: 'opcoes',
+      opcoes: ['Até 9 funcionários', 'De 10 a 49', 'De 50 a 99', 'De 100 a 499', '500 ou mais'] }
+  ];
+
+  var respostas = {};
+  var atual = 0;
+  var enviando = false;
+  var concluido = false;
+  var totalNaLista = 0;
+
+  var $ = function (s) { return document.querySelector(s); };
+  var slide = $('#slide');
+  var esc = function (v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  };
+
+  function pintarProgresso() {
+    var pct = concluido ? 100 : Math.round((atual / PERGUNTAS.length) * 100);
+    $('#barra').style.width = pct + '%';
+  }
+
+  function render(erroTexto) {
+    if (concluido) return renderConcluido();
+
+    var p = PERGUNTAS[atual];
+    var valor = respostas[p.id] || '';
+    var html = '' +
+      '<p class="passo">' + (atual + 1) + ' de ' + PERGUNTAS.length + ' →</p>' +
+      '<h1>' + esc(p.titulo) + '<span class="obrigatorio"> *</span></h1>';
+
+    if (p.tipo === 'texto') {
+      html += '<input class="campo" id="entrada" type="text" autocomplete="off" ' +
+              'placeholder="' + esc(p.placeholder) + '" value="' + esc(valor) + '" />' +
+              '<p class="dica">Pressione <strong>Enter ↵</strong> para avançar</p>';
+    } else {
+      html += '<div class="opcoes">';
+      p.opcoes.forEach(function (o, i) {
+        html += '<button type="button" class="opcao' + (valor === o ? ' marcada' : '') + '" data-opcao="' + esc(o) + '">' +
+                '<span class="opcao-letra">' + String.fromCharCode(65 + i) + '</span>' + esc(o) + '</button>';
+      });
+      html += '</div>';
+    }
+
+    if (erroTexto) html += '<p class="erro">' + esc(erroTexto) + '</p>';
+
+    var ultima = atual === PERGUNTAS.length - 1;
+    html += '<button class="btn" id="btn-principal"' + (enviando ? ' disabled' : '') + '>' +
+            (enviando ? 'Enviando…' : (ultima ? 'Finalizar credenciamento' : 'Avançar →')) + '</button>';
+
+    slide.innerHTML = html;
+
+    var entrada = $('#entrada');
+    if (entrada) {
+      entrada.addEventListener('input', function () { respostas[p.id] = entrada.value; });
+      entrada.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); avancar(); }
+      });
+      // O teclado virtual so' sobe com foco disparado por gesto; no desktop
+      // o autofocus direto e' o esperado.
+      setTimeout(function () { entrada.focus(); }, 60);
+    }
+    slide.querySelectorAll('[data-opcao]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        respostas[p.id] = b.dataset.opcao;
+        render();
+        // Multipla escolha avanca sozinha: economiza um toque por pergunta
+        // em quem responde de pe', na fila.
+        setTimeout(avancar, 180);
+      });
+    });
+    $('#btn-principal').addEventListener('click', avancar);
+
+    $('#btn-voltar').disabled = atual === 0;
+    pintarProgresso();
+  }
+
+  function renderConcluido() {
+    slide.innerHTML = '' +
+      '<div class="selo"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#77cbf5" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>' +
+      '<h1>Credenciamento concluído!</h1>' +
+      '<p class="ajuda">Você já está concorrendo aos sorteios do evento. Fique de olho no telão.</p>' +
+      '<div class="destaque"><strong>' + totalNaLista + '</strong>' +
+      '<span>' + (totalNaLista === 1 ? 'participante na lista' : 'participantes na lista do sorteio') + '</span></div>';
+    $('#navegacao').hidden = true;
+    pintarProgresso();
+  }
+
+  function anima(classe, depois) {
+    slide.classList.add(classe);
+    setTimeout(function () {
+      depois();
+      slide.classList.remove('saindo-frente', 'saindo-tras');
+    }, 200);
+  }
+
+  function avancar() {
+    if (enviando || concluido) return;
+    var p = PERGUNTAS[atual];
+    var v = (respostas[p.id] || '').trim();
+    if (v.length < 2) { render('Esta resposta é obrigatória.'); return; }
+
+    if (atual < PERGUNTAS.length - 1) {
+      anima('saindo-frente', function () { atual++; render(); });
+      return;
+    }
+    enviar();
+  }
+
+  function voltar() {
+    if (atual === 0 || enviando || concluido) return;
+    anima('saindo-tras', function () { atual--; render(); });
+  }
+
+  function enviar() {
+    enviando = true;
+    render();
+
+    fetch('/api/publico/credenciamento?k=' + encodeURIComponent(TOKEN), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(respostas)
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (c) {
+        if (!r.ok) throw new Error(c.erro || 'Não foi possível enviar.');
+        return c;
+      });
+    }).then(function (c) {
+      totalNaLista = c.total || 0;
+      enviando = false;
+      concluido = true;
+      anima('saindo-frente', render);
+    }).catch(function (e) {
+      enviando = false;
+      render(e.message);
+    });
+  }
+
+  $('#btn-avancar').addEventListener('click', avancar);
+  $('#btn-voltar').addEventListener('click', voltar);
+
+  // Confere o token antes de desenhar: sem isso a pessoa preencheria as
+  // quatro perguntas para so' no envio descobrir que o link nao vale.
+  fetch('/api/publico/credenciamento?k=' + encodeURIComponent(TOKEN))
+    .then(function (r) {
+      if (r.ok) {
+        $('#palco').hidden = false;
+        $('#navegacao').hidden = false;
+        render();
+      } else {
+        return r.json().catch(function () { return {}; }).then(function (c) {
+          $('#texto-bloqueado').textContent = c.erro || 'Peça o endereço atualizado à organização do evento.';
+          $('#tela-bloqueado').hidden = false;
+        });
+      }
+    })
+    .catch(function () {
+      $('#texto-bloqueado').textContent = 'Sem conexão. Tente novamente em instantes.';
+      $('#tela-bloqueado').hidden = false;
+    });
+})();
+</script>
+</body>
+</html>

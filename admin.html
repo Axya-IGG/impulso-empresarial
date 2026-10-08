@@ -46,6 +46,8 @@
       <button class="aba" data-aba="mensagens">Mensagens</button>
       <button class="aba" data-aba="envios">Envios</button>
       <button class="aba" data-aba="recebidas">Caixa de entrada<span class="aba-contador" id="contador-recebidas" hidden></span></button>
+      <button class="aba" data-aba="credenciamento">Credenciamento</button>
+      <button class="aba" data-aba="sorteio">Sorteio</button>
     </nav>
     <button class="btn btn-fantasma" id="btn-sair">Sair</button>
   </header>
@@ -203,7 +205,113 @@
       </div>
     </section>
 
+    <!-- ------------------------ CREDENCIAMENTO ----------------------- -->
+    <section class="painel-aba" data-painel="credenciamento" hidden>
+      <div class="link-publico">
+        <div class="link-publico-texto">
+          <strong>Link do formulário</strong>
+          <span>Mande por WhatsApp para quem foi credenciado. Não pede login.</span>
+        </div>
+        <input type="text" id="link-credenciamento" readonly />
+        <button type="button" class="btn btn-secundario" data-copiar="#link-credenciamento">Copiar</button>
+        <button type="button" class="btn btn-fantasma" data-regerar="credenciamento"
+                title="Gera um endereço novo e derruba o anterior">Trocar</button>
+      </div>
+
+      <div class="cards" id="cards-credenciamento"></div>
+
+      <div class="barra">
+        <input type="search" id="busca-participantes" placeholder="Buscar por nome, empresa ou cargo..." />
+        <button type="button" class="btn btn-primario" id="btn-novo-participante">+ Adicionar participante</button>
+        <a class="btn btn-secundario" href="/api/admin/participantes?formato=csv">Exportar CSV</a>
+      </div>
+
+      <div class="tabela-wrap tabela-wrap-rolavel">
+        <table class="tabela">
+          <thead>
+            <tr>
+              <th>Nome</th><th>Empresa</th><th>Cargo</th>
+              <th>Funcionários</th><th>Origem</th><th>Cadastro</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="corpo-participantes"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ---------------------------- SORTEIO -------------------------- -->
+    <section class="painel-aba" data-painel="sorteio" hidden>
+      <div class="link-publico">
+        <div class="link-publico-texto">
+          <strong>Link do telão</strong>
+          <span>Para a equipe da casa projetar. Só exibe — sortear é só aqui.</span>
+        </div>
+        <input type="text" id="link-sorteio" readonly />
+        <button type="button" class="btn btn-secundario" data-copiar="#link-sorteio">Copiar</button>
+        <button type="button" class="btn btn-fantasma" data-regerar="sorteio"
+                title="Gera um endereço novo e derruba o anterior">Trocar</button>
+      </div>
+
+      <div class="sorteio-novo">
+        <form id="form-sorteio">
+          <div class="sorteio-campos">
+            <label>
+              <span>Nome do sorteio</span>
+              <input type="text" name="titulo" required placeholder="Ex.: Sorteio 1" />
+            </label>
+            <label>
+              <span>Prêmio (aparece no telão)</span>
+              <input type="text" name="premio" placeholder="Ex.: Consultoria de 1h com a axya" />
+            </label>
+          </div>
+          <label class="check-inline">
+            <input type="checkbox" name="repescagem" />
+            <span>Quem já ganhou concorre de novo</span>
+          </label>
+          <button type="submit" class="btn btn-primario">+ Criar sorteio</button>
+        </form>
+        <p class="sorteio-dica" id="sorteio-elegiveis"></p>
+      </div>
+
+      <div id="lista-sorteios" class="lista-sorteios"></div>
+    </section>
+
   </main>
+</div>
+
+<!-- =================== MODAL DE PARTICIPANTE =================== -->
+<div class="modal" id="modal-participante" hidden>
+  <div class="modal-fundo" data-fechar></div>
+  <div class="modal-caixa" role="dialog" aria-modal="true" aria-labelledby="titulo-participante">
+    <button type="button" class="modal-fechar" data-fechar aria-label="Fechar">&times;</button>
+    <h2 id="titulo-participante">Adicionar participante</h2>
+
+    <form id="form-participante">
+      <label>
+        <span>Nome completo</span>
+        <input type="text" name="nome" required />
+      </label>
+      <label>
+        <span>Empresa</span>
+        <input type="text" name="empresa" required />
+      </label>
+      <label>
+        <span>Cargo</span>
+        <input type="text" name="cargo" required />
+      </label>
+      <label>
+        <span>Quantidade de funcionários</span>
+        <select name="funcionarios" id="campo-funcionarios" required></select>
+      </label>
+
+      <p class="alerta alerta-erro" id="participante-erro" role="alert" hidden></p>
+
+      <div class="modal-acoes">
+        <button type="button" class="btn btn-fantasma" data-fechar>Cancelar</button>
+        <button type="submit" class="btn btn-primario">Adicionar</button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <!-- ===================== MODAL DE MENSAGEM ===================== -->

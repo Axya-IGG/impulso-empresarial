@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sorteio ao vivo · Impulso Empresarial</title>
+<meta name="robots" content="noindex, nofollow" />
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<meta name="theme-color" content="#141c2f" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  [hidden] { display: none !important; }
+
+  :root {
+    --navy: #141c2f;
+    --navy-2: #1a2440;
+    --azul: #77cbf5;
+    --azul-claro: #96d7f7;
+    --azul-escuro: #57b8e8;
+    --claro: #eff1f0;
+    --prata: #a3b9c6;
+  }
+
+  html, body { height: 100%; }
+  body {
+    font-family: 'Sora', system-ui, sans-serif;
+    background: var(--navy);
+    color: var(--claro);
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: -20%;
+    pointer-events: none;
+    background:
+      radial-gradient(38% 42% at 18% 20%, rgba(119,203,245,0.18) 0%, transparent 70%),
+      radial-gradient(34% 38% at 84% 80%, rgba(163,185,198,0.13) 0%, transparent 72%);
+    animation: deriva 26s ease-in-out infinite;
+  }
+  @keyframes deriva {
+    0%, 100% { transform: translate3d(-4%, -2%, 0) scale(1.06); }
+    50%      { transform: translate3d(4%, 2%, 0) scale(1.18); }
+  }
+
+  .tela {
+    position: relative;
+    z-index: 1;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: clamp(20px, 3vh, 36px) clamp(24px, 4vw, 64px);
+  }
+
+  /* ---------- topo ---------- */
+  .topo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    flex-shrink: 0;
+  }
+  .topo img { height: clamp(28px, 4vh, 42px); width: auto; }
+  .contador-caixa { text-align: right; }
+  .contador-num {
+    font-size: clamp(30px, 5vh, 52px);
+    font-weight: 900;
+    line-height: 1;
+    background: linear-gradient(150deg, var(--azul-claro), var(--azul) 55%, var(--azul-escuro));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .contador-rot {
+    font-size: clamp(10px, 1.3vh, 13px);
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--prata);
+    font-weight: 600;
+  }
+
+  /* ---------- miolo ---------- */
+  .miolo {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-height: 0;
+    gap: clamp(10px, 2vh, 20px);
+  }
+
+  .etiqueta {
+    display: inline-block;
+    font-size: clamp(10px, 1.4vh, 13px);
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--azul);
+    background: rgba(119,203,245,0.12);
+    border: 1px solid rgba(119,203,245,0.3);
+    padding: 6px 18px;
+    border-radius: 100px;
+  }
+
+  .premio {
+    font-size: clamp(26px, 5.2vh, 60px);
+    font-weight: 800;
+    line-height: 1.12;
+    letter-spacing: -0.5px;
+    max-width: 18ch;
+  }
+  .premio-sub { color: var(--prata); font-size: clamp(14px, 2vh, 20px); max-width: 40ch; }
+
+  /* nome girando / vencedor */
+  .nome-palco {
+    font-size: clamp(34px, 9vh, 104px);
+    font-weight: 900;
+    line-height: 1.05;
+    letter-spacing: -1.5px;
+    /* Bem mais claro que o prata das outras telas: aqui o nome e lido de pe,
+       do fundo de um salao, muitas vezes num projetor que lava o contraste.
+       O prata entra so' como banda estreita, sem escurecer a leitura. */
+    background: linear-gradient(115deg, #ffffff 0%, var(--claro) 30%, var(--prata) 46%, #ffffff 62%, var(--claro) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 0 0 60px rgba(119,203,245,0.18);
+    word-break: break-word;
+    max-width: 16ch;
+  }
+  .nome-palco.girando { opacity: 0.75; }
+  .empresa-palco {
+    font-size: clamp(16px, 2.8vh, 30px);
+    color: var(--azul);
+    font-weight: 600;
+  }
+
+  .vencedor-bloco { animation: entra 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  @keyframes entra {
+    from { opacity: 0; transform: scale(0.94) translateY(16px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  .recibo {
+    margin-top: clamp(8px, 1.6vh, 16px);
+    font-size: clamp(11px, 1.5vh, 14px);
+    color: var(--prata);
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .recibo b { color: var(--claro); font-weight: 600; }
+
+  /* ---------- lista de nomes (transparencia) ---------- */
+  .nomes-wrap {
+    flex-shrink: 0;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  }
+  .nomes-titulo {
+    font-size: clamp(10px, 1.3vh, 12px);
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--prata);
+    text-align: center;
+    margin-bottom: 10px;
+    font-weight: 600;
+  }
+  .nomes-trilho {
+    display: flex;
+    gap: 10px;
+    width: max-content;
+  }
+  /* A rolagem so' entra quando a lista nao cabe na tela. Com poucos nomes a
+     faixa fica parada e centralizada: a duplicacao que o laco exige faria o
+     mesmo nome aparecer duas vezes, e numa tela de sorteio isso parece que a
+     pessoa tem duas chances. */
+  .nomes-trilho.rolando { animation: correNomes 70s linear infinite; }
+  .nomes-trilho.parado { width: 100%; justify-content: center; flex-wrap: wrap; }
+  .nomes-wrap:hover .nomes-trilho.rolando { animation-play-state: paused; }
+  @keyframes correNomes {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+  .nome-chip {
+    padding: 7px 15px;
+    border-radius: 100px;
+    border: 1px solid rgba(163,185,198,0.2);
+    background: rgba(255,255,255,0.04);
+    font-size: clamp(11px, 1.5vh, 14px);
+    white-space: nowrap;
+    color: rgba(239,241,240,0.8);
+  }
+  .nome-chip.ja-ganhou {
+    border-color: rgba(119,203,245,0.4);
+    background: rgba(119,203,245,0.1);
+    color: var(--azul);
+  }
+
+  /* ---------- rodape: ganhadores ---------- */
+  .rodape {
+    flex-shrink: 0;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    padding-top: clamp(10px, 2vh, 18px);
+    border-top: 1px solid rgba(163,185,198,0.14);
+  }
+  .ganhador-pill {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 7px 16px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(163,185,198,0.18);
+    font-size: clamp(11px, 1.5vh, 14px);
+  }
+  .ganhador-pill span { color: var(--prata); font-size: 0.85em; }
+  .ganhador-pill b { font-weight: 700; }
+
+  .aviso {
+    height: 100vh;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    padding: 32px;
+    position: relative;
+    z-index: 1;
+  }
+  .aviso h1 { font-size: clamp(22px, 4vh, 34px); margin-bottom: 10px; }
+  .aviso p { color: var(--prata); max-width: 440px; }
+
+  .pulso { animation: pulsa 2.2s ease-in-out infinite; }
+  @keyframes pulsa { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    body::before, .nomes-trilho, .pulso { animation: none; }
+    .vencedor-bloco { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="aviso" id="tela-bloqueado" hidden>
+  <div>
+    <h1>Link inválido</h1>
+    <p id="texto-bloqueado">Peça o endereço atualizado à organização do evento.</p>
+  </div>
+</div>
+
+<div class="tela" id="tela" hidden>
+  <header class="topo">
+    <img src="/assets/logo-impulso-footer.png" alt="Impulso Empresarial" />
+    <div class="contador-caixa">
+      <div class="contador-num" id="contador">0</div>
+      <div class="contador-rot" id="contador-rot">participantes concorrendo</div>
+    </div>
+  </header>
+
+  <main class="miolo" id="miolo"></main>
+
+  <section class="nomes-wrap" id="nomes-wrap" hidden>
+    <p class="nomes-titulo">Quem está concorrendo</p>
+    <div class="nomes-trilho" id="nomes-trilho"></div>
+  </section>
+
+  <footer class="rodape" id="rodape" hidden></footer>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var TOKEN = new URLSearchParams(location.search).get('k') || '';
+  var INTERVALO_MS = 2000;
+  var DURACAO_GIRO_MS = 4200;
+
+  var $ = function (s) { return document.querySelector(s); };
+  var esc = function (v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  };
+
+  var estado = null;
+  var idExibido = null;      // sorteio que a tela ja mostrou resolvido
+  var girando = false;
+  var listaRenderizada = '';
+  // Assinatura do que esta desenhado no miolo. Sem isso, cada consulta
+  // reescreveria o mesmo HTML e reiniciaria a animacao de entrada — na
+  // projecao o nome do ganhador ficaria piscando a cada 2 segundos.
+  var mioloRenderizado = '';
+
+  function escreverMiolo(assinatura, html) {
+    if (assinatura === mioloRenderizado) return;
+    mioloRenderizado = assinatura;
+    $('#miolo').innerHTML = html;
+  }
+
+  function primeiroNome(n) { return String(n || '').split(/\s+/)[0] || ''; }
+
+  // ---------------------------------------------------------------- telas
+  function pintarEspera(s, total) {
+    escreverMiolo('espera:' + s.id,
+      '<span class="etiqueta">A seguir</span>' +
+      '<h1 class="premio">' + esc(s.titulo) + '</h1>' +
+      (s.premio ? '<p class="premio-sub">' + esc(s.premio) + '</p>' : '') +
+      '<p class="premio-sub pulso" style="margin-top:1.5vh">Aguardando o sorteio começar…</p>' +
+      (s.repescagem
+        ? '<p class="recibo">Nesta rodada quem já ganhou concorre de novo</p>'
+        : '<p class="recibo">Quem já ganhou não concorre nesta rodada</p>'));
+  }
+
+  function pintarSemSorteio(total) {
+    escreverMiolo('sem-sorteio',
+      '<span class="etiqueta">Credenciamento aberto</span>' +
+      '<h1 class="premio">Sorteios do Impulso Empresarial</h1>' +
+      '<p class="premio-sub">Preencha o formulário do credenciamento para concorrer. ' +
+      'Seu nome aparece na faixa abaixo assim que entrar na lista.</p>');
+  }
+
+  function pintarVencedor(s) {
+    escreverMiolo('vencedor:' + s.id,
+      '<div class="vencedor-bloco">' +
+        '<span class="etiqueta">' + esc(s.titulo) + '</span>' +
+        '<div class="nome-palco" style="margin-top:2vh">' + esc(s.vencedor_nome) + '</div>' +
+        '<div class="empresa-palco">' + esc(s.vencedor_empresa || '') + '</div>' +
+        '<div class="recibo">' +
+          '<span>Sorteado o nº <b>' + esc(s.posicao) + '</b> de <b>' + esc(s.total_elegiveis) + '</b> concorrentes</span>' +
+          (s.verificacao ? '<span>Código <b>' + esc(s.verificacao) + '</b></span>' : '') +
+        '</div>' +
+      '</div>');
+  }
+
+  // Giro de nomes antes de revelar. Termina sempre no vencedor que o
+  // servidor ja escolheu — a animacao e' so' encenacao, nao decide nada.
+  function girar(s, nomes, aoFim) {
+    girando = true;
+    var fim = Date.now() + DURACAO_GIRO_MS;
+    escreverMiolo('giro:' + s.id,
+      '<span class="etiqueta">' + esc(s.titulo) + '</span>' +
+      '<div class="nome-palco girando" id="giro" style="margin-top:2vh">—</div>' +
+      '<div class="empresa-palco" id="giro-empresa">&nbsp;</div>');
+
+    var alvoGiro = $('#giro');
+    var alvoEmpresa = $('#giro-empresa');
+    if (!alvoGiro) { girando = false; aoFim(); return; }
+
+    (function passo() {
+      var restante = fim - Date.now();
+      if (restante <= 0) {
+        girando = false;
+        aoFim();
+        return;
+      }
+      var p = nomes[Math.floor(Math.random() * nomes.length)] || {};
+      alvoGiro.textContent = p.nome || '—';
+      alvoEmpresa.textContent = p.empresa || '';
+      // Desacelera no fim: o intervalo cresce conforme o tempo acaba, o que
+      // da a sensacao de roleta parando em vez de corte seco.
+      var prog = 1 - restante / DURACAO_GIRO_MS;
+      setTimeout(passo, 55 + prog * prog * 420);
+    })();
+  }
+
+  function pintarNomes(participantes, vencedores) {
+    if (!participantes.length) { $('#nomes-wrap').hidden = true; return; }
+    var assinatura = participantes.length + ':' + vencedores.join(',');
+    if (assinatura === listaRenderizada) return;   // nao reinicia a animacao a toa
+    listaRenderizada = assinatura;
+
+    var chips = participantes.map(function (p) {
+      var ganhou = vencedores.indexOf(p.id) !== -1;
+      return '<span class="nome-chip' + (ganhou ? ' ja-ganhou' : '') + '">' +
+             esc(p.nome) + (ganhou ? ' ★' : '') + '</span>';
+    }).join('');
+
+    var trilho = $('#nomes-trilho');
+    var wrap = $('#nomes-wrap');
+    wrap.hidden = false;
+
+    // Mede com uma copia so'; se transbordar, duplica para o laco do marquee
+    // nao ter emenda visivel.
+    trilho.className = 'nomes-trilho';
+    trilho.innerHTML = chips;
+    if (trilho.scrollWidth > wrap.clientWidth) {
+      trilho.innerHTML = chips + chips;
+      trilho.classList.add('rolando');
+    } else {
+      trilho.classList.add('parado');
+    }
+  }
+
+  function pintarRodape(anteriores) {
+    if (!anteriores.length) { $('#rodape').hidden = true; return; }
+    $('#rodape').innerHTML = anteriores.map(function (s) {
+      return '<div class="ganhador-pill"><span>' + esc(s.titulo) + '</span>' +
+             '<b>' + esc(primeiroNome(s.vencedor_nome)) + '</b></div>';
+    }).join('');
+    $('#rodape').hidden = false;
+  }
+
+  // ---------------------------------------------------------------- ciclo
+  function aplicar(novo) {
+    estado = novo;
+    var atual = novo.atual;
+    var vencedores = (novo.anteriores || []).concat(atual && atual.sorteado_em ? [atual] : [])
+      .map(function (s) { return s.vencedor_id; }).filter(Boolean);
+
+    $('#contador').textContent = novo.total;
+    $('#contador-rot').textContent = novo.total === 1 ? 'participante concorrendo' : 'participantes concorrendo';
+    pintarNomes(novo.participantes || [], vencedores);
+    pintarRodape(novo.anteriores || []);
+
+    if (girando) return;
+
+    if (!atual) { idExibido = null; return pintarSemSorteio(novo.total); }
+
+    if (!atual.sorteado_em) {
+      idExibido = null;
+      return pintarEspera(atual, novo.total);
+    }
+
+    if (idExibido === atual.id) return pintarVencedor(atual);
+
+    // Resultado novo: gira e so' depois revela.
+    idExibido = atual.id;
+    girar(atual, novo.participantes || [], function () { pintarVencedor(atual); });
+  }
+
+  function consultar() {
+    fetch('/api/publico/sorteio?k=' + encodeURIComponent(TOKEN))
+      .then(function (r) {
+        if (r.status === 401) throw new Error('401');
+        if (!r.ok) throw new Error('http');
+        return r.json();
+      })
+      .then(function (dados) {
+        $('#tela').hidden = false;
+        $('#tela-bloqueado').hidden = true;
+        aplicar(dados);
+      })
+      .catch(function (e) {
+        // Oscilacao de rede num telao nao pode limpar a tela: so' o token
+        // invalido troca para o aviso; o resto espera a proxima consulta.
+        if (e.message === '401') {
+          $('#tela').hidden = true;
+          $('#tela-bloqueado').hidden = false;
+        }
+      });
+  }
+
+  consultar();
+  setInterval(consultar, INTERVALO_MS);
+})();
+</script>
+</body>
+</html>

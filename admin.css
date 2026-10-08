@@ -751,9 +751,111 @@ input:focus, select:focus, textarea:focus {
   box-shadow: 0 8px 30px rgba(0,0,0,0.5);
 }
 
+/* ============================================================
+   CREDENCIAMENTO E SORTEIO
+   ============================================================ */
+
+/* --------------------------------------------------- link publico */
+.link-publico {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: var(--dark-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--primary);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  margin-bottom: 20px;
+}
+.link-publico-texto { flex: 1 1 220px; min-width: 0; }
+.link-publico-texto strong { display: block; font-size: 0.9rem; }
+.link-publico-texto span { font-size: 0.78rem; color: var(--text-muted); }
+.link-publico input {
+  flex: 2 1 300px;
+  min-width: 0;
+  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+  font-size: 0.78rem;
+  background: var(--navy);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-muted);
+  padding: 9px 12px;
+}
+.link-publico input:focus { outline: none; border-color: var(--primary); color: var(--text); }
+
+/* ------------------------------------------------- criar sorteio */
+.sorteio-novo {
+  background: var(--dark-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  margin-bottom: 22px;
+}
+.sorteio-novo form { display: flex; flex-direction: column; gap: 14px; align-items: flex-start; }
+.sorteio-campos { display: flex; gap: 14px; flex-wrap: wrap; width: 100%; }
+.sorteio-campos label { flex: 1 1 240px; display: flex; flex-direction: column; gap: 6px; }
+.sorteio-campos span { font-size: 0.8rem; color: var(--text-muted); }
+.sorteio-dica { font-size: 0.8rem; color: var(--text-muted); }
+.sorteio-novo .sorteio-dica { margin-top: 14px; }
+
+/* -------------------------------------------------- lista sorteios */
+.lista-sorteios { display: flex; flex-direction: column; gap: 14px; }
+
+.sorteio-card {
+  background: var(--dark-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+}
+/* Sorteio ainda nao realizado e o que pede acao: ganha a borda de destaque
+   para a pessoa achar o botao no meio do evento, sem procurar. */
+.sorteio-card-aberto { border-color: rgba(119,203,245,0.45); }
+
+.sorteio-cabeca {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+.sorteio-cabeca h3 { font-size: 1rem; font-weight: 700; }
+.sorteio-premio { font-size: 0.85rem; color: var(--text-muted); margin-top: 2px; }
+
+.sorteio-vencedor {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: rgba(119,203,245,0.08);
+  border: 1px solid rgba(119,203,245,0.25);
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+.sorteio-vencedor span {
+  font-size: 0.7rem;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.sorteio-vencedor b { font-size: 1.15rem; font-weight: 800; color: var(--primary); }
+.sorteio-vencedor small { color: var(--text-muted); font-size: 0.82rem; }
+
+.sorteio-recibo {
+  margin-top: 10px;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+}
+
+.sorteio-acoes { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+
 @media (max-width: 640px) {
   .topo { gap: 12px; }
   .abas { margin-left: 0; order: 3; width: 100%; }
   .aba { flex: 1; }
   .conteudo { padding: 18px 14px 50px; }
+
+  .link-publico { flex-direction: column; align-items: stretch; }
+  .sorteio-campos { flex-direction: column; gap: 10px; }
 }

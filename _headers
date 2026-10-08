@@ -10,6 +10,25 @@
 /index.html
   Cache-Control: no-cache, must-revalidate
 
+# Paginas do dia do evento: protegidas por token na URL, nao por sessao.
+# Fora do indice de busca e sem cache — o telao precisa sempre do HTML novo,
+# e o endereco nao deve sobreviver no cache de um aparelho emprestado.
+/credenciamento
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow
+
+/credenciamento.html
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow
+
+/sorteio
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow
+
+/sorteio.html
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow
+
 # Painel interno: fora dos buscadores mesmo que alguem publique o link, e
 # sem cache para nao deixar dados de lead parados no navegador.
 /admin

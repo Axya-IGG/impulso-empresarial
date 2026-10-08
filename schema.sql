@@ -178,3 +178,48 @@ CREATE TABLE IF NOT EXISTS tentativas_login (
   em      TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_tentativas ON tentativas_login(ip, em);
+
+-- ------------------------------------------- credenciamento e sorteio
+-- Espelha a migration 011. Participante nao e lead: lead e quem demonstrou
+-- interesse pela landing (tem whatsapp, recebe remarketing, vira compra);
+-- participante e quem respondeu o formulario no dia do evento.
+CREATE TABLE IF NOT EXISTS participantes (
+  id           TEXT PRIMARY KEY,
+  nome         TEXT NOT NULL,
+  empresa      TEXT NOT NULL,
+  cargo        TEXT NOT NULL,
+  funcionarios TEXT NOT NULL,
+  -- nome+empresa normalizados: quem abre o link duas vezes no celular nao
+  -- pode acabar com duas chances no sorteio.
+  chave        TEXT NOT NULL UNIQUE,
+  origem       TEXT NOT NULL DEFAULT 'formulario',
+  criado_em    TEXT NOT NULL,
+  ip           TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_participantes_criado ON participantes(criado_em);
+
+CREATE TABLE IF NOT EXISTS sorteios (
+  id              TEXT PRIMARY KEY,
+  titulo          TEXT NOT NULL,
+  premio          TEXT,
+  criado_em       TEXT NOT NULL,
+  sorteado_em     TEXT,
+  vencedor_id     TEXT REFERENCES participantes(id),
+  -- Copia do nome no instante do sorteio: a organizacao pode excluir o
+  -- participante depois, e o historico do telao precisa continuar de pe.
+  vencedor_nome    TEXT,
+  vencedor_empresa TEXT,
+  total_elegiveis INTEGER,
+  posicao         INTEGER,
+  verificacao     TEXT,
+  repescagem      INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_sorteios_criado ON sorteios(criado_em);
+
+-- Chave/valor do painel. Hoje guarda os tokens dos links publicos, que
+-- precisam ser trocaveis sem mexer no SESSION_SECRET.
+CREATE TABLE IF NOT EXISTS config (
+  chave         TEXT PRIMARY KEY,
+  valor         TEXT NOT NULL,
+  atualizado_em TEXT NOT NULL
+);

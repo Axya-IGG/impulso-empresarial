@@ -49,6 +49,90 @@ export function emailValido(v) {
 export const ipDaRequisicao = (request) =>
   request.headers.get('CF-Connecting-IP') || '';
 
+// ------------------------------------------------- links publicos (?k=)
+// O credenciamento e o telao do sorteio sao abertos por gente que nao tem
+// (nem deve ter) senha do painel: o participante na fila e a equipe da casa
+// que poe o telao no ar. Em vez de sessao, o acesso vem de um token longo e
+// aleatorio na propria URL.
+//
+// O token fica na tabela `config`, e nao derivado do SESSION_SECRET, por
+// causa da revogacao: trocar o SESSION_SECRET invalidaria tambem a sessao de
+// quem esta logado no painel. Assim cada link e trocado sozinho, sem efeito
+// colateral.
+
+export const CHAVES_PUBLICAS = {
+  credenciamento: 'token_credenciamento',
+  sorteio: 'token_sorteio',
+};
+
+const tokenNovo = () => {
+  const b = new Uint8Array(24);
+  crypto.getRandomValues(b);
+  return [...b].map(x => x.toString(16).padStart(2, '0')).join('');
+};
+
+/** Le o token do papel, criando na primeira chamada. */
+export async function tokenPublico(env, papel) {
+  const chave = CHAVES_PUBLICAS[papel];
+  if (!chave) return null;
+
+  const { results } = await env.DB.prepare(
+    'SELECT valor FROM config WHERE chave = ?'
+  ).bind(chave).all();
+  if (results?.[0]?.valor) return results[0].valor;
+
+  const valor = tokenNovo();
+  await env.DB.prepare(
+    'INSERT INTO config (chave, valor, atualizado_em) VALUES (?, ?, ?) ' +
+    'ON CONFLICT(chave) DO NOTHING'
+  ).bind(chave, valor, agora()).run();
+
+  // Releitura em vez de devolver `valor`: se duas abas do painel pedirem o
+  // link ao mesmo tempo, o DO NOTHING descarta o segundo INSERT e quem
+  // perdeu a corrida tem de devolver o token que ficou, nao o que gerou.
+  const conf = await env.DB.prepare(
+    'SELECT valor FROM config WHERE chave = ?'
+  ).bind(chave).all();
+  return conf.results?.[0]?.valor || valor;
+}
+
+/** Gera um token novo para o papel, derrubando o link anterior. */
+export async function regerarTokenPublico(env, papel) {
+  const chave = CHAVES_PUBLICAS[papel];
+  if (!chave) return null;
+  const valor = tokenNovo();
+  await env.DB.prepare(
+    'INSERT INTO config (chave, valor, atualizado_em) VALUES (?, ?, ?) ' +
+    'ON CONFLICT(chave) DO UPDATE SET valor = excluded.valor, atualizado_em = excluded.atualizado_em'
+  ).bind(chave, valor, agora()).run();
+  return valor;
+}
+
+/** Compara em tempo constante — o mesmo cuidado de sessaoValida(). */
+export async function tokenPublicoValido(env, papel, recebido) {
+  if (!recebido || typeof recebido !== 'string') return false;
+  const esperado = await tokenPublico(env, papel);
+  if (!esperado || recebido.length !== esperado.length) return false;
+  let diff = 0;
+  for (let i = 0; i < recebido.length; i++) diff |= recebido.charCodeAt(i) ^ esperado.charCodeAt(i);
+  return diff === 0;
+}
+
+/**
+ * Chave de deduplicacao do participante: nome + empresa, sem acento, sem
+ * pontuacao e sem caixa. O formulario nao pede telefone nem e-mail, entao
+ * esta e a unica identidade disponivel — e sem ela quem abrisse o link duas
+ * vezes no celular teria duas chances no sorteio.
+ */
+export function chaveParticipante(nome, empresa) {
+  const limpar = (v) => String(v || '')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+  return `${limpar(nome)}|${limpar(empresa)}`;
+}
+
 // ----------------------------------------------------------------- sessao
 // A sessao do painel e um cookie assinado, sem tabela: o valor carrega o
 // instante de expiracao e um HMAC dele. Serve porque a unica coisa que

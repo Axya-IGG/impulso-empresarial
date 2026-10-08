@@ -61,8 +61,11 @@ function mostrarLogin() {
 
 // Cada aba tem sua propria URL (#leads, #recebidas...), pra dar pra
 // favoritar uma aba especifica em vez de sempre cair na de Leads.
-const ABAS_VALIDAS = ['leads', 'mensagens', 'envios', 'recebidas'];
-const CARREGAR_ABA = { leads: carregarLeads, mensagens: carregarMensagens, envios: carregarEnvios, recebidas: carregarRecebidas };
+const ABAS_VALIDAS = ['leads', 'mensagens', 'envios', 'recebidas', 'credenciamento', 'sorteio'];
+const CARREGAR_ABA = {
+  leads: carregarLeads, mensagens: carregarMensagens, envios: carregarEnvios,
+  recebidas: carregarRecebidas, credenciamento: carregarParticipantes, sorteio: carregarSorteios,
+};
 
 function mostrarAba(nome) {
   if (!ABAS_VALIDAS.includes(nome)) nome = 'leads';
@@ -907,6 +910,243 @@ setInterval(() => {
   carregarRecebidas().catch(() => {});
   recarregarThread().catch(() => {});
 }, 15000);
+
+// ====================================================================
+// CREDENCIAMENTO E SORTEIO
+// ====================================================================
+// Os dois links públicos não pedem senha: quem abre é o participante na fila
+// e a equipe da casa no telão. O que autoriza é o token na URL, emitido aqui
+// e trocável pelo botão "Trocar" quando o endereço vaza.
+
+let linksPublicos = null;
+
+async function carregarLinks() {
+  if (linksPublicos) return linksPublicos;
+  linksPublicos = await api('/api/admin/links-publicos');
+  $('#link-credenciamento').value = linksPublicos.credenciamento;
+  $('#link-sorteio').value = linksPublicos.sorteio;
+  return linksPublicos;
+}
+
+$$('[data-copiar]').forEach(botao => botao.addEventListener('click', async () => {
+  const campo = $(botao.dataset.copiar);
+  try {
+    await navigator.clipboard.writeText(campo.value);
+  } catch {
+    // clipboard exige contexto seguro e permissão; a seleção é o plano B
+    campo.select();
+    document.execCommand('copy');
+  }
+  toast('Link copiado.');
+}));
+
+$$('[data-regerar]').forEach(botao => botao.addEventListener('click', async () => {
+  const papel = botao.dataset.regerar;
+  if (!confirm('Gerar um endereço novo? Quem estiver com o link antigo perde o acesso na hora.')) return;
+  const r = await api('/api/admin/links-publicos', {
+    method: 'POST',
+    body: JSON.stringify({ papel }),
+  });
+  linksPublicos = null;
+  $(papel === 'sorteio' ? '#link-sorteio' : '#link-credenciamento').value = r.link;
+  toast('Link novo gerado.');
+}));
+
+// ------------------------------------------------------- participantes
+let participantes = [];
+let faixasFuncionarios = [];
+
+async function carregarParticipantes() {
+  await carregarLinks();
+  const r = await api('/api/admin/participantes');
+  participantes = r.participantes || [];
+  faixasFuncionarios = r.faixas || [];
+  pintarParticipantes();
+}
+
+function pintarParticipantes() {
+  const busca = ($('#busca-participantes').value || '').trim().toLowerCase();
+  const lista = busca
+    ? participantes.filter(p => [p.nome, p.empresa, p.cargo].some(
+        c => String(c || '').toLowerCase().includes(busca)))
+    : participantes;
+
+  const doFormulario = participantes.filter(p => p.origem === 'formulario').length;
+  $('#cards-credenciamento').innerHTML = [
+    ['Participantes', participantes.length],
+    ['Pelo formulário', doFormulario],
+    ['Adicionados à mão', participantes.length - doFormulario],
+    ['Já ganharam', participantes.filter(p => p.vitorias > 0).length],
+  ].map(([r, v]) => `<div class="card"><b>${v ?? 0}</b><span>${r}</span></div>`).join('');
+
+  $('#corpo-participantes').innerHTML = lista.length
+    ? lista.map(p => `
+        <tr>
+          <td>${esc(p.nome)}${p.vitorias > 0 ? ' <span class="selo selo-ok">ganhou</span>' : ''}</td>
+          <td>${esc(p.empresa)}</td>
+          <td>${esc(p.cargo)}</td>
+          <td>${esc(p.funcionarios)}</td>
+          <td>${p.origem === 'manual' ? 'Manual' : 'Formulário'}</td>
+          <td>${dataBR(p.criado_em)}</td>
+          <td><button type="button" class="btn-mini perigo"
+                      data-excluir-participante="${esc(p.id)}">Excluir</button></td>
+        </tr>`).join('')
+    : `<tr><td colspan="7" class="vazio">${
+        participantes.length ? 'Nenhum participante para essa busca.' : 'Ninguém se credenciou ainda.'
+      }</td></tr>`;
+}
+
+$('#busca-participantes').addEventListener('input', pintarParticipantes);
+
+$('#corpo-participantes').addEventListener('click', async e => {
+  const botao = e.target.closest('[data-excluir-participante]');
+  if (!botao) return;
+  if (!confirm('Excluir este participante? Ele sai da lista do sorteio na hora.\n\nSe já tiver ganhado, o resultado continua no histórico do telão.')) return;
+  await api(`/api/admin/participantes?id=${encodeURIComponent(botao.dataset.excluirParticipante)}`,
+    { method: 'DELETE' });
+  toast('Participante excluído.');
+  carregarParticipantes();
+});
+
+// ------------------------------------------------ modal de participante
+const formParticipante = $('#form-participante');
+
+$('#btn-novo-participante').addEventListener('click', () => {
+  formParticipante.reset();
+  $('#participante-erro').hidden = true;
+  $('#campo-funcionarios').innerHTML = faixasFuncionarios
+    .map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('');
+  $('#modal-participante').hidden = false;
+});
+
+formParticipante.addEventListener('submit', async e => {
+  e.preventDefault();
+  const erro = $('#participante-erro');
+  const botao = e.target.querySelector('button[type="submit"]');
+  erro.hidden = true;
+  botao.disabled = true;
+
+  try {
+    await api('/api/admin/participantes', {
+      method: 'POST',
+      body: JSON.stringify({
+        nome: formParticipante.nome.value,
+        empresa: formParticipante.empresa.value,
+        cargo: formParticipante.cargo.value,
+        funcionarios: formParticipante.funcionarios.value,
+      }),
+    });
+    fecharModais();
+    toast('Participante adicionado.');
+    carregarParticipantes();
+  } catch (err) {
+    erro.textContent = err.message;
+    erro.hidden = false;
+  } finally {
+    botao.disabled = false;
+  }
+});
+
+// ------------------------------------------------------------- sorteios
+async function carregarSorteios() {
+  await carregarLinks();
+  const r = await api('/api/admin/sorteios');
+  const sorteios = r.sorteios || [];
+
+  const jaGanharam = new Set(sorteios.filter(s => s.vencedor_id).map(s => s.vencedor_id));
+  $('#sorteio-elegiveis').textContent = r.total_participantes
+    ? `${r.total_participantes} participante${r.total_participantes === 1 ? '' : 's'} na lista · ` +
+      `${r.total_participantes - jaGanharam.size} ainda sem ganhar nada`
+    : 'Ninguém se credenciou ainda — o sorteio só roda com participantes na lista.';
+
+  $('#lista-sorteios').innerHTML = sorteios.length
+    ? sorteios.map(s => {
+        const feito = Boolean(s.sorteado_em);
+        return `
+        <article class="sorteio-card${feito ? '' : ' sorteio-card-aberto'}">
+          <div class="sorteio-cabeca">
+            <div>
+              <h3>${esc(s.titulo)}</h3>
+              ${s.premio ? `<p class="sorteio-premio">${esc(s.premio)}</p>` : ''}
+            </div>
+            <span class="selo ${feito ? 'selo-ok' : 'selo-andamento'}">
+              ${feito ? 'Sorteado' : 'Aguardando'}
+            </span>
+          </div>
+
+          ${feito ? `
+            <div class="sorteio-vencedor">
+              <span>Ganhador</span>
+              <b>${esc(s.vencedor_nome || '—')}</b>
+              <small>${esc(s.vencedor_empresa || '')}</small>
+            </div>
+            <p class="sorteio-recibo">
+              Nº ${esc(s.posicao)} de ${esc(s.total_elegiveis)} concorrentes ·
+              código ${esc(s.verificacao || '—')} · ${dataBR(s.sorteado_em)}
+            </p>` : `
+            <p class="sorteio-dica">
+              ${s.repescagem
+                ? 'Quem já ganhou concorre nesta rodada.'
+                : 'Quem já ganhou está fora desta rodada.'}
+              O telão mostra o prêmio e fica aguardando.
+            </p>`}
+
+          <div class="sorteio-acoes">
+            ${feito ? '' : `<button type="button" class="btn btn-primario" data-sortear="${esc(s.id)}">Sortear agora</button>`}
+            <button type="button" class="btn btn-fantasma" data-excluir-sorteio="${esc(s.id)}">Excluir</button>
+          </div>
+        </article>`;
+      }).join('')
+    : '<p class="vazio">Nenhum sorteio criado. Crie o primeiro acima.</p>';
+}
+
+$('#form-sorteio').addEventListener('submit', async e => {
+  e.preventDefault();
+  const botao = e.target.querySelector('button[type="submit"]');
+  botao.disabled = true;
+  try {
+    await api('/api/admin/sorteios', {
+      method: 'POST',
+      body: JSON.stringify({
+        titulo: e.target.titulo.value,
+        premio: e.target.premio.value,
+        repescagem: e.target.repescagem.checked,
+      }),
+    });
+    e.target.reset();
+    toast('Sorteio criado. O telão já mostra o prêmio.');
+    carregarSorteios();
+  } catch (err) {
+    toast(err.message);
+  } finally {
+    botao.disabled = false;
+  }
+});
+
+$('#lista-sorteios').addEventListener('click', async e => {
+  const sortear = e.target.closest('[data-sortear]');
+  const excluir = e.target.closest('[data-excluir-sorteio]');
+
+  if (sortear) {
+    if (!confirm('Sortear agora? O telão vai girar os nomes e revelar o ganhador.\n\nNão dá para refazer: para tirar outro nome, crie um sorteio novo.')) return;
+    sortear.disabled = true;
+    try {
+      const r = await api(`/api/admin/sorteios/${sortear.dataset.sortear}`, { method: 'POST' });
+      toast(`Ganhador: ${r.vencedor.nome}`);
+      carregarSorteios();
+    } catch (err) {
+      toast(err.message);
+      sortear.disabled = false;
+    }
+  }
+
+  if (excluir) {
+    if (!confirm('Excluir este sorteio? Ele some do telão e do histórico.')) return;
+    await api(`/api/admin/sorteios/${excluir.dataset.excluirSorteio}`, { method: 'DELETE' });
+    toast('Sorteio excluído.');
+    carregarSorteios();
+  }
+});
 
 // -------------------------------------------------------------- arranque
 // Uma chamada protegida decide a tela inicial: com cookie válido o painel
