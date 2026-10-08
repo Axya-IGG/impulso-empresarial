@@ -13,11 +13,11 @@
 # Paginas do dia do evento: protegidas por token na URL, nao por sessao.
 # Fora do indice de busca e sem cache — o telao precisa sempre do HTML novo,
 # e o endereco nao deve sobreviver no cache de um aparelho emprestado.
-/credenciamento
+/formulario
   Cache-Control: no-store
   X-Robots-Tag: noindex, nofollow
 
-/credenciamento.html
+/formulario.html
   Cache-Control: no-store
   X-Robots-Tag: noindex, nofollow
 

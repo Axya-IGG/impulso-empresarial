@@ -228,6 +228,16 @@
   }
   .ganhador-pill span { color: var(--prata); font-size: 0.85em; }
   .ganhador-pill b { font-weight: 700; }
+  /* Chamada em que o nome sorteado nao estava na sala. */
+  .ganhador-pill.ausente { opacity: 0.5; }
+  .ganhador-pill.ausente b { text-decoration: line-through; font-weight: 500; }
+  .ganhador-pill.ausente i {
+    font-style: normal;
+    font-size: 0.78em;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--prata);
+  }
 
   .aviso {
     height: 100vh;
@@ -313,7 +323,7 @@
   // ---------------------------------------------------------------- telas
   function pintarEspera(s, total) {
     escreverMiolo('espera:' + s.id,
-      '<span class="etiqueta">A seguir</span>' +
+      '<span class="etiqueta">' + (s.chamada > 1 ? s.chamada + 'ª chamada' : 'A seguir') + '</span>' +
       '<h1 class="premio">' + esc(s.titulo) + '</h1>' +
       (s.premio ? '<p class="premio-sub">' + esc(s.premio) + '</p>' : '') +
       '<p class="premio-sub pulso" style="margin-top:1.5vh">Aguardando o sorteio começar…</p>' +
@@ -330,10 +340,16 @@
       'Seu nome aparece na faixa abaixo assim que entrar na lista.</p>');
   }
 
+  // Rotulo do premio. A chamada so' aparece a partir da segunda: e o que
+  // explica para a plateia por que o nome na tela mudou.
+  function rotulo(s) {
+    return esc(s.titulo) + (s.chamada > 1 ? ' · ' + s.chamada + 'ª chamada' : '');
+  }
+
   function pintarVencedor(s) {
     escreverMiolo('vencedor:' + s.id,
       '<div class="vencedor-bloco">' +
-        '<span class="etiqueta">' + esc(s.titulo) + '</span>' +
+        '<span class="etiqueta">' + rotulo(s) + '</span>' +
         '<div class="nome-palco" style="margin-top:2vh">' + esc(s.vencedor_nome) + '</div>' +
         '<div class="empresa-palco">' + esc(s.vencedor_empresa || '') + '</div>' +
         '<div class="recibo">' +
@@ -349,7 +365,7 @@
     girando = true;
     var fim = Date.now() + DURACAO_GIRO_MS;
     escreverMiolo('giro:' + s.id,
-      '<span class="etiqueta">' + esc(s.titulo) + '</span>' +
+      '<span class="etiqueta">' + rotulo(s) + '</span>' +
       '<div class="nome-palco girando" id="giro" style="margin-top:2vh">—</div>' +
       '<div class="empresa-palco" id="giro-empresa">&nbsp;</div>');
 
@@ -404,9 +420,13 @@
 
   function pintarRodape(anteriores) {
     if (!anteriores.length) { $('#rodape').hidden = true; return; }
+    // O ausente fica na lista, riscado, em vez de sumir: e o que mostra que
+    // o nome mudou por ausencia, e nao porque o sorteio foi refeito.
     $('#rodape').innerHTML = anteriores.map(function (s) {
-      return '<div class="ganhador-pill"><span>' + esc(s.titulo) + '</span>' +
-             '<b>' + esc(primeiroNome(s.vencedor_nome)) + '</b></div>';
+      return '<div class="ganhador-pill' + (s.ausente ? ' ausente' : '') + '">' +
+             '<span>' + esc(s.titulo) + (s.chamada > 1 ? ' · ' + s.chamada + 'ª' : '') + '</span>' +
+             '<b>' + esc(primeiroNome(s.vencedor_nome)) + '</b>' +
+             (s.ausente ? '<i>ausente</i>' : '') + '</div>';
     }).join('');
     $('#rodape').hidden = false;
   }

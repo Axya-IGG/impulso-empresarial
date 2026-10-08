@@ -47,6 +47,7 @@
       <button class="aba" data-aba="envios">Envios</button>
       <button class="aba" data-aba="recebidas">Caixa de entrada<span class="aba-contador" id="contador-recebidas" hidden></span></button>
       <button class="aba" data-aba="credenciamento">Credenciamento</button>
+      <button class="aba" data-aba="formularios">Formulários</button>
       <button class="aba" data-aba="sorteio">Sorteio</button>
     </nav>
     <button class="btn btn-fantasma" id="btn-sair">Sair</button>
@@ -205,24 +206,59 @@
       </div>
     </section>
 
-    <!-- ------------------------ CREDENCIAMENTO ----------------------- -->
+    <!-- ------------------------ CREDENCIAMENTO -----------------------
+         Porta do evento: a lista de quem comprou, sincronizada da Eduzz a
+         cada abertura da aba. Marcar presença dispara o link do formulário
+         no WhatsApp da pessoa. -->
     <section class="painel-aba" data-painel="credenciamento" hidden>
-      <div class="link-publico">
-        <div class="link-publico-texto">
-          <strong>Link do formulário</strong>
-          <span>Mande por WhatsApp para quem foi credenciado. Não pede login.</span>
-        </div>
-        <input type="text" id="link-credenciamento" readonly />
-        <button type="button" class="btn btn-secundario" data-copiar="#link-credenciamento">Copiar</button>
-        <button type="button" class="btn btn-fantasma" data-regerar="credenciamento"
-                title="Gera um endereço novo e derruba o anterior">Trocar</button>
-      </div>
-
       <div class="cards" id="cards-credenciamento"></div>
 
       <div class="barra">
+        <input type="search" id="busca-credenciamento" placeholder="Buscar por nome, e-mail ou WhatsApp..." />
+        <select id="filtro-presenca">
+          <option value="">Todos</option>
+          <option value="falta">Só quem ainda não chegou</option>
+          <option value="presente">Só quem já chegou</option>
+          <option value="sem-form">Chegou mas não preencheu</option>
+        </select>
+        <button type="button" class="btn btn-primario" id="btn-novo-credenciado">+ Acompanhante / avulso</button>
+        <a class="btn btn-secundario" href="/api/admin/credenciamento?formato=csv">Exportar CSV</a>
+      </div>
+
+      <p class="sorteio-dica" id="aviso-sync" hidden></p>
+
+      <div class="tabela-wrap tabela-wrap-rolavel">
+        <table class="tabela">
+          <thead>
+            <tr>
+              <th>Nome</th><th>Contato</th><th>Ingresso</th>
+              <th>Formulário</th><th>Presença</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="corpo-credenciamento"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- -------------------------- FORMULÁRIOS ------------------------
+         As respostas do formulário — e só elas alimentam o sorteio. -->
+    <section class="painel-aba" data-painel="formularios" hidden>
+      <div class="link-publico">
+        <div class="link-publico-texto">
+          <strong>Link do formulário</strong>
+          <span>Enviado automaticamente ao marcar presença. Não pede login.</span>
+        </div>
+        <input type="text" id="link-formulario" readonly />
+        <button type="button" class="btn btn-secundario" data-copiar="#link-formulario">Copiar</button>
+        <button type="button" class="btn btn-fantasma" data-regerar="formulario"
+                title="Gera um endereço novo e derruba o anterior">Trocar</button>
+      </div>
+
+      <div class="cards" id="cards-formularios"></div>
+
+      <div class="barra">
         <input type="search" id="busca-participantes" placeholder="Buscar por nome, empresa ou cargo..." />
-        <button type="button" class="btn btn-primario" id="btn-novo-participante">+ Adicionar participante</button>
+        <button type="button" class="btn btn-primario" id="btn-novo-participante">+ Adicionar à mão</button>
         <a class="btn btn-secundario" href="/api/admin/participantes?formato=csv">Exportar CSV</a>
       </div>
 
@@ -231,7 +267,7 @@
           <thead>
             <tr>
               <th>Nome</th><th>Empresa</th><th>Cargo</th>
-              <th>Funcionários</th><th>Origem</th><th>Cadastro</th><th></th>
+              <th>Funcionários</th><th>Origem</th><th>Respondido em</th><th></th>
             </tr>
           </thead>
           <tbody id="corpo-participantes"></tbody>
@@ -305,6 +341,41 @@
       </label>
 
       <p class="alerta alerta-erro" id="participante-erro" role="alert" hidden></p>
+
+      <div class="modal-acoes">
+        <button type="button" class="btn btn-fantasma" data-fechar>Cancelar</button>
+        <button type="submit" class="btn btn-primario">Adicionar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============== MODAL DE ACOMPANHANTE / AVULSO ============== -->
+<div class="modal" id="modal-credenciado" hidden>
+  <div class="modal-fundo" data-fechar></div>
+  <div class="modal-caixa" role="dialog" aria-modal="true" aria-labelledby="titulo-credenciado">
+    <button type="button" class="modal-fechar" data-fechar aria-label="Fechar">&times;</button>
+    <h2 id="titulo-credenciado">Adicionar à lista</h2>
+    <p class="modal-sub">Para quem chegou junto de um comprador de ingresso múltiplo,
+      ou para quem entrou sem compra registrada.</p>
+
+    <form id="form-credenciado">
+      <label>
+        <span>Nome completo</span>
+        <input type="text" name="nome" required />
+      </label>
+      <label>
+        <span>WhatsApp (opcional — é por ele que vai o link do formulário)</span>
+        <input type="tel" name="whatsapp" inputmode="numeric" placeholder="(12) 99999-9999" />
+      </label>
+      <label>
+        <span>Acompanha quem?</span>
+        <select name="anfitriao_id" id="campo-anfitriao">
+          <option value="">Ninguém — entrou avulso</option>
+        </select>
+      </label>
+
+      <p class="alerta alerta-erro" id="credenciado-erro" role="alert" hidden></p>
 
       <div class="modal-acoes">
         <button type="button" class="btn btn-fantasma" data-fechar>Cancelar</button>

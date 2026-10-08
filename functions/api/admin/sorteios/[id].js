@@ -24,20 +24,39 @@ const codigoVerificacao = () => {
 };
 
 /** Roda o sorteio. So' uma vez por sorteio: refazer apagaria o que a plateia
- *  ja viu na tela. Para tirar outro nome (vencedor ausente, por exemplo), a
- *  organizacao cria um sorteio novo — e o historico mostra os dois. */
+ *  ja viu na tela.
+ *
+ *  Com `{ "rechamada": true }` no corpo, o caminho e outro: o sorteio ja
+ *  realizado tem o ganhador marcado como ausente e abre-se a chamada
+ *  seguinte do mesmo premio, ja sorteada. E um clique so' porque no palco o
+ *  tempo de digitar um sorteio novo e tempo de plateia esperando — mas nada
+ *  e sobrescrito, a tentativa anterior fica no historico marcada. */
 export async function onRequestPost(context) {
-  const { params, env } = context;
+  const { request, params, env } = context;
   const id = params.id;
 
+  // GET/DELETE nao tem corpo, e o POST de sorteio simples e disparado sem
+  // body nenhum: a leitura precisa tolerar as duas coisas.
+  const corpo = await request.json().catch(() => ({}));
+  const rechamada = Boolean(corpo?.rechamada);
+
   const atual = await env.DB.prepare(
-    'SELECT id, sorteado_em, repescagem FROM sorteios WHERE id = ?'
+    `SELECT id, titulo, premio, sorteado_em, repescagem, chamada, vencedor_nome
+       FROM sorteios WHERE id = ?`
   ).bind(id).all();
   const sorteio = atual.results?.[0];
   if (!sorteio) return erro('Sorteio nao encontrado.', 404);
-  if (sorteio.sorteado_em) return erro('Este sorteio ja foi realizado.', 409);
 
-  // Com repescagem desligada, quem ja ganhou sai do bolo.
+  if (rechamada && !sorteio.sorteado_em) {
+    return erro('Este sorteio ainda nao foi realizado.', 409);
+  }
+  if (!rechamada && sorteio.sorteado_em) {
+    return erro('Este sorteio ja foi realizado.', 409);
+  }
+
+  // Quem ja foi sorteado — presente ou ausente — sai do bolo. Ausente sai
+  // pelo motivo obvio de nao estar na sala; o sorteado do mesmo premio sai
+  // para o premio nao voltar para a mesma pessoa.
   const sql = sorteio.repescagem
     ? 'SELECT id, nome, empresa FROM participantes ORDER BY criado_em'
     : `SELECT id, nome, empresa FROM participantes
@@ -49,23 +68,48 @@ export async function onRequestPost(context) {
   if (!elegiveis.length) {
     return erro(sorteio.repescagem
       ? 'Nao ha participantes cadastrados.'
-      : 'Todo mundo ja ganhou. Ligue a repescagem para sortear de novo.', 409);
+      : 'Nao sobrou ninguem elegivel. Ligue a repescagem para sortear de novo.', 409);
   }
 
   const i = indiceSorteado(elegiveis.length);
   const vencedor = elegiveis[i];
+  const quando = agora();
 
-  await env.DB.prepare(
-    `UPDATE sorteios
-        SET vencedor_id = ?, vencedor_nome = ?, vencedor_empresa = ?,
-            sorteado_em = ?, total_elegiveis = ?, posicao = ?, verificacao = ?
-      WHERE id = ? AND sorteado_em IS NULL`
-  ).bind(
-    vencedor.id, vencedor.nome, vencedor.empresa,
-    agora(), elegiveis.length, i + 1, codigoVerificacao(), id
-  ).run();
+  if (!rechamada) {
+    await env.DB.prepare(
+      `UPDATE sorteios
+          SET vencedor_id = ?, vencedor_nome = ?, vencedor_empresa = ?,
+              sorteado_em = ?, total_elegiveis = ?, posicao = ?, verificacao = ?
+        WHERE id = ? AND sorteado_em IS NULL`
+    ).bind(
+      vencedor.id, vencedor.nome, vencedor.empresa,
+      quando, elegiveis.length, i + 1, codigoVerificacao(), id
+    ).run();
 
-  return json({ ok: true, vencedor });
+    return json({ ok: true, vencedor });
+  }
+
+  // Rechamada: marca o ausente e grava a chamada seguinte ja sorteada. Em
+  // batch para o telao nunca pegar o estado pela metade — um ausente sem
+  // substituto, ou dois ganhadores validos para o mesmo premio.
+  const novoId = crypto.randomUUID();
+  await env.DB.batch([
+    env.DB.prepare('UPDATE sorteios SET ausente = 1 WHERE id = ?').bind(id),
+    env.DB.prepare(
+      `INSERT INTO sorteios
+         (id, titulo, premio, criado_em, repescagem, chamada, origem_id,
+          vencedor_id, vencedor_nome, vencedor_empresa,
+          sorteado_em, total_elegiveis, posicao, verificacao)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).bind(
+      novoId, sorteio.titulo, sorteio.premio, quando, sorteio.repescagem,
+      (sorteio.chamada || 1) + 1, id,
+      vencedor.id, vencedor.nome, vencedor.empresa,
+      quando, elegiveis.length, i + 1, codigoVerificacao()
+    ),
+  ]);
+
+  return json({ ok: true, vencedor, id: novoId, ausente: sorteio.vencedor_nome });
 }
 
 export async function onRequestDelete(context) {

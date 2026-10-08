@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>Credenciamento · Impulso Empresarial</title>
+<title>Formulário · Impulso Empresarial</title>
 <!-- Link distribuido por WhatsApp para quem ja esta no evento: nao tem por
      que estar em buscador. -->
 <meta name="robots" content="noindex, nofollow" />
@@ -330,7 +330,7 @@
 
     var ultima = atual === PERGUNTAS.length - 1;
     html += '<button class="btn" id="btn-principal"' + (enviando ? ' disabled' : '') + '>' +
-            (enviando ? 'Enviando…' : (ultima ? 'Finalizar credenciamento' : 'Avançar →')) + '</button>';
+            (enviando ? 'Enviando…' : (ultima ? 'Enviar' : 'Avançar →')) + '</button>';
 
     slide.innerHTML = html;
 
@@ -362,7 +362,7 @@
   function renderConcluido() {
     slide.innerHTML = '' +
       '<div class="selo"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#77cbf5" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>' +
-      '<h1>Credenciamento concluído!</h1>' +
+      '<h1>Formulário enviado!</h1>' +
       '<p class="ajuda">Você já está concorrendo aos sorteios do evento. Fique de olho no telão.</p>' +
       '<div class="destaque"><strong>' + totalNaLista + '</strong>' +
       '<span>' + (totalNaLista === 1 ? 'participante na lista' : 'participantes na lista do sorteio') + '</span></div>';
@@ -400,7 +400,7 @@
     enviando = true;
     render();
 
-    fetch('/api/publico/credenciamento?k=' + encodeURIComponent(TOKEN), {
+    fetch('/api/publico/formulario?k=' + encodeURIComponent(TOKEN), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(respostas)
@@ -425,7 +425,7 @@
 
   // Confere o token antes de desenhar: sem isso a pessoa preencheria as
   // quatro perguntas para so' no envio descobrir que o link nao vale.
-  fetch('/api/publico/credenciamento?k=' + encodeURIComponent(TOKEN))
+  fetch('/api/publico/formulario?k=' + encodeURIComponent(TOKEN))
     .then(function (r) {
       if (r.ok) {
         $('#palco').hidden = false;

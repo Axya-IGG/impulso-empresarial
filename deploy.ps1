@@ -45,7 +45,7 @@ $Files = @(
     # Paginas do dia do evento. Sao auto-contidas (CSS e JS embutidos) de
     # proposito: assim nao entram na lista de arquivos versionados por hash
     # mais abaixo, que so' existe para quebrar o cache de 1 ano do _headers.
-    'credenciamento.html', 'sorteio.html',
+    'formulario.html', 'sorteio.html',
     '_headers', '_redirects', 'robots.txt', 'sitemap.xml', 'llms.txt',
     'favicon.ico', 'favicon-32.png', 'favicon-192.png', 'apple-touch-icon.png'
 )

@@ -7,7 +7,8 @@ export async function onRequestGet(context) {
     env.DB.prepare(
       `SELECT id, titulo, premio, criado_em, sorteado_em, vencedor_id,
               vencedor_nome, vencedor_empresa,
-              total_elegiveis, posicao, verificacao, repescagem
+              total_elegiveis, posicao, verificacao, repescagem,
+              ausente, chamada, origem_id
          FROM sorteios
         ORDER BY criado_em DESC`
     ).all(),

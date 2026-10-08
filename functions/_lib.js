@@ -61,7 +61,7 @@ export const ipDaRequisicao = (request) =>
 // colateral.
 
 export const CHAVES_PUBLICAS = {
-  credenciamento: 'token_credenciamento',
+  formulario: 'token_formulario',
   sorteio: 'token_sorteio',
 };
 
@@ -124,13 +124,16 @@ export async function tokenPublicoValido(env, papel, recebido) {
  * esta e a unica identidade disponivel — e sem ela quem abrisse o link duas
  * vezes no celular teria duas chances no sorteio.
  */
-export function chaveParticipante(nome, empresa) {
-  const limpar = (v) => String(v || '')
+export function normalizarChave(v) {
+  return String(v || '')
     .normalize('NFD').replace(/[̀-ͯ]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
-  return `${limpar(nome)}|${limpar(empresa)}`;
+}
+
+export function chaveParticipante(nome, empresa) {
+  return `${normalizarChave(nome)}|${normalizarChave(empresa)}`;
 }
 
 // ----------------------------------------------------------------- sessao

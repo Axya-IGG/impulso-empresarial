@@ -1,7 +1,7 @@
 import { json, erro, tokenPublico, regerarTokenPublico, CHAVES_PUBLICAS } from '../../_lib.js';
 
 const CAMINHO = {
-  credenciamento: '/credenciamento',
+  formulario: '/formulario',
   sorteio: '/sorteio',
 };
 
@@ -12,12 +12,12 @@ export async function onRequestGet(context) {
   const origem = new URL(request.url).origin;
 
   const [cred, sort] = await Promise.all([
-    tokenPublico(env, 'credenciamento'),
+    tokenPublico(env, 'formulario'),
     tokenPublico(env, 'sorteio'),
   ]);
 
   return json({
-    credenciamento: montar(origem, 'credenciamento', cred),
+    formulario: montar(origem, 'formulario', cred),
     sorteio: montar(origem, 'sorteio', sort),
   });
 }

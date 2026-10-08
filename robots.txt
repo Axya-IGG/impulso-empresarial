@@ -2,7 +2,7 @@ User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /api/
-Disallow: /credenciamento
+Disallow: /formulario
 Disallow: /sorteio
 
 Sitemap: https://oimpulsoempresarial.com.br/sitemap.xml

@@ -755,6 +755,43 @@ input:focus, select:focus, textarea:focus {
    CREDENCIAMENTO E SORTEIO
    ============================================================ */
 
+/* ------------------------------------------- lista da porta */
+/* Linha de quem ja entrou: fica recuada visualmente para a equipe varrer a
+   lista procurando quem ainda falta, que e o trabalho da porta. */
+.linha-presente { opacity: 0.6; }
+.linha-presente:hover { opacity: 1; }
+
+.sub-linha {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.fraco { color: var(--text-muted); opacity: 0.7; }
+
+.celula-produto {
+  max-width: 260px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.celula-acoes { white-space: nowrap; }
+
+/* O botao de marcar presenca e a acao repetida centenas de vezes na porta:
+   precisa ser o alvo obvio da linha. */
+.btn-mini.destaque {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--navy);
+  font-weight: 700;
+}
+.btn-mini.destaque:hover { background: var(--primary-dark); border-color: var(--primary-dark); }
+
+.modal-sub {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin: -6px 0 16px;
+}
+
 /* --------------------------------------------------- link publico */
 .link-publico {
   display: flex;
@@ -849,6 +886,29 @@ input:focus, select:focus, textarea:focus {
 }
 
 .sorteio-acoes { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+
+/* Chamada anterior, cujo nome sorteado nao estava na sala. Fica na lista
+   esmaecida em vez de sumir: e o registro de que o nome mudou por ausencia,
+   nao porque o sorteio foi refeito. */
+.sorteio-card-ausente { opacity: 0.66; }
+.sorteio-vencedor-ausente {
+  background: rgba(163,185,198,0.07);
+  border-color: rgba(163,185,198,0.22);
+}
+.sorteio-vencedor-ausente b { color: var(--text-muted); text-decoration: line-through; }
+
+.sorteio-chamada {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--primary);
+  background: rgba(119,203,245,0.12);
+  border-radius: 100px;
+  padding: 3px 10px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
 
 @media (max-width: 640px) {
   .topo { gap: 12px; }

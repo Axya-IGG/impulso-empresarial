@@ -9,7 +9,7 @@ import { erro, tokenPublicoValido } from '../../_lib.js';
 // O papel sai do primeiro segmento depois de /api/publico/, para que o token
 // do telao nao sirva para enviar cadastro e vice-versa.
 const PAPEL_POR_ROTA = {
-  credenciamento: 'credenciamento',
+  formulario: 'formulario',
   sorteio: 'sorteio',
 };
 

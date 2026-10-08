@@ -61,10 +61,11 @@ function mostrarLogin() {
 
 // Cada aba tem sua propria URL (#leads, #recebidas...), pra dar pra
 // favoritar uma aba especifica em vez de sempre cair na de Leads.
-const ABAS_VALIDAS = ['leads', 'mensagens', 'envios', 'recebidas', 'credenciamento', 'sorteio'];
+const ABAS_VALIDAS = ['leads', 'mensagens', 'envios', 'recebidas', 'credenciamento', 'formularios', 'sorteio'];
 const CARREGAR_ABA = {
   leads: carregarLeads, mensagens: carregarMensagens, envios: carregarEnvios,
-  recebidas: carregarRecebidas, credenciamento: carregarParticipantes, sorteio: carregarSorteios,
+  recebidas: carregarRecebidas, credenciamento: carregarCredenciamento,
+  formularios: carregarParticipantes, sorteio: carregarSorteios,
 };
 
 function mostrarAba(nome) {
@@ -923,10 +924,166 @@ let linksPublicos = null;
 async function carregarLinks() {
   if (linksPublicos) return linksPublicos;
   linksPublicos = await api('/api/admin/links-publicos');
-  $('#link-credenciamento').value = linksPublicos.credenciamento;
+  $('#link-formulario').value = linksPublicos.formulario;
   $('#link-sorteio').value = linksPublicos.sorteio;
   return linksPublicos;
 }
+
+// ====================================================================
+// CREDENCIAMENTO — a porta do evento
+// ====================================================================
+// A lista sai das compras aprovadas e e' ressincronizada a cada abertura da
+// aba: o webhook da Eduzz continua chegando durante o evento, e quem compra
+// no corredor precisa aparecer aqui sem ninguem clicar em nada.
+
+let credenciamento = [];
+
+async function carregarCredenciamento() {
+  const r = await api('/api/admin/credenciamento');
+  credenciamento = r.credenciamento || [];
+
+  $('#cards-credenciamento').innerHTML = [
+    ['Na lista', r.total],
+    ['Já chegaram', r.presentes],
+    ['Faltam chegar', r.total - r.presentes],
+    ['Preencheram o formulário', r.responderam],
+  ].map(([rot, v]) => `<div class="card"><b>${v ?? 0}</b><span>${rot}</span></div>`).join('');
+
+  const aviso = $('#aviso-sync');
+  if (r.novos_sincronizados > 0) {
+    aviso.textContent = `${r.novos_sincronizados} comprador(es) novo(s) entraram na lista agora.`;
+    aviso.hidden = false;
+  } else {
+    aviso.hidden = true;
+  }
+
+  pintarCredenciamento();
+}
+
+function pintarCredenciamento() {
+  const busca = ($('#busca-credenciamento').value || '').trim().toLowerCase();
+  const filtro = $('#filtro-presenca').value;
+
+  const lista = credenciamento.filter(k => {
+    if (busca && ![k.nome, k.email, k.whatsapp].some(
+      c => String(c || '').toLowerCase().includes(busca))) return false;
+    if (filtro === 'falta' && k.presente_em) return false;
+    if (filtro === 'presente' && !k.presente_em) return false;
+    if (filtro === 'sem-form' && (!k.presente_em || k.respondeu)) return false;
+    return true;
+  });
+
+  $('#corpo-credenciamento').innerHTML = lista.length
+    ? lista.map(k => {
+        const presente = Boolean(k.presente_em);
+        // Falha de envio precisa ficar visível na linha: é o sinal de que
+        // a equipe tem de passar o link na mão.
+        const envio = k.link_detalhe
+          ? `<span class="selo selo-erro" title="${esc(k.link_detalhe)}">link falhou</span>`
+          : k.link_enviado_em ? '<span class="selo selo-ok">link enviado</span>' : '';
+        return `
+        <tr class="${presente ? 'linha-presente' : ''}">
+          <td>
+            ${esc(k.nome)}
+            ${k.anfitriao_nome ? `<span class="sub-linha">acompanha ${esc(k.anfitriao_nome)}</span>` : ''}
+            ${!k.lead_id && !k.anfitriao_id ? '<span class="sub-linha">avulso</span>' : ''}
+          </td>
+          <td>
+            ${k.whatsapp ? telBR(k.whatsapp) : '<span class="fraco">sem WhatsApp</span>'}
+            ${k.email ? `<span class="sub-linha">${esc(k.email)}</span>` : ''}
+          </td>
+          <td class="celula-produto">${esc(k.produto || '—')}</td>
+          <td>${k.respondeu ? '<span class="selo selo-ok">preencheu</span>' : '<span class="fraco">—</span>'}</td>
+          <td>
+            ${presente
+              ? `<span class="selo selo-ok">${dataBR(k.presente_em)}</span> ${envio}`
+              : '<span class="fraco">não chegou</span>'}
+          </td>
+          <td class="celula-acoes">
+            <button type="button" class="btn-mini ${presente ? '' : 'destaque'}"
+                    data-presenca="${esc(k.id)}">${presente ? 'Desfazer' : 'Marcar presença'}</button>
+            ${k.lead_id ? '' : `<button type="button" class="btn-mini perigo" data-excluir-credenciado="${esc(k.id)}">Excluir</button>`}
+          </td>
+        </tr>`;
+      }).join('')
+    : `<tr><td colspan="6" class="vazio">${
+        credenciamento.length ? 'Ninguém para esse filtro.' : 'Nenhum comprador na lista ainda.'
+      }</td></tr>`;
+}
+
+$('#busca-credenciamento').addEventListener('input', pintarCredenciamento);
+$('#filtro-presenca').addEventListener('change', pintarCredenciamento);
+
+$('#corpo-credenciamento').addEventListener('click', async e => {
+  const marcar = e.target.closest('[data-presenca]');
+  const excluir = e.target.closest('[data-excluir-credenciado]');
+
+  if (marcar) {
+    marcar.disabled = true;
+    try {
+      const r = await api('/api/admin/credenciamento', {
+        method: 'PATCH',
+        body: JSON.stringify({ id: marcar.dataset.presenca }),
+      });
+      if (!r.presente) toast('Presença desfeita.');
+      else if (r.envio?.ok) toast('Presença marcada. Link do formulário enviado.');
+      // O detalhe técnico fica no title do selo da linha; na porta o que
+      // importa é saber que precisa passar o link na mão, agora.
+      else toast('Presença marcada, mas o link NÃO foi enviado — passe o link manualmente.');
+      carregarCredenciamento();
+    } catch (err) {
+      toast(err.message);
+      marcar.disabled = false;
+    }
+  }
+
+  if (excluir) {
+    if (!confirm('Remover esta pessoa da lista?')) return;
+    await api(`/api/admin/credenciamento?id=${encodeURIComponent(excluir.dataset.excluirCredenciado)}`,
+      { method: 'DELETE' });
+    toast('Removido da lista.');
+    carregarCredenciamento();
+  }
+});
+
+// -------------------------------------- modal acompanhante / avulso
+const formCredenciado = $('#form-credenciado');
+
+$('#btn-novo-credenciado').addEventListener('click', () => {
+  formCredenciado.reset();
+  $('#credenciado-erro').hidden = true;
+  $('#campo-anfitriao').innerHTML = '<option value="">Ninguém — entrou avulso</option>' +
+    credenciamento.filter(k => k.lead_id)
+      .map(k => `<option value="${esc(k.id)}">${esc(k.nome)}</option>`).join('');
+  $('#modal-credenciado').hidden = false;
+});
+
+formCredenciado.addEventListener('submit', async e => {
+  e.preventDefault();
+  const erro = $('#credenciado-erro');
+  const botao = e.target.querySelector('button[type="submit"]');
+  erro.hidden = true;
+  botao.disabled = true;
+
+  try {
+    await api('/api/admin/credenciamento', {
+      method: 'POST',
+      body: JSON.stringify({
+        nome: formCredenciado.nome.value,
+        whatsapp: formCredenciado.whatsapp.value,
+        anfitriao_id: formCredenciado.anfitriao_id.value,
+      }),
+    });
+    fecharModais();
+    toast('Adicionado à lista.');
+    carregarCredenciamento();
+  } catch (err) {
+    erro.textContent = err.message;
+    erro.hidden = false;
+  } finally {
+    botao.disabled = false;
+  }
+});
 
 $$('[data-copiar]').forEach(botao => botao.addEventListener('click', async () => {
   const campo = $(botao.dataset.copiar);
@@ -972,8 +1129,8 @@ function pintarParticipantes() {
     : participantes;
 
   const doFormulario = participantes.filter(p => p.origem === 'formulario').length;
-  $('#cards-credenciamento').innerHTML = [
-    ['Participantes', participantes.length],
+  $('#cards-formularios').innerHTML = [
+    ['Respostas', participantes.length],
     ['Pelo formulário', doFormulario],
     ['Adicionados à mão', participantes.length - doFormulario],
     ['Já ganharam', participantes.filter(p => p.vitorias > 0).length],
@@ -1062,21 +1219,23 @@ async function carregarSorteios() {
   $('#lista-sorteios').innerHTML = sorteios.length
     ? sorteios.map(s => {
         const feito = Boolean(s.sorteado_em);
+        const ausente = Boolean(s.ausente);
+        const chamada = s.chamada > 1 ? ` <span class="sorteio-chamada">${s.chamada}ª chamada</span>` : '';
         return `
-        <article class="sorteio-card${feito ? '' : ' sorteio-card-aberto'}">
+        <article class="sorteio-card${feito ? '' : ' sorteio-card-aberto'}${ausente ? ' sorteio-card-ausente' : ''}">
           <div class="sorteio-cabeca">
             <div>
-              <h3>${esc(s.titulo)}</h3>
+              <h3>${esc(s.titulo)}${chamada}</h3>
               ${s.premio ? `<p class="sorteio-premio">${esc(s.premio)}</p>` : ''}
             </div>
-            <span class="selo ${feito ? 'selo-ok' : 'selo-andamento'}">
-              ${feito ? 'Sorteado' : 'Aguardando'}
+            <span class="selo ${ausente ? 'selo-off' : feito ? 'selo-ok' : 'selo-andamento'}">
+              ${ausente ? 'Ausente' : feito ? 'Sorteado' : 'Aguardando'}
             </span>
           </div>
 
           ${feito ? `
-            <div class="sorteio-vencedor">
-              <span>Ganhador</span>
+            <div class="sorteio-vencedor${ausente ? ' sorteio-vencedor-ausente' : ''}">
+              <span>${ausente ? 'Não estava presente' : 'Ganhador'}</span>
               <b>${esc(s.vencedor_nome || '—')}</b>
               <small>${esc(s.vencedor_empresa || '')}</small>
             </div>
@@ -1093,6 +1252,10 @@ async function carregarSorteios() {
 
           <div class="sorteio-acoes">
             ${feito ? '' : `<button type="button" class="btn btn-primario" data-sortear="${esc(s.id)}">Sortear agora</button>`}
+            ${feito && !ausente
+              ? `<button type="button" class="btn btn-secundario" data-rechamada="${esc(s.id)}"
+                   title="Marca o ganhador como ausente e já sorteia outro nome para o mesmo prêmio">Não está presente · sortear outro</button>`
+              : ''}
             <button type="button" class="btn btn-fantasma" data-excluir-sorteio="${esc(s.id)}">Excluir</button>
           </div>
         </article>`;
@@ -1125,7 +1288,26 @@ $('#form-sorteio').addEventListener('submit', async e => {
 
 $('#lista-sorteios').addEventListener('click', async e => {
   const sortear = e.target.closest('[data-sortear]');
+  const rechamar = e.target.closest('[data-rechamada]');
   const excluir = e.target.closest('[data-excluir-sorteio]');
+
+  // Caminho do palco: um clique, sem digitar nada. O ganhador anterior fica
+  // registrado como ausente e o mesmo prêmio vai para a chamada seguinte.
+  if (rechamar) {
+    if (!confirm('Marcar como ausente e sortear outro nome para o mesmo prêmio?')) return;
+    rechamar.disabled = true;
+    try {
+      const r = await api(`/api/admin/sorteios/${rechamar.dataset.rechamada}`, {
+        method: 'POST',
+        body: JSON.stringify({ rechamada: true }),
+      });
+      toast(`${r.ausente} ausente. Novo ganhador: ${r.vencedor.nome}`);
+      carregarSorteios();
+    } catch (err) {
+      toast(err.message);
+      rechamar.disabled = false;
+    }
+  }
 
   if (sortear) {
     if (!confirm('Sortear agora? O telão vai girar os nomes e revelar o ganhador.\n\nNão dá para refazer: para tirar outro nome, crie um sorteio novo.')) return;
