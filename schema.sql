@@ -227,3 +227,14 @@ CREATE TABLE IF NOT EXISTS config (
 -- Uma chamada seguinte por sorteio (ver migrations/014_sorteio_telao.sql).
 CREATE UNIQUE INDEX IF NOT EXISTS idx_sorteios_origem
   ON sorteios(origem_id) WHERE origem_id IS NOT NULL;
+
+-- Log cru dos eventos de ingresso da Eduzz (ver migrations/015_eduzz_eventos.sql).
+CREATE TABLE IF NOT EXISTS eduzz_eventos (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  evento        TEXT,
+  assinatura_ok INTEGER NOT NULL DEFAULT 0,
+  corpo         TEXT NOT NULL,
+  recebido_em   TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_eduzz_eventos_evento ON eduzz_eventos(evento, recebido_em);

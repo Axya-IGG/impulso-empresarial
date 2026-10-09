@@ -101,14 +101,35 @@ export async function onRequestGet() {
 
 export async function onRequestPost({ request, env }) {
   const bruto = await request.text();
-
-  if (env.EDUZZ_WEBHOOK_SECRET) {
-    const ok = await assinaturaValida(bruto, request.headers.get('x-signature'), env.EDUZZ_WEBHOOK_SECRET);
-    if (!ok) return erro('Assinatura invalida.', 401);
-  }
+  const assinada = env.EDUZZ_WEBHOOK_SECRET
+    ? await assinaturaValida(bruto, request.headers.get('x-signature'), env.EDUZZ_WEBHOOK_SECRET)
+    : true;
 
   let payload;
-  try { payload = JSON.parse(bruto); } catch { return erro('JSON invalido.'); }
+  try { payload = JSON.parse(bruto); } catch { payload = null; }
+
+  // Ingressos (Blinket): grava cru e responde 200 mesmo sem assinatura que
+  // bata. A Eduzz recusa salvar a configuracao do webhook quando o teste
+  // volta 401, e o formato desses eventos ainda nao era conhecido. Gravar
+  // nao mexe em nada: so' o evento assinado alimenta a lista da porta
+  // (migrations/015_eduzz_eventos.sql).
+  const nomeEvento = String(payload?.event || '');
+  if (nomeEvento.startsWith('blinket.')) {
+    await env.DB.prepare(
+      'INSERT INTO eduzz_eventos (evento, assinatura_ok, corpo, recebido_em) VALUES (?, ?, ?, ?)'
+    ).bind(nomeEvento, assinada ? 1 : 0, bruto.slice(0, 100000), agora()).run();
+    return json({ ok: true, recebido: nomeEvento });
+  }
+
+  if (!assinada) {
+    // Registra o que foi recusado: sem isto, um webhook novo mal configurado
+    // so' aparece como "erro" no painel da Eduzz, sem pista do lado de ca'.
+    await env.DB.prepare(
+      'INSERT INTO eduzz_eventos (evento, assinatura_ok, corpo, recebido_em) VALUES (?, 0, ?, ?)'
+    ).bind(nomeEvento || null, bruto.slice(0, 100000), agora()).run();
+    return erro('Assinatura invalida.', 401);
+  }
+  if (!payload) return erro('JSON invalido.');
 
   const d = payload?.data;
   const status = MAPA_STATUS[payload?.event];
