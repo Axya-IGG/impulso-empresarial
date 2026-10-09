@@ -1040,9 +1040,10 @@ Sem presença, a pessoa não recebe certificado.`)) return;
     try {
       const r = await api('/api/admin/credenciamento', {
         method: 'PATCH',
-        body: JSON.stringify({ id: marcar.dataset.presenca }),
+        body: JSON.stringify({ id: marcar.dataset.presenca, presente: !pessoa?.presente_em }),
       });
       if (!r.presente) toast('Presença desfeita.');
+      else if (r.ja_estava) toast('Outra pessoa já tinha marcado essa presença.');
       else if (r.envio?.ok) toast('Presença marcada. Link do formulário enviado.');
       // O detalhe técnico fica no title do selo da linha; na porta o que
       // importa é saber que precisa passar o link na mão, agora.
@@ -1104,7 +1105,7 @@ formCredenciado.addEventListener('submit', async e => {
     if (formCredenciado.ja_chegou.checked && novo.id) {
       const r = await api('/api/admin/credenciamento', {
         method: 'PATCH',
-        body: JSON.stringify({ id: novo.id }),
+        body: JSON.stringify({ id: novo.id, presente: true }),
       });
       toast(r.envio?.ok ? 'Adicionado e presente. Link do formulário enviado.'
         : 'Adicionado e presente. O link do formulário não foi enviado: passe manualmente.');

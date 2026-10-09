@@ -73,24 +73,6 @@ async function acharPorNome(env, nome) {
 }
 
 /**
- * Ingresso que entrou pela planilha (chave "xls:...") e agora chega pelo
- * webhook. A planilha da Eduzz nao traz o inviteKey do webhook, entao a
- * primeira vez que o webhook fala desse ingresso a chave nao bate: sem
- * isto, a mesma pessoa viraria duas linhas. Exige nome igual E contato
- * igual, para nao trocar um ingresso por outro do mesmo comprador.
- */
-async function mesmoIngressoDaPlanilha(env, ing) {
-  if (ing.chave.startsWith('xls:') || (!ing.whatsapp && !ing.email)) return null;
-  const { results } = await env.DB.prepare(`
-    SELECT * FROM credenciamento
-     WHERE ingresso_chave LIKE 'xls:%'
-       AND ((? IS NOT NULL AND whatsapp = ?) OR (? IS NOT NULL AND lower(email) = ?))
-  `).bind(ing.whatsapp, ing.whatsapp, ing.email, ing.email).all();
-  const alvo = normalizarChave(ing.nome);
-  return (results || []).find(k => normalizarChave(k.nome) === alvo) || null;
-}
-
-/**
  * Vaga de ingresso sem nome do mesmo comprador, para receber o nome quando
  * a empresa finalmente atribuir o ingresso a alguem.
  */
@@ -107,13 +89,15 @@ async function vagaSemNome(env, comprador) {
 /**
  * Linha da planilha "Lista de presença" exportada da area de ingressos da
  * Eduzz, ja com as colunas pelo nome do cabecalho (o painel le o arquivo e
- * manda assim). A chave e' o "Nº Ingresso", com prefixo para nunca colidir
- * com o inviteKey do webhook.
+ * manda assim). A chave e' o "Nº Ingresso", que e' o MESMO codigo que o
+ * webhook manda como inviteKey (confirmado em 09/10 com um evento real:
+ * "2610IR379W" nos dois). Ja houve um prefixo "xls:" aqui, e ele duplicou
+ * quem tinha chegado antes pelo webhook.
  */
 export function ingressoDaPlanilha(l) {
   const status = normalizarChave(l.status);
   return {
-    chave: l.ingresso ? 'xls:' + limpar(l.ingresso, 40) : '',
+    chave: limpar(l.ingresso, 80),
     nome: limpar(l.participante, 120),
     email: emailLimpo(l.email),
     whatsapp: normalizarWhatsapp(l.telefone),
@@ -174,7 +158,6 @@ export async function aplicarIngresso(env, ing, { tipo = 'atualizado' } = {}) {
   const comprador = await acharPorContato(env, ing.comprador.whatsapp, ing.comprador.email);
 
   let linha = existente
-    || await mesmoIngressoDaPlanilha(env, ing)
     || (semNome ? null : await acharPorContato(env, ing.whatsapp, ing.email, { semIngresso: true }))
     || (semNome ? null : await acharPorNome(env, ing.nome))
     || (semNome ? null : await vagaSemNome(env, comprador))

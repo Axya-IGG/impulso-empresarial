@@ -183,18 +183,31 @@ export async function onRequestPatch(context) {
   ).bind(id).first();
   if (!pessoa) return erro('Pessoa nao encontrada.', 404);
 
+  // O pedido diz o que quer (presente: true ou false) em vez de inverter o
+  // estado. Com varios credenciadores na mesma lista, dois tocando no mesmo
+  // nome com a tela desatualizada faziam o segundo DESFAZER a presenca que
+  // o primeiro acabou de marcar. Sem o campo (versao antiga da pagina em
+  // cache), continua invertendo.
+  const quer = typeof corpo?.presente === 'boolean' ? corpo.presente : !pessoa.presente_em;
+
   // Desmarcar presenca: so' tira o carimbo, nao mexe no que ja foi enviado.
-  if (pessoa.presente_em) {
+  if (!quer) {
     await env.DB.prepare(
       'UPDATE credenciamento SET presente_em = NULL WHERE id = ?'
     ).bind(id).run();
     return json({ ok: true, presente: false });
   }
 
+  // So' marca quem ainda nao estava marcado, numa operacao so': se outro
+  // credenciador marcou no mesmo instante, um dos dois nao altera nada e
+  // o link do formulario nao vai duas vezes.
   const quando = agora();
-  await env.DB.prepare(
-    'UPDATE credenciamento SET presente_em = ? WHERE id = ?'
+  const marcou = await env.DB.prepare(
+    'UPDATE credenciamento SET presente_em = ? WHERE id = ? AND presente_em IS NULL'
   ).bind(quando, id).run();
+  if (!marcou.meta?.changes) {
+    return json({ ok: true, presente: true, ja_estava: true });
+  }
 
   if (!pessoa.whatsapp) {
     return json({ ok: true, presente: true, envio: { ok: false, detalhe: 'Sem WhatsApp cadastrado.' } });

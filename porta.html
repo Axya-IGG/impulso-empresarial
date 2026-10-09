@@ -198,8 +198,9 @@
     var k = lista.find(function (x) { return x.id === marcar.dataset.presenca; });
     if (k && k.presente_em && !confirm('Desfazer a presença de ' + k.nome + '?\n\nSem presença, a pessoa não recebe certificado.')) return;
     marcar.disabled = true;
-    api('PATCH', { id: marcar.dataset.presenca }).then(function (r) {
+    api('PATCH', { id: marcar.dataset.presenca, presente: !(k && k.presente_em) }).then(function (r) {
       if (!r.presente) toast('Presença desfeita.');
+      else if (r.ja_estava) toast('Outro credenciador já tinha marcado essa presença.');
       else if (r.envio && r.envio.ok) toast('Presença marcada. Link do formulário enviado.');
       else toast('Presença marcada, mas o link do formulário NÃO foi. Mostre o QR Code da recepção.');
       $('#busca').value = '';
@@ -229,7 +230,7 @@
       .then(function (novo) {
         fechar();
         if (!f.ja_chegou.checked || !novo.id) { toast('Adicionado à lista.'); return; }
-        return api('PATCH', { id: novo.id }).then(function (r) {
+        return api('PATCH', { id: novo.id, presente: true }).then(function (r) {
           toast(r.envio && r.envio.ok ? 'Adicionado e presente. Link do formulário enviado.'
             : 'Adicionado e presente. O link do formulário não foi: mostre o QR Code.');
         });
@@ -262,13 +263,16 @@
       .then(function () { botao.disabled = false; });
   });
 
-  // Varios credenciadores ao mesmo tempo: a lista se atualiza sozinha, mas
-  // nunca no meio de uma digitacao ou com um formulario aberto.
-  setInterval(function () {
-    var ocupado = document.activeElement === $('#busca') && $('#busca').value
-      || document.querySelector('.modal:not([hidden])') || document.hidden;
-    if (!ocupado && !$('#tela-porta').hidden) carregar().catch(function () {});
-  }, 20000);
+  // Varios credenciadores ao mesmo tempo: a lista se atualiza sozinha a
+  // cada 10 s e ao voltar para a aba, mas nunca com um formulario aberto.
+  // Com busca digitada ela atualiza do mesmo jeito: pintar() reaplica o
+  // filtro, entao o resultado na tela so' troca o estado de presenca.
+  function atualizarSePuder() {
+    if (document.querySelector('.modal:not([hidden])') || document.hidden || $('#tela-porta').hidden) return;
+    carregar().catch(function () {});
+  }
+  setInterval(atualizarSePuder, 10000);
+  document.addEventListener('visibilitychange', atualizarSePuder);
 
   if (!K) { $('#tela-invalida').hidden = false; }
   else carregar().catch(function (err) { if ($('#tela-invalida').hidden) toast(err.message); });
