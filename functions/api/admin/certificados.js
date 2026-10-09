@@ -164,3 +164,24 @@ export async function onRequestPost({ request, env }) {
   if (!r.ok) return erro(`A Evolution recusou o envio: ${r.detalhe}`, 422);
   return json({ ok: true });
 }
+
+/**
+ * Exclui a linha e o certificado (cascata do banco: certificado e
+ * entregas). Recusa quem ja recebeu: a pessoa tem o codigo, e apagar faria
+ * o QR dela dar "nao encontrado". Quem ainda tem presenca no credenciamento
+ * volta na proxima sincronizacao; o painel avisa disso antes de excluir.
+ */
+export async function onRequestDelete({ request, env }) {
+  const id = new URL(request.url).searchParams.get('id');
+  if (!id) return erro('Informe o id.');
+
+  const enviado = await env.DB.prepare(`
+    SELECT 1 FROM cert_certificados c JOIN cert_entregas e ON e.certificado_id = c.id
+     WHERE c.participante_id = ? AND e.status IN ('enviado','enviando')
+  `).bind(id).first();
+  if (enviado) return erro('Este certificado já foi enviado: a pessoa tem o código e não dá para excluir.', 409);
+
+  const r = await env.DB.prepare('DELETE FROM cert_participantes WHERE id = ?').bind(id).run();
+  if (!r.meta?.changes) return erro('Participante não encontrado.', 404);
+  return json({ ok: true });
+}

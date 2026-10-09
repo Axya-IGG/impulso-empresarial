@@ -681,6 +681,22 @@
   </div>
 </div>
 
+<!-- Confirmacao no lugar do confirm() do navegador (ver confirmar() em
+     admin.js). Fica por ultimo no HTML para abrir por cima de outro modal. -->
+<div class="modal modal-confirmar" id="modal-confirmar" hidden>
+  <div class="modal-fundo" data-cancelar></div>
+  <div class="modal-caixa modal-estreito" role="alertdialog" aria-modal="true"
+       aria-labelledby="confirmar-titulo" aria-describedby="confirmar-texto">
+    <span class="confirmar-icone" aria-hidden="true">!</span>
+    <h2 id="confirmar-titulo"></h2>
+    <p id="confirmar-texto"></p>
+    <div class="modal-acoes">
+      <button type="button" class="btn btn-fantasma" id="confirmar-cancelar">Cancelar</button>
+      <button type="button" class="btn btn-primario" id="confirmar-ok">Confirmar</button>
+    </div>
+  </div>
+</div>
+
 <div class="aviso-flutuante" id="toast" hidden></div>
 
 <script src="admin.js?v=20260928a"></script>

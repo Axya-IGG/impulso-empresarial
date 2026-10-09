@@ -40,6 +40,44 @@ function toast(msg) {
   toastTimer = setTimeout(() => { el.hidden = true; }, 3200);
 }
 
+// ------------------------------------------------- popup de confirmacao
+// Substitui o confirm() do navegador, que sai cinza, com o nome do site no
+// topo e sem nada da identidade do Impulso. Devolve uma Promise<boolean>:
+// true so' no botao de acao; Cancelar, fundo, X e Esc devolvem false.
+// `perigo` pinta o botao de vermelho (excluir, desfazer) e poe o foco no
+// Cancelar, para um Enter distraido nao apagar nada.
+let resolverConfirmacao = null;
+
+function confirmar({ titulo, texto = '', botao = 'Confirmar', perigo = false, soAviso = false }) {
+  const modal = $('#modal-confirmar');
+  if (resolverConfirmacao) resolverConfirmacao(false);
+  $('#confirmar-titulo').textContent = titulo;
+  $('#confirmar-texto').textContent = texto;
+  $('#confirmar-texto').hidden = !texto;
+  const ok = $('#confirmar-ok');
+  ok.textContent = botao;
+  ok.className = `btn ${perigo ? 'btn-perigo' : 'btn-primario'}`;
+  $('#confirmar-cancelar').hidden = soAviso;
+  modal.classList.toggle('confirmar-perigo', perigo);
+  modal.hidden = false;
+  (perigo ? $('#confirmar-cancelar') : ok).focus();
+  return new Promise(resolve => { resolverConfirmacao = resolve; });
+}
+
+/** Aviso com um botao so' (resultado de importacao, erro). */
+const avisar = (titulo, texto) => confirmar({ titulo, texto, botao: 'Ok', soAviso: true });
+
+function fecharConfirmacao(valor) {
+  $('#modal-confirmar').hidden = true;
+  const r = resolverConfirmacao;
+  resolverConfirmacao = null;
+  if (r) r(valor);
+}
+
+$('#confirmar-ok').addEventListener('click', () => fecharConfirmacao(true));
+$('#confirmar-cancelar').addEventListener('click', () => fecharConfirmacao(false));
+$$('#modal-confirmar [data-cancelar]').forEach(el => el.addEventListener('click', () => fecharConfirmacao(false)));
+
 const dataBR = (iso) => {
   if (!iso) return '-';
   // O banco grava ISO em UTC; o painel é operado do Brasil.
@@ -212,10 +250,18 @@ $('#corpo-leads').addEventListener('click', async e => {
   }
 
   if (btExcluir) {
-    if (!confirm('Excluir este lead? Os envios registrados para ele também somem. Não dá para desfazer.')) return;
-    await api(`/api/admin/leads/${btExcluir.dataset.excluirLead}`, { method: 'DELETE' });
-    toast('Lead excluído.');
-    carregarLeads();
+    if (!(await confirmar({
+      titulo: 'Excluir este lead?',
+      texto: 'Os envios registrados para ele também somem. Não dá para desfazer.',
+      botao: 'Excluir', perigo: true,
+    }))) return;
+    try {
+      await api(`/api/admin/leads/${btExcluir.dataset.excluirLead}`, { method: 'DELETE' });
+      toast('Lead excluído.');
+      carregarLeads();
+    } catch (err) {
+      toast(err.message);
+    }
   }
 });
 
@@ -398,9 +444,17 @@ $('#lista-mensagens').addEventListener('click', async e => {
     cacheMensagens.find(m => String(m.id) === bt.dataset.editar));
 
   if (bt.dataset.excluir) {
-    if (!confirm('Excluir esta mensagem? O histórico de envios dela também some.\n\nPara só parar os disparos, use Pausar ou Arquivar.')) return;
-    await api(`/api/admin/mensagens/${bt.dataset.excluir}`, { method: 'DELETE' });
-    toast('Mensagem excluída.');
+    if (!(await confirmar({
+      titulo: 'Excluir esta mensagem?',
+      texto: 'O histórico de envios dela também some.\n\nPara só parar os disparos, use Pausar ou Arquivar.',
+      botao: 'Excluir', perigo: true,
+    }))) return;
+    try {
+      await api(`/api/admin/mensagens/${bt.dataset.excluir}`, { method: 'DELETE' });
+      toast('Mensagem excluída.');
+    } catch (err) {
+      toast(err.message);
+    }
     return carregarMensagens();
   }
 
@@ -431,6 +485,7 @@ $$('[data-fechar]').forEach(el => el.addEventListener('click', () => {
 // visível da lista, não simplesmente "um modal qualquer".
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
+  if (!$('#modal-confirmar').hidden) return fecharConfirmacao(false);
   const abertos = $$('.modal:not([hidden])');
   if (abertos.length) abertos[abertos.length - 1].hidden = true;
 });
@@ -1033,9 +1088,11 @@ $('#corpo-credenciamento').addEventListener('click', async e => {
     // Desfazer tira a pessoa da lista de certificados: um toque errado no
     // celular, no meio da fila, nao pode bastar.
     const pessoa = credenciamento.find(k => k.id === marcar.dataset.presenca);
-    if (pessoa?.presente_em && !confirm(`Desfazer a presença de ${pessoa.nome}?
-
-Sem presença, a pessoa não recebe certificado.`)) return;
+    if (pessoa?.presente_em && !(await confirmar({
+      titulo: `Desfazer a presença de ${pessoa.nome}?`,
+      texto: 'Sem presença, a pessoa não recebe certificado.',
+      botao: 'Desfazer presença', perigo: true,
+    }))) return;
     marcar.disabled = true;
     try {
       const r = await api('/api/admin/credenciamento', {
@@ -1056,7 +1113,11 @@ Sem presença, a pessoa não recebe certificado.`)) return;
   }
 
   if (excluir) {
-    if (!confirm('Remover esta pessoa da lista?')) return;
+    if (!(await confirmar({
+      titulo: 'Remover esta pessoa da lista?',
+      texto: 'Ela sai da porta e, se ainda não recebeu, da lista de certificados.',
+      botao: 'Remover', perigo: true,
+    }))) return;
     excluir.disabled = true;
     try {
       await api(`/api/admin/credenciamento?id=${encodeURIComponent(excluir.dataset.excluirCredenciado)}`,
@@ -1224,7 +1285,11 @@ $('#arquivo-ingressos').addEventListener('change', async e => {
   if (!arquivo) return;
   try {
     const linhas = await lerPlanilhaIngressos(arquivo);
-    if (!confirm(`Importar ${linhas.length} ingresso(s) da planilha?\n\nQuem já está na lista é atualizado, ninguém é duplicado e nenhuma presença é desfeita.`)) return;
+    if (!(await confirmar({
+      titulo: `Importar ${linhas.length} ingresso(s) da planilha?`,
+      texto: 'Quem já está na lista é atualizado, ninguém é duplicado e nenhuma presença é desfeita.',
+      botao: 'Importar',
+    }))) return;
     toast('Importando...');
     const r = await api('/api/admin/ingressos', { method: 'POST', body: JSON.stringify({ linhas }) });
     const nomes = {
@@ -1233,10 +1298,10 @@ $('#arquivo-ingressos').addEventListener('change', async e => {
     };
     const partes = Object.entries(r.resumo).map(([k, v]) => `${v} ${nomes[k] || k}`);
     if (r.ignorados.length) partes.push(`${r.ignorados.length} de teste ignorado(s)`);
-    alert(`Planilha importada.\n\n${partes.join('\n')}`);
+    avisar('Planilha importada', partes.join('\n'));
     carregarCredenciamento().catch(err => toast(err.message));
   } catch (err) {
-    alert(err.message);
+    avisar('Não deu para importar', err.message);
   }
 });
 
@@ -1254,7 +1319,11 @@ $$('[data-copiar]').forEach(botao => botao.addEventListener('click', async () =>
 
 $$('[data-regerar]').forEach(botao => botao.addEventListener('click', async () => {
   const papel = botao.dataset.regerar;
-  if (!confirm('Gerar um endereço novo? Quem estiver com o link antigo perde o acesso na hora.')) return;
+  if (!(await confirmar({
+    titulo: 'Gerar um endereço novo?',
+    texto: 'Quem estiver com o link antigo perde o acesso na hora.',
+    botao: 'Gerar link novo', perigo: true,
+  }))) return;
   botao.disabled = true;
   try {
     const r = await api('/api/admin/links-publicos', {
@@ -1337,16 +1406,25 @@ function pintarParticipantes() {
 $('#busca-participantes').addEventListener('input', pintarParticipantes);
 
 async function excluirParticipante(id) {
-  if (!confirm('Excluir este participante? Ele sai da lista do sorteio na hora.\n\nSe já tiver ganhado, o resultado continua no histórico do telão.')) return false;
-  await api(`/api/admin/participantes?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
-  toast('Participante excluído.');
+  if (!(await confirmar({
+    titulo: 'Excluir esta resposta?',
+    texto: 'A pessoa sai da lista do sorteio na hora.\n\nSe já tiver ganhado, o resultado continua no histórico do telão.',
+    botao: 'Excluir', perigo: true,
+  }))) return false;
+  try {
+    await api(`/api/admin/participantes?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+  } catch (err) {
+    toast(err.message);
+    return false;
+  }
+  toast('Resposta excluída.');
   carregarParticipantes();
   return true;
 }
 
 $('#corpo-participantes').addEventListener('click', async e => {
   // O Excluir vem antes: ele fica dentro da linha, e sem esta saída o clique
-  // subiria e abriria a ficha por baixo do confirm().
+  // subiria e abriria a ficha por baixo da confirmacao.
   const botao = e.target.closest('[data-excluir-participante]');
   if (botao) {
     await excluirParticipante(botao.dataset.excluirParticipante);
@@ -1574,7 +1652,11 @@ $('#lista-sorteios').addEventListener('click', async e => {
   // Caminho do palco: um clique, sem digitar nada. O ganhador anterior fica
   // registrado como ausente e o mesmo prêmio vai para a chamada seguinte.
   if (rechamar) {
-    if (!confirm('Marcar como ausente e sortear outro nome para o mesmo prêmio?')) return;
+    if (!(await confirmar({
+      titulo: 'Ganhador ausente?',
+      texto: 'Marca como ausente e já sorteia outro nome para o mesmo prêmio.',
+      botao: 'Sortear outro',
+    }))) return;
     rechamar.disabled = true;
     try {
       const r = await api(`/api/admin/sorteios/${rechamar.dataset.rechamada}`, {
@@ -1590,7 +1672,11 @@ $('#lista-sorteios').addEventListener('click', async e => {
   }
 
   if (sortear) {
-    if (!confirm('Sortear agora? O telão vai girar os nomes e revelar o ganhador.\n\nNão dá para refazer: para tirar outro nome, crie um sorteio novo.')) return;
+    if (!(await confirmar({
+      titulo: 'Sortear agora?',
+      texto: 'O telão vai girar os nomes e revelar o ganhador.\n\nNão dá para refazer: para tirar outro nome, crie um sorteio novo.',
+      botao: 'Sortear',
+    }))) return;
     sortear.disabled = true;
     try {
       const r = await api(`/api/admin/sorteios/${sortear.dataset.sortear}`, { method: 'POST' });
@@ -1607,7 +1693,11 @@ $('#lista-sorteios').addEventListener('click', async e => {
   }
 
   if (excluir) {
-    if (!confirm('Excluir este sorteio? Ele some do telão e do histórico.')) return;
+    if (!(await confirmar({
+      titulo: 'Excluir este sorteio?',
+      texto: 'Ele some do telão e do histórico.',
+      botao: 'Excluir', perigo: true,
+    }))) return;
     excluir.disabled = true;
     try {
       await api(`/api/admin/sorteios/${excluir.dataset.excluirSorteio}`, { method: 'DELETE' });
@@ -1699,6 +1789,7 @@ function pintarCertificados() {
           <td>${envio}</td>
           <td class="celula-acoes">
             <button type="button" class="btn-mini" data-cert-nome="${esc(c.id)}">Editar nome</button>
+            ${c.envio_status === 'enviado' ? '' : `<button type="button" class="btn-mini perigo" data-cert-excluir="${esc(c.id)}">Excluir</button>`}
             ${pdf ? `<a class="btn-mini" href="${esc(pdf)}" target="_blank" rel="noopener">Ver</a>
                      <a class="btn-mini" href="${esc(pdf)}&amp;baixar=1">Baixar</a>` : ''}
             ${podeEnviar ? `<button type="button" class="btn-mini destaque" data-cert-enviar="${esc(c.id)}">${c.envio_status === 'enviado' ? 'Reenviar' : 'Enviar'}</button>` : ''}
@@ -1716,6 +1807,28 @@ $('#filtro-certificados').addEventListener('change', pintarCertificados);
 $('#corpo-certificados').addEventListener('click', async e => {
   const editar = e.target.closest('[data-cert-nome]');
   const enviar = e.target.closest('[data-cert-enviar]');
+  const excluir = e.target.closest('[data-cert-excluir]');
+
+  if (excluir) {
+    const c = certs.lista.find(x => x.id === excluir.dataset.certExcluir);
+    if (!c) return;
+    if (!(await confirmar({
+      titulo: `Excluir o certificado de ${c.nome}?`,
+      texto: c.presente
+        ? 'A pessoa continua com presença no Credenciamento, então volta para cá na próxima vez que a aba abrir. Para tirar de vez, desfaça a presença lá.'
+        : 'A linha e o código somem. Não dá para desfazer.',
+      botao: 'Excluir', perigo: true,
+    }))) return;
+    excluir.disabled = true;
+    try {
+      await api(`/api/admin/certificados?id=${encodeURIComponent(c.id)}`, { method: 'DELETE' });
+      toast('Certificado excluído.');
+    } catch (err) {
+      toast(err.message);
+    }
+    carregarCertificados().catch(err => toast(err.message));
+    return;
+  }
 
   if (editar) {
     const c = certs.lista.find(x => x.id === editar.dataset.certNome);
@@ -1735,7 +1848,7 @@ $('#corpo-certificados').addEventListener('click', async e => {
     const pergunta = c.envio_status === 'enviado'
       ? `${c.nome} já recebeu o certificado. Mandar de novo?`
       : `Enviar o certificado de ${c.nome} para ${telBR(c.whatsapp)}?`;
-    if (!confirm(pergunta)) return;
+    if (!(await confirmar({ titulo: pergunta, botao: c.envio_status === 'enviado' ? 'Reenviar' : 'Enviar' }))) return;
     enviar.disabled = true;
     enviar.textContent = 'Enviando...';
     try {
@@ -1780,11 +1893,12 @@ $('#btn-enviar-todos').addEventListener('click', async () => {
   if (!pendentes.length) return toast('Ninguém pendente para enviar.');
   const conferir = pendentes.filter(c => c.suspeito).length;
   const horas = Math.max(1, Math.ceil(pendentes.length / 48));
-  if (!confirm(
-    `Colocar ${pendentes.length} certificado(s) na fila de envio?\n\n` +
-    `Saem aos poucos, cerca de 48 por hora, das 8h às 20h: umas ${horas}h no total.` +
-    (conferir ? `\n\nAtenção: ${conferir} nome(s) estão marcados para conferir. Use o filtro "Nome para conferir" antes, se quiser.` : '')
-  )) return;
+  if (!(await confirmar({
+    titulo: `Enviar ${pendentes.length} certificado(s)?`,
+    texto: `Saem aos poucos, cerca de 48 por hora, das 8h às 20h: umas ${horas}h no total.` +
+      (conferir ? `\n\nAtenção: ${conferir} nome(s) estão marcados para conferir. Use o filtro "Nome para conferir" antes, se quiser.` : ''),
+    botao: 'Colocar na fila',
+  }))) return;
   const botao = $('#btn-enviar-todos');
   botao.disabled = true;
   try {
@@ -1799,7 +1913,11 @@ $('#btn-enviar-todos').addEventListener('click', async () => {
 });
 
 $('#btn-cancelar-fila').addEventListener('click', async () => {
-  if (!confirm('Tirar da fila os certificados que ainda não saíram? Quem já recebeu não é afetado.')) return;
+  if (!(await confirmar({
+    titulo: 'Cancelar a fila?',
+    texto: 'Os certificados que ainda não saíram ficam parados. Quem já recebeu não é afetado.',
+    botao: 'Cancelar a fila', perigo: true,
+  }))) return;
   try {
     const r = await api('/api/admin/certificados', { method: 'POST', body: JSON.stringify({ acao: 'cancelar_fila' }) });
     toast(`${r.cancelados} envio(s) cancelado(s).`);

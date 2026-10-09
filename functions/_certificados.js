@@ -148,8 +148,17 @@ export async function sincronizarCertificados(env) {
               OR cert_participantes.whatsapp IS NOT k.whatsapp
               OR (k.email IS NOT NULL AND cert_participantes.email IS NOT k.email))
     `).bind(quando, evento.id),
-    // Linha apagada do credenciamento (acompanhante removido) deixa de ter
-    // presenca aqui.
+    // Linha apagada do credenciamento (acompanhante removido, teste): sai
+    // daqui tambem, junto com o certificado, se ele nunca foi enviado. Se
+    // ja foi, a linha fica, sem presenca, porque a pessoa tem o codigo.
+    env.DB.prepare(`
+      DELETE FROM cert_participantes
+       WHERE evento_id = ? AND credenciamento_id IS NOT NULL
+         AND NOT EXISTS (SELECT 1 FROM credenciamento k WHERE k.id = cert_participantes.credenciamento_id)
+         AND NOT EXISTS (SELECT 1 FROM cert_certificados c JOIN cert_entregas e ON e.certificado_id = c.id
+                          WHERE c.participante_id = cert_participantes.id
+                            AND e.status IN ('enviado','enviando','falha'))
+    `).bind(evento.id),
     env.DB.prepare(`
       UPDATE cert_participantes SET presente = 0, atualizado_em = ?
        WHERE evento_id = ? AND credenciamento_id IS NOT NULL AND presente = 1
