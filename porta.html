@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Credenciamento · Impulso Empresarial</title>
+  <!-- Pagina da porta, para os credenciadores: sem senha, o acesso vem do
+       token na URL (?k=), emitido e trocavel no painel (aba Credenciamento).
+       Fala com /api/publico/porta, que usa o mesmo codigo da aba do painel. -->
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <meta name="theme-color" content="#141c2f" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="admin.css?v=porta" />
+  <style>
+    .porta-topo { padding: 16px 22px; background: var(--dark-2); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10; }
+    .porta-topo strong { display: block; font-size: 1rem; }
+    .porta-topo span { font-size: 0.78rem; color: var(--text-muted); }
+    #busca { font-size: 1rem; padding: 14px 16px; }
+    .porta-barra { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; margin-bottom: 16px; }
+    .porta-barra #busca { grid-column: 1 / -1; }
+    .porta-invalida { max-width: 32rem; margin: 18vh auto 0; padding: 0 22px; text-align: center; }
+    .porta-invalida p { color: var(--text-muted); }
+  </style>
+</head>
+<body>
+
+<div class="porta-invalida" id="tela-invalida" hidden>
+  <h1>Link inválido</h1>
+  <p>Este endereço não vale mais. Peça o link atualizado para a organização.</p>
+</div>
+
+<div id="tela-porta" hidden>
+  <header class="porta-topo">
+    <strong>Credenciamento</strong>
+    <span>Impulso Empresarial · 2ª edição</span>
+  </header>
+
+  <main class="conteudo">
+    <div class="cards" id="cards"></div>
+
+    <div class="porta-barra">
+      <input type="search" id="busca" placeholder="Buscar pelo nome ou final do telefone..." autocomplete="off" autocapitalize="off" spellcheck="false" />
+      <select id="filtro">
+        <option value="">Todos</option>
+        <option value="falta">Faltam chegar</option>
+        <option value="presente">Já chegaram</option>
+      </select>
+      <button type="button" class="btn btn-primario" id="btn-novo">+ Acompanhante / avulso</button>
+    </div>
+
+    <div class="tabela-wrap">
+      <table class="tabela tabela-cartoes">
+        <thead><tr><th>Nome</th><th>WhatsApp</th><th>Presença</th><th></th></tr></thead>
+        <tbody id="corpo"></tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<!-- Acompanhante / avulso -->
+<div class="modal" id="modal-novo" hidden>
+  <div class="modal-fundo" data-fechar></div>
+  <div class="modal-caixa modal-estreito" role="dialog" aria-modal="true" aria-labelledby="titulo-novo">
+    <button type="button" class="modal-fechar" data-fechar aria-label="Fechar">&times;</button>
+    <h2 id="titulo-novo">Adicionar à lista</h2>
+    <p class="modal-sub">Para quem chegou junto de um comprador, ou entrou sem ingresso na lista.</p>
+    <form id="form-novo">
+      <label><span>Nome completo</span><input type="text" name="nome" required autocomplete="off" /></label>
+      <label><span>WhatsApp (é por ele que vão o formulário e o certificado)</span>
+        <input type="tel" name="whatsapp" inputmode="numeric" placeholder="(12) 99999-9999" /></label>
+      <label><span>Acompanha quem?</span><select name="anfitriao_id" id="campo-anfitriao"></select></label>
+      <label class="check-inline"><input type="checkbox" name="ja_chegou" checked /><span>Já chegou: marcar presença agora</span></label>
+      <p class="alerta alerta-erro" id="erro-novo" role="alert" hidden></p>
+      <div class="modal-acoes">
+        <button type="button" class="btn btn-fantasma" data-fechar>Cancelar</button>
+        <button type="submit" class="btn btn-primario">Adicionar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Editar -->
+<div class="modal" id="modal-editar" hidden>
+  <div class="modal-fundo" data-fechar></div>
+  <div class="modal-caixa modal-estreito" role="dialog" aria-modal="true" aria-labelledby="titulo-editar">
+    <button type="button" class="modal-fechar" data-fechar aria-label="Fechar">&times;</button>
+    <h2 id="titulo-editar">Editar</h2>
+    <p class="modal-sub">Para pôr o nome de quem chegou num ingresso sem nome, ou corrigir o nome. O nome vai para o certificado.</p>
+    <form id="form-editar">
+      <input type="hidden" name="id" />
+      <label><span>Nome completo</span><input type="text" name="nome" required autocomplete="off" /></label>
+      <label><span id="rotulo-whats">WhatsApp</span>
+        <input type="tel" name="whatsapp" inputmode="numeric" placeholder="(12) 99999-9999" /></label>
+      <p class="alerta alerta-erro" id="erro-editar" role="alert" hidden></p>
+      <div class="modal-acoes">
+        <button type="button" class="btn btn-fantasma" data-fechar>Cancelar</button>
+        <button type="submit" class="btn btn-primario">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="aviso-flutuante" id="toast" hidden></div>
+
+<script>
+(function () {
+  var K = new URLSearchParams(location.search).get('k') || '';
+  var $ = function (s) { return document.querySelector(s); };
+  var lista = [];
+
+  var esc = function (v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  };
+  // Na porta ninguem digita acento: "joao" acha "João".
+  var semAcento = function (v) { return String(v || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); };
+  var hora = function (iso) {
+    var d = new Date(iso);
+    return isNaN(d) ? '' : d.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
+  };
+
+  var timer;
+  function toast(msg) {
+    var el = $('#toast'); el.textContent = msg; el.hidden = false;
+    clearTimeout(timer); timer = setTimeout(function () { el.hidden = true; }, 3600);
+  }
+
+  function api(metodo, corpo, extra) {
+    return fetch('/api/publico/porta?k=' + encodeURIComponent(K) + (extra || ''), {
+      method: metodo,
+      headers: { 'Content-Type': 'application/json' },
+      body: corpo ? JSON.stringify(corpo) : undefined,
+    }).then(function (r) {
+      if (r.status === 401) { $('#tela-porta').hidden = true; $('#tela-invalida').hidden = false; throw new Error('Link inválido.'); }
+      return r.json().catch(function () { return {}; }).then(function (c) {
+        if (!r.ok) throw new Error(c.erro || ('Erro ' + r.status + '. Tente de novo.'));
+        return c;
+      });
+    });
+  }
+
+  function carregar() {
+    return api('GET').then(function (r) {
+      lista = r.credenciamento || [];
+      $('#tela-porta').hidden = false;
+      $('#cards').innerHTML = [['Na lista', r.total], ['Já chegaram', r.presentes], ['Faltam chegar', r.total - r.presentes]]
+        .map(function (c) { return '<div class="card"><b>' + (c[1] || 0) + '</b><span>' + c[0] + '</span></div>'; }).join('');
+      pintar();
+    });
+  }
+
+  function pintar() {
+    var busca = semAcento($('#busca').value).trim();
+    var digitos = busca.replace(/\D/g, '');
+    var filtro = $('#filtro').value;
+    var vis = lista.filter(function (k) {
+      if (busca && ![k.nome, k.anfitriao_nome, k.comprador_nome].some(function (c) { return semAcento(c).indexOf(busca) >= 0; })
+          && !(digitos.length >= 3 && k.whatsapp_final.replace(/\D/g, '').slice(-4).indexOf(digitos.slice(-4)) >= 0)) return false;
+      if (filtro === 'falta' && k.presente_em) return false;
+      if (filtro === 'presente' && !k.presente_em) return false;
+      return true;
+    });
+
+    $('#corpo').innerHTML = vis.length ? vis.map(function (k) {
+      var presente = Boolean(k.presente_em);
+      var link = !presente ? '' : k.link_falhou
+        ? ' <span class="selo selo-erro">link não foi</span>'
+        : k.link_enviado ? ' <span class="selo selo-ok">link enviado</span>' : '';
+      return '<tr class="' + (presente ? 'linha-presente' : '') + '">' +
+        '<td>' + esc(k.nome) +
+          (k.ingresso_status === 'unassigned' ? ' <span class="selo selo-andamento">sem nome</span>' : '') +
+          (k.ingresso_status === 'canceled' ? ' <span class="selo selo-erro">ingresso cancelado</span>' : '') +
+          (k.anfitriao_nome ? '<span class="sub-linha">ingresso de ' + esc(k.anfitriao_nome) + '</span>' : '') +
+          (!k.anfitriao_nome && k.comprador_nome ? '<span class="sub-linha">comprado por ' + esc(k.comprador_nome) + '</span>' : '') +
+          (k.avulso ? '<span class="sub-linha">avulso</span>' : '') +
+        '</td>' +
+        '<td>' + (k.tem_whatsapp ? esc(k.whatsapp_final) : '<span class="fraco">sem WhatsApp</span>') + '</td>' +
+        '<td>' + (presente ? '<span class="selo selo-ok">chegou ' + esc(hora(k.presente_em)) + '</span>' + link : '<span class="fraco">não chegou</span>') + '</td>' +
+        '<td class="celula-acoes">' +
+          '<button type="button" class="btn-mini ' + (presente ? '' : 'destaque') + '" data-presenca="' + esc(k.id) + '">' + (presente ? 'Desfazer' : 'Marcar presença') + '</button>' +
+          '<button type="button" class="btn-mini" data-editar="' + esc(k.id) + '">Editar</button>' +
+        '</td></tr>';
+    }).join('') : '<tr><td colspan="4" class="vazio">' + (lista.length ? 'Ninguém com esse nome. Confira a grafia ou use "+ Acompanhante / avulso".' : 'Lista vazia.') + '</td></tr>';
+  }
+
+  $('#busca').addEventListener('input', pintar);
+  $('#filtro').addEventListener('change', pintar);
+
+  $('#corpo').addEventListener('click', function (e) {
+    var marcar = e.target.closest('[data-presenca]');
+    var editar = e.target.closest('[data-editar]');
+    if (editar) return abrirEdicao(editar.dataset.editar);
+    if (!marcar) return;
+    var k = lista.find(function (x) { return x.id === marcar.dataset.presenca; });
+    if (k && k.presente_em && !confirm('Desfazer a presença de ' + k.nome + '?\n\nSem presença, a pessoa não recebe certificado.')) return;
+    marcar.disabled = true;
+    api('PATCH', { id: marcar.dataset.presenca }).then(function (r) {
+      if (!r.presente) toast('Presença desfeita.');
+      else if (r.envio && r.envio.ok) toast('Presença marcada. Link do formulário enviado.');
+      else toast('Presença marcada, mas o link do formulário NÃO foi. Mostre o QR Code da recepção.');
+      $('#busca').value = '';
+      return carregar();
+    }).catch(function (err) { toast(err.message); marcar.disabled = false; });
+  });
+
+  // ------------------------------------------------------------- modais
+  function fechar() { Array.prototype.forEach.call(document.querySelectorAll('.modal'), function (m) { m.hidden = true; }); }
+  Array.prototype.forEach.call(document.querySelectorAll('[data-fechar]'), function (el) { el.addEventListener('click', fechar); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') fechar(); });
+
+  $('#btn-novo').addEventListener('click', function () {
+    var f = $('#form-novo'); f.reset(); $('#erro-novo').hidden = true;
+    $('#campo-anfitriao').innerHTML = '<option value="">Ninguém, entrou avulso</option>' +
+      lista.filter(function (k) { return k.comprador; })
+        .map(function (k) { return '<option value="' + esc(k.id) + '">' + esc(k.nome) + '</option>'; }).join('');
+    $('#modal-novo').hidden = false;
+    f.nome.focus();
+  });
+
+  $('#form-novo').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var f = e.target, botao = f.querySelector('button[type="submit"]');
+    $('#erro-novo').hidden = true; botao.disabled = true;
+    api('POST', { nome: f.nome.value, whatsapp: f.whatsapp.value, anfitriao_id: f.anfitriao_id.value })
+      .then(function (novo) {
+        fechar();
+        if (!f.ja_chegou.checked || !novo.id) { toast('Adicionado à lista.'); return; }
+        return api('PATCH', { id: novo.id }).then(function (r) {
+          toast(r.envio && r.envio.ok ? 'Adicionado e presente. Link do formulário enviado.'
+            : 'Adicionado e presente. O link do formulário não foi: mostre o QR Code.');
+        });
+      })
+      .then(carregar)
+      .catch(function (err) { $('#erro-novo').textContent = err.message; $('#erro-novo').hidden = false; })
+      .then(function () { botao.disabled = false; });
+  });
+
+  function abrirEdicao(id) {
+    var k = lista.find(function (x) { return x.id === id; });
+    if (!k) return;
+    var f = $('#form-editar'); f.reset(); $('#erro-editar').hidden = true;
+    f.id.value = k.id;
+    f.nome.value = k.ingresso_status === 'unassigned' ? '' : k.nome;
+    $('#rotulo-whats').textContent = k.tem_whatsapp
+      ? 'WhatsApp (deixe em branco para manter o ' + k.whatsapp_final + ')'
+      : 'WhatsApp (é por ele que vão o formulário e o certificado)';
+    $('#modal-editar').hidden = false;
+    f.nome.focus();
+  }
+
+  $('#form-editar').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var f = e.target, botao = f.querySelector('button[type="submit"]');
+    $('#erro-editar').hidden = true; botao.disabled = true;
+    api('PUT', { id: f.id.value, nome: f.nome.value, whatsapp: f.whatsapp.value })
+      .then(function () { fechar(); toast('Dados atualizados.'); return carregar(); })
+      .catch(function (err) { $('#erro-editar').textContent = err.message; $('#erro-editar').hidden = false; })
+      .then(function () { botao.disabled = false; });
+  });
+
+  // Varios credenciadores ao mesmo tempo: a lista se atualiza sozinha, mas
+  // nunca no meio de uma digitacao ou com um formulario aberto.
+  setInterval(function () {
+    var ocupado = document.activeElement === $('#busca') && $('#busca').value
+      || document.querySelector('.modal:not([hidden])') || document.hidden;
+    if (!ocupado && !$('#tela-porta').hidden) carregar().catch(function () {});
+  }, 20000);
+
+  if (!K) { $('#tela-invalida').hidden = false; }
+  else carregar().catch(function (err) { if ($('#tela-invalida').hidden) toast(err.message); });
+})();
+</script>
+</body>
+</html>

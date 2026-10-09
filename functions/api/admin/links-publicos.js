@@ -3,6 +3,7 @@ import { json, erro, tokenPublico, regerarTokenPublico, CHAVES_PUBLICAS } from '
 const CAMINHO = {
   formulario: '/formulario',
   sorteio: '/sorteio',
+  porta: '/porta',
 };
 
 const montar = (origem, papel, token) => `${origem}${CAMINHO[papel]}?k=${token}`;
@@ -11,14 +12,16 @@ export async function onRequestGet(context) {
   const { request, env } = context;
   const origem = new URL(request.url).origin;
 
-  const [cred, sort] = await Promise.all([
+  const [cred, sort, porta] = await Promise.all([
     tokenPublico(env, 'formulario'),
     tokenPublico(env, 'sorteio'),
+    tokenPublico(env, 'porta'),
   ]);
 
   return json({
     formulario: montar(origem, 'formulario', cred),
     sorteio: montar(origem, 'sorteio', sort),
+    porta: montar(origem, 'porta', porta),
   });
 }
 

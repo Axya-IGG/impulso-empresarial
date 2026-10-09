@@ -212,6 +212,17 @@
          cada abertura da aba. Marcar presença dispara o link do formulário
          no WhatsApp da pessoa. -->
     <section class="painel-aba" data-painel="credenciamento" hidden>
+      <div class="link-publico">
+        <div class="link-publico-texto">
+          <strong>Link da porta</strong>
+          <span>Para os credenciadores: marca presença sem a senha do painel.</span>
+        </div>
+        <input type="text" id="link-porta" readonly />
+        <button type="button" class="btn btn-secundario" data-copiar="#link-porta">Copiar</button>
+        <button type="button" class="btn btn-fantasma" data-regerar="porta"
+                title="Gera um endereço novo e derruba o anterior">Trocar</button>
+      </div>
+
       <div class="cards" id="cards-credenciamento"></div>
 
       <div class="barra">
@@ -236,8 +247,7 @@
         <table class="tabela tabela-cartoes">
           <thead>
             <tr>
-              <th>Nome</th><th>Contato</th><th>Ingresso</th>
-              <th>Formulário</th><th>Presença</th><th></th>
+              <th>Nome</th><th>Contato</th><th>Presença</th><th></th>
             </tr>
           </thead>
           <tbody id="corpo-credenciamento"></tbody>

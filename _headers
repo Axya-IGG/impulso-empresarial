@@ -21,6 +21,14 @@
   Cache-Control: no-store
   X-Robots-Tag: noindex, nofollow
 
+/porta
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow
+
+/porta.html
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow
+
 /sorteio
   Cache-Control: no-store
   X-Robots-Tag: noindex, nofollow

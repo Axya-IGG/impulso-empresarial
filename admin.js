@@ -926,6 +926,7 @@ async function carregarLinks() {
   linksPublicos = await api('/api/admin/links-publicos');
   $('#link-formulario').value = linksPublicos.formulario;
   $('#link-sorteio').value = linksPublicos.sorteio;
+  $('#link-porta').value = linksPublicos.porta;
   return linksPublicos;
 }
 
@@ -939,6 +940,7 @@ async function carregarLinks() {
 let credenciamento = [];
 
 async function carregarCredenciamento() {
+  carregarLinks().catch(() => {});
   const r = await api('/api/admin/credenciamento');
   credenciamento = r.credenciamento || [];
 
@@ -1000,8 +1002,6 @@ function pintarCredenciamento() {
             ${k.whatsapp ? telBR(k.whatsapp) : '<span class="fraco">sem WhatsApp</span>'}
             ${k.email ? `<span class="sub-linha">${esc(k.email)}</span>` : ''}
           </td>
-          <td class="celula-produto">${esc(k.produto || '-')}</td>
-          <td>${k.respondeu ? '<span class="selo selo-ok">preencheu</span>' : '<span class="fraco">-</span>'}</td>
           <td>
             ${presente
               ? `<span class="selo selo-ok">${dataBR(k.presente_em)}</span> ${envio}`
@@ -1015,7 +1015,7 @@ function pintarCredenciamento() {
           </td>
         </tr>`;
       }).join('')
-    : `<tr><td colspan="6" class="vazio">${
+    : `<tr><td colspan="4" class="vazio">${
         credenciamento.length ? 'Ninguém para esse filtro.' : 'Nenhum comprador na lista ainda.'
       }</td></tr>`;
 }
@@ -1267,7 +1267,7 @@ $$('[data-regerar]').forEach(botao => botao.addEventListener('click', async () =
     // link velho (já morto) e nem o toast aparecia, porque a atribuição
     // num elemento nulo derrubava o handler. Dar o link errado na porta é
     // pior do que não trocar.
-    const campo = $(papel === 'sorteio' ? '#link-sorteio' : '#link-formulario');
+    const campo = $({ sorteio: '#link-sorteio', porta: '#link-porta' }[papel] || '#link-formulario');
     if (campo) campo.value = r.link;
     toast('Link novo gerado.');
   } catch (err) {

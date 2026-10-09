@@ -63,6 +63,8 @@ export const ipDaRequisicao = (request) =>
 export const CHAVES_PUBLICAS = {
   formulario: 'token_formulario',
   sorteio: 'token_sorteio',
+  // Pagina da porta (/porta): credenciadores sem senha do painel (09/10).
+  porta: 'token_porta',
 };
 
 const tokenNovo = () => {

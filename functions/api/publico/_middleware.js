@@ -11,6 +11,7 @@ import { erro, tokenPublicoValido } from '../../_lib.js';
 const PAPEL_POR_ROTA = {
   formulario: 'formulario',
   sorteio: 'sorteio',
+  porta: 'porta',
 };
 
 export async function onRequest(context) {

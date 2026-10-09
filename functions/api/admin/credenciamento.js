@@ -221,7 +221,9 @@ export async function onRequestPatch(context) {
 }
 
 /**
- * Corrige nome e WhatsApp de uma linha da porta: a vaga de ingresso sem nome
+ * Corrige nome e WhatsApp de uma linha da porta (WhatsApp vazio mantem o
+ * que ja estava: a pagina /porta so' mostra o numero mascarado e nao tem
+ * como reenviar o numero inteiro): a vaga de ingresso sem nome
  * que ganha a pessoa que chegou, o comprador que e' uma empresa, o numero
  * digitado errado. O nome daqui e' o que vai para o certificado de quem
  * ainda nao tem um (depois de emitido, o nome se corrige na aba
@@ -240,7 +242,7 @@ export async function onRequestPut({ request, env }) {
 
   const r = await env.DB.prepare(`
     UPDATE credenciamento
-       SET nome = ?, whatsapp = ?,
+       SET nome = ?, whatsapp = COALESCE(?, whatsapp),
            ingresso_status = CASE WHEN ingresso_status = 'unassigned' THEN 'paid' ELSE ingresso_status END
      WHERE id = ?
   `).bind(nome, whatsapp, id).run();
