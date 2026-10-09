@@ -982,6 +982,7 @@ async function carregarLinks() {
   $('#link-formulario').value = linksPublicos.formulario;
   $('#link-sorteio').value = linksPublicos.sorteio;
   $('#link-porta').value = linksPublicos.porta;
+  $('#link-palco').value = linksPublicos.palco;
   return linksPublicos;
 }
 
@@ -1337,7 +1338,7 @@ $$('[data-regerar]').forEach(botao => botao.addEventListener('click', async () =
     // link velho (já morto) e nem o toast aparecia, porque a atribuição
     // num elemento nulo derrubava o handler. Dar o link errado na porta é
     // pior do que não trocar.
-    const campo = $({ sorteio: '#link-sorteio', porta: '#link-porta' }[papel] || '#link-formulario');
+    const campo = $({ sorteio: '#link-sorteio', porta: '#link-porta', palco: '#link-palco' }[papel] || '#link-formulario');
     if (campo) campo.value = r.link;
     toast('Link novo gerado.');
   } catch (err) {

@@ -65,6 +65,9 @@ export const CHAVES_PUBLICAS = {
   sorteio: 'token_sorteio',
   // Pagina da porta (/porta): credenciadores sem senha do painel (09/10).
   porta: 'token_porta',
+  // Pagina do sorteio para o suporte (/palco): opera a aba Sorteio sem a
+  // senha do painel (09/10).
+  palco: 'token_palco',
 };
 
 const tokenNovo = () => {

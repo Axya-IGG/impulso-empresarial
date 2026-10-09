@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sorteio · Impulso Empresarial</title>
+  <!-- Aba Sorteio para o suporte, sem senha: o acesso vem do token na URL
+       (?k=), emitido e trocavel no painel (aba Sorteio). Fala com
+       /api/publico/palco, que usa o mesmo codigo da aba do painel. -->
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <meta name="theme-color" content="#141c2f" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="admin.css?v=palco" />
+  <style>
+    .palco-topo { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+                  padding: 16px 22px; background: var(--dark-2); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10; }
+    .palco-topo strong { display: block; font-size: 1rem; }
+    .palco-topo span { font-size: 0.78rem; color: var(--text-muted); }
+    .palco-invalida { max-width: 32rem; margin: 18vh auto 0; padding: 0 22px; text-align: center; }
+    .palco-invalida p { color: var(--text-muted); }
+  </style>
+</head>
+<body>
+
+<div class="palco-invalida" id="tela-invalida" hidden>
+  <h1>Link inválido</h1>
+  <p>Este endereço não vale mais. Peça o link atualizado para a organização.</p>
+</div>
+
+<div id="tela-palco" hidden>
+  <header class="palco-topo">
+    <div>
+      <strong>Sorteio</strong>
+      <span>Impulso Empresarial · 2ª edição</span>
+    </div>
+    <a class="btn btn-secundario" id="abrir-telao" target="_blank" rel="noopener">Abrir o telão ↗</a>
+  </header>
+
+  <main class="conteudo">
+    <div class="sorteio-novo">
+      <form id="form-sorteio">
+        <div class="sorteio-campos">
+          <label><span>Nome do sorteio</span><input type="text" name="titulo" required placeholder="Ex.: Sorteio 1" /></label>
+          <label><span>Prêmio (aparece no telão)</span><input type="text" name="premio" placeholder="Ex.: Consultoria de 1h com a axya" /></label>
+        </div>
+        <label class="check-inline"><input type="checkbox" name="repescagem" /><span>Quem já ganhou concorre de novo</span></label>
+        <button type="submit" class="btn btn-primario">+ Criar sorteio</button>
+      </form>
+      <p class="sorteio-dica" id="sorteio-elegiveis"></p>
+    </div>
+
+    <div id="lista-sorteios" class="lista-sorteios"></div>
+  </main>
+</div>
+
+<!-- Editar sorteio -->
+<div class="modal" id="modal-sorteio" hidden>
+  <div class="modal-fundo" data-fechar></div>
+  <div class="modal-caixa modal-estreito" role="dialog" aria-modal="true" aria-labelledby="titulo-editar-sorteio">
+    <button type="button" class="modal-fechar" data-fechar aria-label="Fechar">&times;</button>
+    <h2 id="titulo-editar-sorteio">Editar sorteio</h2>
+    <p class="modal-sub">O telão mostra a mudança em poucos segundos, se este sorteio estiver na tela.</p>
+    <form id="form-editar-sorteio">
+      <input type="hidden" name="id" />
+      <label><span>Nome do sorteio</span><input type="text" name="titulo" required maxlength="120" /></label>
+      <label><span>Prêmio (o destaque do telão)</span><input type="text" name="premio" maxlength="200" /></label>
+      <label class="check-inline" id="campo-repescagem-editar"><input type="checkbox" name="repescagem" /><span>Quem já ganhou concorre de novo</span></label>
+      <p class="alerta alerta-erro" id="editar-sorteio-erro" role="alert" hidden></p>
+      <div class="modal-acoes">
+        <button type="button" class="btn btn-fantasma" data-fechar>Cancelar</button>
+        <button type="submit" class="btn btn-primario">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Confirmacao (mesmo popup do painel) -->
+<div class="modal modal-confirmar" id="modal-confirmar" hidden>
+  <div class="modal-fundo" data-cancelar></div>
+  <div class="modal-caixa modal-estreito" role="alertdialog" aria-modal="true" aria-labelledby="confirmar-titulo" aria-describedby="confirmar-texto">
+    <span class="confirmar-icone" aria-hidden="true">!</span>
+    <h2 id="confirmar-titulo"></h2>
+    <p id="confirmar-texto"></p>
+    <div class="modal-acoes">
+      <button type="button" class="btn btn-fantasma" id="confirmar-cancelar">Cancelar</button>
+      <button type="button" class="btn btn-primario" id="confirmar-ok">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<div class="aviso-flutuante" id="toast" hidden></div>
+
+<script>
+(function () {
+  var K = new URLSearchParams(location.search).get('k') || '';
+  var $ = function (s) { return document.querySelector(s); };
+  var $$ = function (s) { return document.querySelectorAll(s); };
+  var sorteios = [], telaoId = null;
+
+  var esc = function (v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  };
+  var dataBR = function (iso) {
+    var d = new Date(iso);
+    return isNaN(d) ? '-' : d.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+  };
+
+  var timer;
+  function toast(msg) {
+    var el = $('#toast'); el.textContent = msg; el.hidden = false;
+    clearTimeout(timer); timer = setTimeout(function () { el.hidden = true; }, 4000);
+  }
+
+  function api(metodo, caminho, corpo) {
+    return fetch('/api/publico/palco' + (caminho || '') + '?k=' + encodeURIComponent(K), {
+      method: metodo,
+      headers: { 'Content-Type': 'application/json' },
+      body: corpo ? JSON.stringify(corpo) : undefined,
+    }).then(function (r) {
+      if (r.status === 401) { $('#tela-palco').hidden = true; $('#tela-invalida').hidden = false; throw new Error('Link inválido.'); }
+      return r.json().catch(function () { return {}; }).then(function (c) {
+        if (!r.ok) throw new Error(c.erro || ('Erro ' + r.status + '. Tente de novo.'));
+        return c;
+      });
+    });
+  }
+
+  // ------------------------------------------------- popup de confirmacao
+  var resolver = null;
+  function confirmar(o) {
+    if (resolver) resolver(false);
+    $('#confirmar-titulo').textContent = o.titulo;
+    $('#confirmar-texto').textContent = o.texto || '';
+    $('#confirmar-texto').hidden = !o.texto;
+    var ok = $('#confirmar-ok');
+    ok.textContent = o.botao || 'Confirmar';
+    ok.className = 'btn ' + (o.perigo ? 'btn-perigo' : 'btn-primario');
+    $('#modal-confirmar').classList.toggle('confirmar-perigo', Boolean(o.perigo));
+    $('#modal-confirmar').hidden = false;
+    (o.perigo ? $('#confirmar-cancelar') : ok).focus();
+    return new Promise(function (res) { resolver = res; });
+  }
+  function fecharConfirmacao(v) {
+    $('#modal-confirmar').hidden = true;
+    var r = resolver; resolver = null; if (r) r(v);
+  }
+  $('#confirmar-ok').addEventListener('click', function () { fecharConfirmacao(true); });
+  $('#confirmar-cancelar').addEventListener('click', function () { fecharConfirmacao(false); });
+  $('#modal-confirmar [data-cancelar]').addEventListener('click', function () { fecharConfirmacao(false); });
+  Array.prototype.forEach.call($$('[data-fechar]'), function (el) {
+    el.addEventListener('click', function () { el.closest('.modal').hidden = true; });
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    if (!$('#modal-confirmar').hidden) return fecharConfirmacao(false);
+    $('#modal-sorteio').hidden = true;
+  });
+
+  // ---------------------------------------------------------------- lista
+  function carregar() {
+    return api('GET').then(function (r) {
+      sorteios = r.sorteios || [];
+      telaoId = r.telao_id || null;
+      $('#abrir-telao').href = r.telao_link;
+      $('#tela-palco').hidden = false;
+
+      var jaGanharam = {};
+      sorteios.forEach(function (s) { if (s.vencedor_id) jaGanharam[s.vencedor_id] = 1; });
+      var n = r.total_participantes;
+      $('#sorteio-elegiveis').textContent = n
+        ? n + ' participante' + (n === 1 ? '' : 's') + ' na lista · ' + (n - Object.keys(jaGanharam).length) + ' ainda sem ganhar nada'
+        : 'Ninguém respondeu o formulário ainda. O sorteio só roda com participantes na lista.';
+
+      $('#lista-sorteios').innerHTML = sorteios.length ? sorteios.map(function (s) {
+        var feito = Boolean(s.sorteado_em), ausente = Boolean(s.ausente), noTelao = s.id === telaoId;
+        var chamada = s.chamada > 1 ? ' <span class="sorteio-chamada">' + s.chamada + 'ª chamada</span>' : '';
+        return '<article class="sorteio-card' + (feito ? '' : ' sorteio-card-aberto') + (ausente ? ' sorteio-card-ausente' : '') + (noTelao ? ' sorteio-card-telao' : '') + '">' +
+          '<div class="sorteio-cabeca"><div><h3>' + esc(s.titulo) + chamada + '</h3>' +
+            (s.premio ? '<p class="sorteio-premio">' + esc(s.premio) + '</p>' : '') + '</div>' +
+            '<div class="sorteio-selos">' + (noTelao ? '<span class="selo selo-oficial">no telão</span>' : '') +
+              '<span class="selo ' + (ausente ? 'selo-off' : feito ? 'selo-ok' : 'selo-andamento') + '">' + (ausente ? 'Ausente' : feito ? 'Sorteado' : 'Aguardando') + '</span></div></div>' +
+          (feito
+            ? '<div class="sorteio-vencedor' + (ausente ? ' sorteio-vencedor-ausente' : '') + '"><span>' + (ausente ? 'Não estava presente' : 'Ganhador') + '</span>' +
+                '<b>' + esc(s.vencedor_nome || '-') + '</b><small>' + esc(s.vencedor_empresa || '') + '</small></div>' +
+              '<p class="sorteio-recibo">Nº ' + esc(s.posicao) + ' de ' + esc(s.total_elegiveis) + ' concorrentes · código ' + esc(s.verificacao || '-') + ' · ' + dataBR(s.sorteado_em) + '</p>'
+            : '<p class="sorteio-dica">' + (s.repescagem ? 'Quem já ganhou concorre nesta rodada.' : 'Quem já ganhou está fora desta rodada.') + ' O telão mostra o prêmio e fica aguardando.</p>') +
+          '<div class="sorteio-acoes">' +
+            (noTelao ? '' : '<button type="button" class="btn btn-secundario" data-telao="' + esc(s.id) + '">Mostrar no telão</button>') +
+            (feito ? '' : '<button type="button" class="btn btn-primario" data-sortear="' + esc(s.id) + '">Sortear agora</button>') +
+            (feito && !ausente ? '<button type="button" class="btn btn-secundario" data-rechamada="' + esc(s.id) + '">Não está presente · sortear outro</button>' : '') +
+            '<button type="button" class="btn btn-fantasma" data-editar="' + esc(s.id) + '">Editar</button>' +
+            '<button type="button" class="btn btn-fantasma" data-excluir="' + esc(s.id) + '">Excluir</button>' +
+          '</div></article>';
+      }).join('') : '<p class="vazio">Nenhum sorteio criado. Crie o primeiro acima.</p>';
+    });
+  }
+
+  // ---------------------------------------------------------------- acoes
+  $('#form-sorteio').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var f = e.target, botao = f.querySelector('button[type="submit"]');
+    botao.disabled = true;
+    api('POST', '', { titulo: f.titulo.value, premio: f.premio.value, repescagem: f.repescagem.checked })
+      .then(function () { f.reset(); toast('Sorteio criado. O telão já mostra o prêmio.'); return carregar(); })
+      .catch(function (err) { toast(err.message); })
+      .then(function () { botao.disabled = false; });
+  });
+
+  $('#lista-sorteios').addEventListener('click', function (e) {
+    var bt = e.target.closest('button');
+    if (!bt) return;
+    var d = bt.dataset;
+
+    if (d.editar) {
+      var s = sorteios.find(function (x) { return x.id === d.editar; });
+      if (!s) return;
+      var f = $('#form-editar-sorteio');
+      f.id.value = s.id; f.titulo.value = s.titulo || ''; f.premio.value = s.premio || '';
+      f.repescagem.checked = Boolean(s.repescagem);
+      $('#campo-repescagem-editar').hidden = Boolean(s.sorteado_em);
+      $('#editar-sorteio-erro').hidden = true;
+      $('#modal-sorteio').hidden = false;
+      f.premio.focus();
+      return;
+    }
+
+    var passo;
+    if (d.telao) {
+      passo = Promise.resolve(true).then(function () {
+        return api('PATCH', '', { telao_id: d.telao }).then(function () { toast('Telão trocado.'); });
+      });
+    } else if (d.sortear) {
+      passo = confirmar({ titulo: 'Sortear agora?', texto: 'O telão vai girar os nomes e revelar o ganhador.\n\nNão dá para refazer: para tirar outro nome, crie um sorteio novo.', botao: 'Sortear' })
+        .then(function (sim) {
+          if (!sim) return;
+          bt.disabled = true;
+          return api('POST', '/' + encodeURIComponent(d.sortear)).then(function (r) {
+            toast(r.ja_sorteado ? 'Já havia sido sorteado. Ganhador: ' + r.vencedor.nome : 'Ganhador: ' + r.vencedor.nome);
+          });
+        });
+    } else if (d.rechamada) {
+      passo = confirmar({ titulo: 'Ganhador ausente?', texto: 'Marca como ausente e já sorteia outro nome para o mesmo prêmio.', botao: 'Sortear outro' })
+        .then(function (sim) {
+          if (!sim) return;
+          bt.disabled = true;
+          return api('POST', '/' + encodeURIComponent(d.rechamada), { rechamada: true }).then(function (r) {
+            toast(r.ausente + ' ausente. Novo ganhador: ' + r.vencedor.nome);
+          });
+        });
+    } else if (d.excluir) {
+      passo = confirmar({ titulo: 'Excluir este sorteio?', texto: 'Ele some do telão e do histórico.', botao: 'Excluir', perigo: true })
+        .then(function (sim) {
+          if (!sim) return;
+          bt.disabled = true;
+          return api('DELETE', '/' + encodeURIComponent(d.excluir)).then(function () { toast('Sorteio excluído.'); });
+        });
+    }
+    if (!passo) return;
+    passo.catch(function (err) { toast(err.message); bt.disabled = false; })
+      .then(function () { return carregar(); })
+      .catch(function () {});
+  });
+
+  $('#form-editar-sorteio').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var f = e.target, botao = f.querySelector('button[type="submit"]');
+    $('#editar-sorteio-erro').hidden = true; botao.disabled = true;
+    api('PUT', '/' + encodeURIComponent(f.id.value), { titulo: f.titulo.value, premio: f.premio.value, repescagem: f.repescagem.checked })
+      .then(function () { $('#modal-sorteio').hidden = true; toast('Sorteio atualizado.'); return carregar(); })
+      .catch(function (err) { $('#editar-sorteio-erro').textContent = err.message; $('#editar-sorteio-erro').hidden = false; })
+      .then(function () { botao.disabled = false; });
+  });
+
+  // Mais de uma pessoa operando: atualiza a cada 10 s e ao voltar para a
+  // aba, mas nunca com um formulario ou confirmacao aberta.
+  function atualizarSePuder() {
+    if (document.querySelector('.modal:not([hidden])') || document.hidden || $('#tela-palco').hidden) return;
+    var digitando = document.activeElement && document.activeElement.closest && document.activeElement.closest('#form-sorteio');
+    if (digitando) return;
+    carregar().catch(function () {});
+  }
+  setInterval(atualizarSePuder, 10000);
+  document.addEventListener('visibilitychange', atualizarSePuder);
+
+  if (!K) { $('#tela-invalida').hidden = false; }
+  else carregar().catch(function (err) { if ($('#tela-invalida').hidden) toast(err.message); });
+})();
+</script>
+</body>
+</html>

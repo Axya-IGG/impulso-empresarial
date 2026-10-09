@@ -12,6 +12,7 @@ const PAPEL_POR_ROTA = {
   formulario: 'formulario',
   sorteio: 'sorteio',
   porta: 'porta',
+  palco: 'palco',
 };
 
 export async function onRequest(context) {

@@ -995,6 +995,9 @@ input:focus, select:focus, textarea:focus {
 
   .link-publico { flex-direction: column; align-items: stretch; }
   .sorteio-campos { flex-direction: column; gap: 10px; }
+  /* Em coluna, o flex-basis de 240px virava ALTURA: cada campo ocupava
+     240px de tela no celular. */
+  .sorteio-campos label { flex: 0 0 auto; }
 }
 
 /* ------------------------------------------------------- certificados */
@@ -1048,3 +1051,6 @@ a.btn-mini { text-decoration: none; display: inline-block; }
   background: var(--vermelho); color: var(--navy); border: 1px solid var(--vermelho); font-weight: 600;
 }
 .btn-perigo:hover { filter: brightness(1.06); }
+
+/* A etiqueta "2ª chamada" nao quebra no meio no celular. */
+.sorteio-chamada { white-space: nowrap; display: inline-block; }
