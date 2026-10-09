@@ -62,11 +62,9 @@ export async function onRequestPost(context) {
        cargo = excluded.cargo, funcionarios = excluded.funcionarios`
   ).bind(id, nome, empresa, cargo, funcionarios, chave, agora(), ip).run();
 
-  // Devolve o total para o formulario poder dizer "voce e o Nº X na lista",
-  // que e o que fecha o ciclo para quem acabou de responder.
-  const total = await env.DB.prepare('SELECT COUNT(*) AS n FROM participantes').all();
-
-  return json({ ok: true, total: total.results?.[0]?.n ?? 0 });
+  // Sem o total de participantes: a organizacao preferiu nao mostrar quantos
+  // estao concorrendo (09/10/2026).
+  return json({ ok: true });
 }
 
 /** O formulario busca as faixas daqui para nao duplicar a lista no HTML. */

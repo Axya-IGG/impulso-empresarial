@@ -208,21 +208,6 @@
     border: 1px solid rgba(119,203,245,0.4);
     margin-bottom: 22px;
   }
-  .destaque {
-    margin-top: 26px;
-    padding: 20px 24px;
-    border-radius: 14px;
-    border: 1px solid rgba(119,203,245,0.3);
-    background: rgba(119,203,245,0.08);
-  }
-  .destaque strong {
-    display: block;
-    font-size: 34px;
-    font-weight: 800;
-    color: var(--azul);
-    line-height: 1.1;
-  }
-  .destaque span { color: var(--prata); font-size: 14px; }
 
   .aviso {
     min-height: 100svh;
@@ -289,7 +274,6 @@
   var atual = 0;
   var enviando = false;
   var concluido = false;
-  var totalNaLista = 0;
 
   var $ = function (s) { return document.querySelector(s); };
   var slide = $('#slide');
@@ -363,9 +347,7 @@
     slide.innerHTML = '' +
       '<div class="selo"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#77cbf5" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>' +
       '<h1>Formulário enviado!</h1>' +
-      '<p class="ajuda">Você já está concorrendo aos sorteios do evento. Fique de olho no telão.</p>' +
-      '<div class="destaque"><strong>' + totalNaLista + '</strong>' +
-      '<span>' + (totalNaLista === 1 ? 'participante na lista' : 'participantes na lista do sorteio') + '</span></div>';
+      '<p class="ajuda">Você já está concorrendo aos sorteios do evento. Fique de olho no telão.</p>';
     $('#navegacao').hidden = true;
     pintarProgresso();
   }
@@ -410,7 +392,6 @@
         return c;
       });
     }).then(function (c) {
-      totalNaLista = c.total || 0;
       enviando = false;
       concluido = true;
       anima('saindo-frente', render);
