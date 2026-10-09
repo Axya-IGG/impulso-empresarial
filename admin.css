@@ -58,6 +58,10 @@ body {
 .btn-fantasma  { background: transparent; color: var(--text-muted); border-color: var(--border); }
 .btn-fantasma:hover { color: var(--text); }
 
+.btn.perigo:hover { color: var(--vermelho); border-color: var(--vermelho); }
+/* Empurra o botao pro canto oposto do grupo — ver o comentario no admin.html. */
+.modal-acoes .acao-secundaria { margin-right: auto; }
+
 .btn-mini {
   font-size: 0.72rem;
   padding: 5px 10px;
@@ -791,6 +795,65 @@ input:focus, select:focus, textarea:focus {
   font-size: 0.85rem;
   margin: -6px 0 16px;
 }
+
+
+/* ------------------------------------------- ficha de uma resposta
+   A tabela compara pessoas; a ficha mostra uma pessoa com a pergunta
+   escrita junto da resposta. */
+.dica-tabela {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  margin: -4px 0 12px;
+}
+.dica-tabela strong { color: var(--text); font-weight: 600; }
+
+.linha-clicavel { cursor: pointer; }
+.linha-clicavel:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+.resposta-selos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: -6px 0 18px;
+}
+
+.resposta-bloco {
+  padding: 12px 14px;
+  background: var(--dark-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 10px;
+}
+.resposta-pergunta {
+  display: block;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.resposta-valor {
+  margin: 5px 0 0;
+  font-size: 0.98rem;
+  /* Resposta de campo aberto: quebra onde precisar em vez de esticar o modal. */
+  overflow-wrap: anywhere;
+}
+
+.resposta-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+.resposta-meta b { color: var(--text); font-weight: 600; }
+.resposta-meta a { color: var(--primary); }
 
 /* --------------------------------------------------- link publico */
 .link-publico {

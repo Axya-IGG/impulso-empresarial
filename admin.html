@@ -262,6 +262,12 @@
         <a class="btn btn-secundario" href="/api/admin/participantes?formato=csv">Exportar CSV</a>
       </div>
 
+      <p class="dica-tabela">
+        Cada linha é uma resposta completa — as quatro perguntas do formulário
+        estão nas colunas. <strong>Clique na linha</strong> para abrir a resposta
+        inteira, com o contato da pessoa.
+      </p>
+
       <div class="tabela-wrap tabela-wrap-rolavel">
         <table class="tabela">
           <thead>
@@ -347,6 +353,27 @@
         <button type="submit" class="btn btn-primario">Adicionar</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- ============== MODAL DE RESPOSTA DO FORMULARIO ==============
+     A tabela mostra as respostas em colunas, que e' o formato bom pra
+     comparar gente. Este modal mostra UMA pessoa com a pergunta escrita
+     junto — "De 10 a 49" sozinho numa celula nao diz o que foi perguntado. -->
+<div class="modal" id="modal-resposta" hidden>
+  <div class="modal-fundo" data-fechar></div>
+  <div class="modal-caixa" role="dialog" aria-modal="true" aria-labelledby="titulo-resposta">
+    <button type="button" class="modal-fechar" data-fechar aria-label="Fechar">&times;</button>
+    <h2 id="titulo-resposta">Resposta</h2>
+    <div id="corpo-resposta"></div>
+
+    <div class="modal-acoes">
+      <!-- Excluir longe do Fechar, e nao na posicao primaria da direita: aqui
+           a acao comum e' fechar, apagar e' a excecao. -->
+      <button type="button" class="btn btn-fantasma perigo acao-secundaria"
+              id="btn-excluir-resposta">Excluir</button>
+      <button type="button" class="btn btn-fantasma" data-fechar>Fechar</button>
+    </div>
   </div>
 </div>
 

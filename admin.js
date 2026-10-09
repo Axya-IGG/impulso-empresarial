@@ -1110,6 +1110,17 @@ $$('[data-regerar]').forEach(botao => botao.addEventListener('click', async () =
 }));
 
 // ------------------------------------------------------- participantes
+
+// As perguntas vêm escritas igual às de formulario.html. Na tabela elas são
+// cabeçalho de coluna, mas na ficha de uma pessoa só a resposta não basta:
+// "De 10 a 49" sozinho não diz o que foi perguntado. Se o formulário mudar,
+// mude aqui também — são os dois únicos lugares com o texto das perguntas.
+const PERGUNTAS_FORMULARIO = [
+  ['nome',         'Qual o seu nome completo?'],
+  ['empresa',      'Qual o nome da sua empresa?'],
+  ['cargo',        'Qual o seu cargo?'],
+  ['funcionarios', 'Quantos funcionários a empresa tem?'],
+];
 let participantes = [];
 let faixasFuncionarios = [];
 
@@ -1138,7 +1149,8 @@ function pintarParticipantes() {
 
   $('#corpo-participantes').innerHTML = lista.length
     ? lista.map(p => `
-        <tr>
+        <tr class="linha-clicavel" data-ver-resposta="${esc(p.id)}" tabindex="0"
+            role="button" aria-label="Ver a resposta de ${esc(p.nome)}">
           <td>${esc(p.nome)}${p.vitorias > 0 ? ' <span class="selo selo-ok">ganhou</span>' : ''}</td>
           <td>${esc(p.empresa)}</td>
           <td>${esc(p.cargo)}</td>
@@ -1155,14 +1167,86 @@ function pintarParticipantes() {
 
 $('#busca-participantes').addEventListener('input', pintarParticipantes);
 
-$('#corpo-participantes').addEventListener('click', async e => {
-  const botao = e.target.closest('[data-excluir-participante]');
-  if (!botao) return;
-  if (!confirm('Excluir este participante? Ele sai da lista do sorteio na hora.\n\nSe já tiver ganhado, o resultado continua no histórico do telão.')) return;
-  await api(`/api/admin/participantes?id=${encodeURIComponent(botao.dataset.excluirParticipante)}`,
-    { method: 'DELETE' });
+async function excluirParticipante(id) {
+  if (!confirm('Excluir este participante? Ele sai da lista do sorteio na hora.\n\nSe já tiver ganhado, o resultado continua no histórico do telão.')) return false;
+  await api(`/api/admin/participantes?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
   toast('Participante excluído.');
   carregarParticipantes();
+  return true;
+}
+
+$('#corpo-participantes').addEventListener('click', async e => {
+  // O Excluir vem antes: ele fica dentro da linha, e sem esta saída o clique
+  // subiria e abriria a ficha por baixo do confirm().
+  const botao = e.target.closest('[data-excluir-participante]');
+  if (botao) {
+    await excluirParticipante(botao.dataset.excluirParticipante);
+    return;
+  }
+  const linha = e.target.closest('[data-ver-resposta]');
+  if (linha) abrirResposta(linha.dataset.verResposta);
+});
+
+// A linha é role="button", então Enter e Espaço também precisam abrir.
+$('#corpo-participantes').addEventListener('keydown', e => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const linha = e.target.closest('[data-ver-resposta]');
+  if (!linha) return;
+  e.preventDefault();
+  abrirResposta(linha.dataset.verResposta);
+});
+
+// ------------------------------------------------- ficha de uma resposta
+let respostaAberta = null;
+
+function abrirResposta(id) {
+  const p = participantes.find(x => String(x.id) === String(id));
+  if (!p) return;
+  respostaAberta = p.id;
+
+  const selos = [
+    p.origem === 'manual'
+      ? '<span class="selo selo-off">Adicionado à mão</span>'
+      : '<span class="selo selo-oficial">Pelo formulário</span>',
+    p.vitorias > 0
+      ? `<span class="selo selo-ok">Ganhou ${p.vitorias} sorteio${p.vitorias > 1 ? 's' : ''}</span>`
+      : '',
+    p.presente_em ? '<span class="selo selo-ok">Credenciado na porta</span>' : '',
+  ].filter(Boolean).join(' ');
+
+  const blocos = PERGUNTAS_FORMULARIO.map(([campo, pergunta]) => `
+    <div class="resposta-bloco">
+      <span class="resposta-pergunta">${esc(pergunta)}</span>
+      <p class="resposta-valor">${esc(p[campo] || '—')}</p>
+    </div>`).join('');
+
+  // O formulário não coleta contato: o que aparece aqui vem da lista da porta,
+  // cruzado pelo nome. Quando não bate, dizemos por quê — melhor do que um
+  // campo vazio, que parece defeito.
+  const contato = [];
+  if (p.whatsapp) {
+    contato.push(`<a href="https://wa.me/${esc(String(p.whatsapp).replace(/\D/g, ''))}"
+                     target="_blank" rel="noopener">${esc(telBR(p.whatsapp))}</a>`);
+  }
+  if (p.email) contato.push(`<a href="mailto:${esc(p.email)}">${esc(p.email)}</a>`);
+
+  $('#titulo-resposta').textContent = p.nome;
+  $('#corpo-resposta').innerHTML = `
+    <p class="resposta-selos">${selos}</p>
+    ${blocos}
+    <div class="resposta-meta">
+      <span><b>Respondido em</b> ${dataBR(p.criado_em)}</span>
+      ${contato.length
+        ? `<span><b>Contato</b> ${contato.join(' · ')}</span>`
+        : '<span>Sem contato: o nome não bateu com ninguém na lista da porta.</span>'}
+      ${p.produto ? `<span><b>Ingresso</b> ${esc(p.produto)}</span>` : ''}
+    </div>`;
+  $('#modal-resposta').hidden = false;
+}
+
+$('#btn-excluir-resposta').addEventListener('click', async () => {
+  if (!respostaAberta) return;
+  if (await excluirParticipante(respostaAberta)) fecharModais();
 });
 
 // ------------------------------------------------ modal de participante

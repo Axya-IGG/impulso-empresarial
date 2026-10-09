@@ -178,10 +178,15 @@ export async function onRequestPatch(context) {
     `Oi, ${primeiro}! Bem-vindo(a) ao Impulso Empresarial 2ª edição.\n\n` +
     `Responda este formulário rapidinho para concorrer aos sorteios do evento:\n${link}`;
 
-  let r = await enviarWhatsappMetaTexto(env, pessoa.whatsapp, texto);
+  // Evolution primeiro: é o canal escolhido para o evento. A API oficial da
+  // Meta só manda texto livre dentro de 24h desde a última mensagem da pessoa,
+  // e no dia quase ninguém está nessa janela — além de o nome de exibição do
+  // número seguir em PENDING_REVIEW (ver wrangler.pages.toml). Ela fica como
+  // rede de segurança, para o caso de a Evolution estar fora do ar.
+  let r = await enviarWhatsapp(env, pessoa.whatsapp, texto);
   if (!r.ok) {
-    const rEvo = await enviarWhatsapp(env, pessoa.whatsapp, texto);
-    r = rEvo.ok ? rEvo : { ok: false, detalhe: `Meta: ${r.detalhe} | Evolution: ${rEvo.detalhe}` };
+    const rMeta = await enviarWhatsappMetaTexto(env, pessoa.whatsapp, texto);
+    r = rMeta.ok ? rMeta : { ok: false, detalhe: `Evolution: ${r.detalhe} | Meta: ${rMeta.detalhe}` };
   }
 
   await env.DB.prepare(

@@ -1,4 +1,4 @@
-import { json, erro, agora, chaveParticipante } from '../../_lib.js';
+import { json, erro, agora, chaveParticipante, normalizarChave } from '../../_lib.js';
 
 const FAIXAS = [
   'Até 9 funcionários',
@@ -21,17 +21,43 @@ export async function onRequestGet(context) {
   const url = new URL(request.url);
 
   const { results } = await env.DB.prepare(
-    `SELECT p.id, p.nome, p.empresa, p.cargo, p.funcionarios, p.origem, p.criado_em,
+    `SELECT p.id, p.nome, p.empresa, p.cargo, p.funcionarios, p.chave,
+            p.origem, p.criado_em,
             (SELECT COUNT(*) FROM sorteios s WHERE s.vencedor_id = p.id) AS vitorias
        FROM participantes p
       ORDER BY p.criado_em DESC`
   ).all();
   const linhas = results || [];
 
+  // O formulario nao pede contato — sao quatro perguntas e pronto, porque cada
+  // campo a mais na fila do credenciamento e' gente desistindo de responder.
+  // Quem respondeu, porem, passou antes pela porta, e la' o WhatsApp e o e-mail
+  // ja' estao. Cruzamos pelo nome normalizado (mesma funcao dos dois lados)
+  // pra resposta virar algo que da' pra acionar depois do evento.
+  const { results: porta } = await env.DB.prepare(
+    'SELECT nome, whatsapp, email, produto, presente_em FROM credenciamento'
+  ).all();
+  const contatos = new Map();
+  for (const c of porta || []) {
+    const k = normalizarChave(c.nome);
+    // Homonimo na lista da porta: fica o primeiro. E' indicacao operacional,
+    // nao identidade — nada no sorteio depende deste cruzamento.
+    if (k && !contatos.has(k)) contatos.set(k, c);
+  }
+  for (const l of linhas) {
+    const c = contatos.get(String(l.chave || '').split('|')[0]);
+    l.whatsapp = c?.whatsapp || null;
+    l.email = c?.email || null;
+    l.produto = c?.produto || null;
+    l.presente_em = c?.presente_em || null;
+  }
+
   if (url.searchParams.get('formato') === 'csv') {
-    const cab = ['Nome', 'Empresa', 'Cargo', 'Funcionarios', 'Origem', 'Cadastro', 'Vitorias'];
+    const cab = ['Nome', 'Empresa', 'Cargo', 'Funcionarios', 'WhatsApp', 'E-mail',
+                 'Origem', 'Cadastro', 'Vitorias'];
     const corpo = linhas.map(l => [
-      l.nome, l.empresa, l.cargo, l.funcionarios, l.origem, l.criado_em, l.vitorias,
+      l.nome, l.empresa, l.cargo, l.funcionarios, l.whatsapp, l.email,
+      l.origem, l.criado_em, l.vitorias,
     ].map(csvCampo).join(','));
     // BOM: sem ele o Excel no Windows abre o arquivo como ANSI e os acentos
     // viram caracteres quebrados.
