@@ -114,6 +114,12 @@ export async function onRequestPost({ request, env }) {
   // nao mexe em nada: so' o evento assinado alimenta a lista da porta
   // (migrations/015_eduzz_eventos.sql).
   const nomeEvento = String(payload?.event || '');
+
+  // "Verificar URL" da Eduzz manda { event: 'ping' }, e o webhook novo dos
+  // ingressos assina com outra chave: o 401 travava a ativacao. Ping nao
+  // mexe em nada, entao responde 200 sem conferir assinatura.
+  if (nomeEvento === 'ping') return json({ ok: true, pong: true });
+
   if (nomeEvento.startsWith('blinket.')) {
     await env.DB.prepare(
       'INSERT INTO eduzz_eventos (evento, assinatura_ok, corpo, recebido_em) VALUES (?, ?, ?, ?)'
