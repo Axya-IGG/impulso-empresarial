@@ -2,6 +2,7 @@ import {
   json, erro, agora, normalizarWhatsapp, normalizarChave, tokenPublico,
   enviarWhatsapp, registrarMensagemSaida,
 } from '../../_lib.js';
+import { formatarNome } from '../../_certificados.js';
 
 /**
  * Sincroniza a lista de compradores.
@@ -217,6 +218,43 @@ export async function onRequestPatch(context) {
   }
 
   return json({ ok: true, presente: true, envio: r });
+}
+
+/**
+ * Corrige nome e WhatsApp de uma linha da porta: a vaga de ingresso sem nome
+ * que ganha a pessoa que chegou, o comprador que e' uma empresa, o numero
+ * digitado errado. O nome daqui e' o que vai para o certificado de quem
+ * ainda nao tem um (depois de emitido, o nome se corrige na aba
+ * Certificados).
+ */
+export async function onRequestPut({ request, env }) {
+  let corpo;
+  try { corpo = await request.json(); } catch { return erro('Corpo invalido.'); }
+
+  const id = String(corpo?.id ?? '');
+  const nome = String(corpo?.nome ?? '').trim().replace(/\s+/g, ' ').slice(0, 120);
+  const whatsapp = corpo?.whatsapp ? normalizarWhatsapp(corpo.whatsapp) : null;
+  if (!id) return erro('Informe o id.');
+  if (nome.length < 2) return erro('Informe o nome completo.');
+  if (corpo?.whatsapp && !whatsapp) return erro('WhatsApp invalido. Use DDD + numero.');
+
+  const r = await env.DB.prepare(`
+    UPDATE credenciamento
+       SET nome = ?, whatsapp = ?,
+           ingresso_status = CASE WHEN ingresso_status = 'unassigned' THEN 'paid' ELSE ingresso_status END
+     WHERE id = ?
+  `).bind(nome, whatsapp, id).run();
+  if (!r.meta?.changes) return erro('Pessoa nao encontrada.', 404);
+
+  // Se a pessoa ja tem certificado, a correcao da porta vale para ele tambem
+  // (e' a correcao mais recente). Nome com maiusculas e minusculas certas,
+  // igual ao que a aba Certificados faria.
+  const nomeCert = formatarNome(nome);
+  await env.DB.prepare(
+    'UPDATE cert_participantes SET nome = ?, nome_busca = ?, whatsapp = COALESCE(?, whatsapp), atualizado_em = ? WHERE credenciamento_id = ?'
+  ).bind(nomeCert, normalizarChave(nomeCert), whatsapp, agora(), id).run();
+
+  return json({ ok: true });
 }
 
 export async function onRequestDelete(context) {

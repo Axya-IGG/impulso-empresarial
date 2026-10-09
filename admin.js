@@ -991,6 +991,7 @@ function pintarCredenciamento() {
           <td>
             ${esc(k.nome)}
             ${k.ingresso_status === 'canceled' ? '<span class="selo selo-erro">ingresso cancelado</span>' : ''}
+            ${k.ingresso_status === 'unassigned' ? '<span class="selo selo-andamento" title="A empresa ainda não disse quem vai. Use Editar para pôr o nome de quem chegou.">sem nome</span>' : ''}
             ${k.anfitriao_nome ? `<span class="sub-linha">ingresso de ${esc(k.anfitriao_nome)}</span>` : ''}
             ${!k.anfitriao_nome && k.comprador_nome ? `<span class="sub-linha">comprado por ${esc(k.comprador_nome)}</span>` : ''}
             ${!k.lead_id && !k.anfitriao_id && !k.ingresso_chave ? '<span class="sub-linha">avulso</span>' : ''}
@@ -1009,6 +1010,7 @@ function pintarCredenciamento() {
           <td class="celula-acoes">
             <button type="button" class="btn-mini ${presente ? '' : 'destaque'}"
                     data-presenca="${esc(k.id)}">${presente ? 'Desfazer' : 'Marcar presença'}</button>
+            <button type="button" class="btn-mini" data-editar-credenciado="${esc(k.id)}">Editar</button>
             ${k.lead_id ? '' : `<button type="button" class="btn-mini perigo" data-excluir-credenciado="${esc(k.id)}">Excluir</button>`}
           </td>
         </tr>`;
@@ -1024,6 +1026,8 @@ $('#filtro-presenca').addEventListener('change', pintarCredenciamento);
 $('#corpo-credenciamento').addEventListener('click', async e => {
   const marcar = e.target.closest('[data-presenca]');
   const excluir = e.target.closest('[data-excluir-credenciado]');
+  const editar = e.target.closest('[data-editar-credenciado]');
+  if (editar) return abrirEdicaoCredenciado(editar.dataset.editarCredenciado);
 
   if (marcar) {
     // Desfazer tira a pessoa da lista de certificados: um toque errado no
@@ -1113,6 +1117,125 @@ formCredenciado.addEventListener('submit', async e => {
     erro.hidden = false;
   } finally {
     botao.disabled = false;
+  }
+});
+
+
+// ------------------------------------------ editar uma pessoa da porta
+const formEditarCredenciado = $('#form-editar-credenciado');
+
+function abrirEdicaoCredenciado(id) {
+  const k = credenciamento.find(x => x.id === id);
+  if (!k) return;
+  formEditarCredenciado.id.value = k.id;
+  // Vaga sem nome abre com o campo vazio: o nome da empresa nao e' o de
+  // quem chegou, e deixar ele ali convida a salvar sem trocar.
+  formEditarCredenciado.nome.value = k.ingresso_status === 'unassigned' ? '' : k.nome;
+  formEditarCredenciado.whatsapp.value = k.whatsapp ? telBR(k.whatsapp) : '';
+  $('#editar-credenciado-erro').hidden = true;
+  $('#modal-editar-credenciado').hidden = false;
+  formEditarCredenciado.nome.focus();
+}
+
+formEditarCredenciado.addEventListener('submit', async e => {
+  e.preventDefault();
+  const erro = $('#editar-credenciado-erro');
+  const botao = e.target.querySelector('button[type="submit"]');
+  erro.hidden = true;
+  botao.disabled = true;
+  try {
+    await api('/api/admin/credenciamento', {
+      method: 'PUT',
+      body: JSON.stringify({
+        id: formEditarCredenciado.id.value,
+        nome: formEditarCredenciado.nome.value,
+        whatsapp: formEditarCredenciado.whatsapp.value,
+      }),
+    });
+    fecharModais();
+    toast('Dados atualizados.');
+    carregarCredenciamento().catch(err => toast(err.message));
+  } catch (err) {
+    erro.textContent = err.message;
+    erro.hidden = false;
+  } finally {
+    botao.disabled = false;
+  }
+});
+
+// ------------------------------- importar a planilha de ingressos da Eduzz
+// A "Lista de presença" da area de ingressos sai como .xls (na verdade um
+// .xlsx), com duas linhas de titulo antes do cabecalho e acentos do
+// cabecalho as vezes trocados por "?". Por isso o cabecalho e' achado pela
+// celula "Participante" e cada coluna e' reconhecida pelo comeco do nome,
+// sem depender de acento nem da posicao.
+const XLSX_URL = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+
+function carregarLeitorPlanilha() {
+  if (window.XLSX) return Promise.resolve(window.XLSX);
+  return new Promise((ok, falha) => {
+    const s = document.createElement('script');
+    s.src = XLSX_URL;
+    s.onload = () => ok(window.XLSX);
+    s.onerror = () => falha(new Error('Não foi possível carregar o leitor de planilha. Confira a internet.'));
+    document.head.appendChild(s);
+  });
+}
+
+const chaveCabecalho = (v) => semAcento(v).replace(/[^a-z0-9]+/g, ' ').trim();
+
+function campoDaColuna(cab) {
+  const c = chaveCabecalho(cab);
+  if (/^n\b.*ingresso$/.test(c)) return 'ingresso';
+  if (c === 'participante') return 'participante';
+  if (c === 'telefone') return 'telefone';
+  if (c === 'e mail') return 'email';
+  if (c === 'nome comprador') return 'comprador';
+  if (c === 'e mail comprador') return 'comprador_email';
+  if (c === 'nome do lote') return 'lote';
+  if (c.startsWith('descri')) return 'descricao';
+  if (c === 'status') return 'status';
+  if (c === 'check in') return 'checkin';
+  return null;
+}
+
+async function lerPlanilhaIngressos(arquivo) {
+  const XLSX = await carregarLeitorPlanilha();
+  const livro = XLSX.read(await arquivo.arrayBuffer(), { type: 'array', cellDates: true });
+  // raw: true de proposito. Formatado (raw: false), telefone gravado como
+  // numero na planilha sai "5.512E+12" e a pessoa perde o casamento pelo
+  // WhatsApp; cru, vem 5511996125239 inteiro.
+  const linhas = XLSX.utils.sheet_to_json(livro.Sheets[livro.SheetNames[0]], { header: 1, raw: true, defval: '' });
+
+  const iCab = linhas.findIndex(l => l.some(c => chaveCabecalho(c) === 'participante'));
+  if (iCab < 0) throw new Error('Não achei a coluna "Participante". É a planilha "Lista de presença" da área de ingressos?');
+  const campos = linhas[iCab].map(campoDaColuna);
+  if (!campos.includes('ingresso')) throw new Error('Não achei a coluna "Nº Ingresso" na planilha.');
+
+  return linhas.slice(iCab + 1)
+    .map(l => Object.fromEntries(campos.map((c, i) => [c, l[i]]).filter(([c]) => c)))
+    .filter(o => String(o.ingresso || '').trim() && String(o.participante || '').trim());
+}
+
+$('#arquivo-ingressos').addEventListener('change', async e => {
+  const arquivo = e.target.files?.[0];
+  e.target.value = '';   // permite escolher o mesmo arquivo de novo depois
+  if (!arquivo) return;
+  try {
+    const linhas = await lerPlanilhaIngressos(arquivo);
+    if (!confirm(`Importar ${linhas.length} ingresso(s) da planilha?\n\nQuem já está na lista é atualizado, ninguém é duplicado e nenhuma presença é desfeita.`)) return;
+    toast('Importando...');
+    const r = await api('/api/admin/ingressos', { method: 'POST', body: JSON.stringify({ linhas }) });
+    const nomes = {
+      criado: 'novos na lista', ligado: 'ligados a quem já estava', atualizado: 'atualizados',
+      removido: 'cancelados e removidos', marcado_cancelado: 'cancelados (já tinham presença)',
+    };
+    const partes = Object.entries(r.resumo).map(([k, v]) => `${v} ${nomes[k] || k}`);
+    if (r.ignorados.length) partes.push(`${r.ignorados.length} de teste ignorado(s)`);
+    alert(`Planilha importada.\n\n${partes.join('\n')}`);
+    carregarCredenciamento().catch(err => toast(err.message));
+  } catch (err) {
+    alert(err.message);
   }
 });
 

@@ -223,6 +223,10 @@
           <option value="sem-form">Chegou mas não preencheu</option>
         </select>
         <button type="button" class="btn btn-primario" id="btn-novo-credenciado">+ Acompanhante / avulso</button>
+        <label class="btn btn-secundario" title="Planilha &quot;Lista de presença&quot; da área de ingressos da Eduzz">
+          Importar ingressos da Eduzz
+          <input type="file" id="arquivo-ingressos" accept=".xls,.xlsx,.csv" hidden />
+        </label>
         <a class="btn btn-secundario" href="/api/admin/credenciamento?formato=csv">Exportar CSV</a>
       </div>
 
@@ -476,6 +480,33 @@
       <div class="modal-acoes">
         <button type="button" class="btn btn-fantasma" data-fechar>Cancelar</button>
         <button type="submit" class="btn btn-primario">Adicionar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============== MODAL DE EDITAR PESSOA DA PORTA ============== -->
+<div class="modal" id="modal-editar-credenciado" hidden>
+  <div class="modal-fundo" data-fechar></div>
+  <div class="modal-caixa modal-estreito" role="dialog" aria-modal="true" aria-labelledby="titulo-editar-credenciado">
+    <button type="button" class="modal-fechar" data-fechar aria-label="Fechar">&times;</button>
+    <h2 id="titulo-editar-credenciado">Editar</h2>
+    <p class="modal-sub">Para pôr o nome de quem chegou num ingresso sem nome, ou corrigir
+      um nome ou número. O nome vai para o certificado.</p>
+    <form id="form-editar-credenciado">
+      <input type="hidden" name="id" />
+      <label>
+        <span>Nome completo</span>
+        <input type="text" name="nome" required maxlength="120" autocomplete="off" />
+      </label>
+      <label>
+        <span>WhatsApp (opcional, é por ele que vão o link do formulário e o certificado)</span>
+        <input type="tel" name="whatsapp" inputmode="numeric" placeholder="(12) 99999-9999" />
+      </label>
+      <p class="alerta alerta-erro" id="editar-credenciado-erro" role="alert" hidden></p>
+      <div class="modal-acoes">
+        <button type="button" class="btn btn-fantasma" data-fechar>Cancelar</button>
+        <button type="submit" class="btn btn-primario">Salvar</button>
       </div>
     </form>
   </div>

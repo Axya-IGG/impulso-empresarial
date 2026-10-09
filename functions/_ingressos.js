@@ -56,6 +56,83 @@ async function acharPorContato(env, whatsapp, email, { semIngresso = false } = {
 }
 
 /**
+ * Ultimo recurso antes de criar linha nova: mesmo nome completo, sem
+ * ingresso ligado. Cobre o comprador cujo contato na compra difere do
+ * ingresso (caso real: e-mail "gmail.comh" na compra e ingresso sem
+ * telefone, a mesma pessoa virava duas linhas). So' vale se houver UMA
+ * linha com esse nome: homonimo nao e' adivinhado.
+ */
+async function acharPorNome(env, nome) {
+  const alvo = normalizarChave(nome);
+  if (alvo.split(' ').length < 2) return null;
+  const { results } = await env.DB.prepare(
+    'SELECT * FROM credenciamento WHERE ingresso_chave IS NULL'
+  ).all();
+  const iguais = (results || []).filter(k => normalizarChave(k.nome) === alvo);
+  return iguais.length === 1 ? iguais[0] : null;
+}
+
+/**
+ * Ingresso que entrou pela planilha (chave "xls:...") e agora chega pelo
+ * webhook. A planilha da Eduzz nao traz o inviteKey do webhook, entao a
+ * primeira vez que o webhook fala desse ingresso a chave nao bate: sem
+ * isto, a mesma pessoa viraria duas linhas. Exige nome igual E contato
+ * igual, para nao trocar um ingresso por outro do mesmo comprador.
+ */
+async function mesmoIngressoDaPlanilha(env, ing) {
+  if (ing.chave.startsWith('xls:') || (!ing.whatsapp && !ing.email)) return null;
+  const { results } = await env.DB.prepare(`
+    SELECT * FROM credenciamento
+     WHERE ingresso_chave LIKE 'xls:%'
+       AND ((? IS NOT NULL AND whatsapp = ?) OR (? IS NOT NULL AND lower(email) = ?))
+  `).bind(ing.whatsapp, ing.whatsapp, ing.email, ing.email).all();
+  const alvo = normalizarChave(ing.nome);
+  return (results || []).find(k => normalizarChave(k.nome) === alvo) || null;
+}
+
+/**
+ * Vaga de ingresso sem nome do mesmo comprador, para receber o nome quando
+ * a empresa finalmente atribuir o ingresso a alguem.
+ */
+async function vagaSemNome(env, comprador) {
+  if (!comprador) return null;
+  return env.DB.prepare(`
+    SELECT * FROM credenciamento
+     WHERE ingresso_status = 'unassigned' AND (anfitriao_id = ? OR id = ?)
+     ORDER BY (id = ?), criado_em
+     LIMIT 1
+  `).bind(comprador.id, comprador.id, comprador.id).first();
+}
+
+/**
+ * Linha da planilha "Lista de presença" exportada da area de ingressos da
+ * Eduzz, ja com as colunas pelo nome do cabecalho (o painel le o arquivo e
+ * manda assim). A chave e' o "Nº Ingresso", com prefixo para nunca colidir
+ * com o inviteKey do webhook.
+ */
+export function ingressoDaPlanilha(l) {
+  const status = normalizarChave(l.status);
+  return {
+    chave: l.ingresso ? 'xls:' + limpar(l.ingresso, 40) : '',
+    nome: limpar(l.participante, 120),
+    email: emailLimpo(l.email),
+    whatsapp: normalizarWhatsapp(l.telefone),
+    status: status.includes('cancel') ? 'canceled' : status.startsWith('nao atribu') ? 'unassigned' : 'paid',
+    checkInAt: l.checkin && !isNaN(new Date(l.checkin)) ? new Date(l.checkin).toISOString() : null,
+    produto: [l.descricao, l.lote].map(v => limpar(v, 80)).filter(Boolean).join(' - ') || null,
+    // A planilha nao tem o telefone do comprador. Mas no ingresso ainda sem
+    // nome o "participante" e' o proprio comprador, e o telefone e o e-mail
+    // dele sao os do comprador: e' por eles que a compra e' achada quando o
+    // e-mail da Eduzz difere do cadastrado na landing (caso real da Onvale).
+    comprador: {
+      nome: limpar(l.comprador, 120) || null,
+      email: emailLimpo(l.comprador_email) || (status.startsWith('nao atribu') ? emailLimpo(l.email) : null),
+      whatsapp: status.startsWith('nao atribu') ? normalizarWhatsapp(l.telefone) : null,
+    },
+  };
+}
+
+/**
  * Aplica um ingresso na lista da porta. Devolve o que fez, para o log e
  * para o resumo da importacao.
  *
@@ -93,7 +170,17 @@ export async function aplicarIngresso(env, ing, { tipo = 'atualizado' } = {}) {
 
   if (!ing.nome) return 'sem_nome';
 
-  let linha = existente || await acharPorContato(env, ing.whatsapp, ing.email, { semIngresso: true });
+  const semNome = ing.status === 'unassigned';
+  const comprador = await acharPorContato(env, ing.comprador.whatsapp, ing.comprador.email);
+
+  let linha = existente
+    || await mesmoIngressoDaPlanilha(env, ing)
+    || (semNome ? null : await acharPorContato(env, ing.whatsapp, ing.email, { semIngresso: true }))
+    || (semNome ? null : await acharPorNome(env, ing.nome))
+    || (semNome ? null : await vagaSemNome(env, comprador))
+    // O primeiro ingresso sem nome de uma compra fica na linha do proprio
+    // comprador (que ja esta na lista pela fatura); os outros viram vagas.
+    || (semNome && comprador && !comprador.ingresso_chave ? comprador : null);
   let acao;
 
   if (linha) {
@@ -103,13 +190,22 @@ export async function aplicarIngresso(env, ing, { tipo = 'atualizado' } = {}) {
              whatsapp = COALESCE(?, whatsapp), email = COALESCE(?, email),
              produto = COALESCE(?, produto)
        WHERE id = ?
-    `).bind(ing.chave, ing.status, ing.nome, ing.whatsapp, ing.email, ing.produto, linha.id).run();
+    `).bind(ing.chave,
+      // Ingresso sem nome ligado a linha do proprio comprador: a linha e' de
+      // uma pessoa (quem pagou), nao uma vaga, e nao leva o selo "sem nome".
+      semNome && linha.id === comprador?.id ? 'paid' : ing.status,
+      semNome ? linha.nome : ing.nome,
+      semNome ? null : ing.whatsapp, semNome ? null : ing.email, ing.produto, linha.id).run();
     acao = existente ? 'atualizado' : 'ligado';
   } else {
     // O comprador e' a linha da fatura (lead com compra), achada pelo
     // contato de quem pagou. Se o comprador e' o proprio participante, o
     // passo 2 acima ja teria ligado o ingresso a ele.
-    const comprador = await acharPorContato(env, ing.comprador.whatsapp, ing.comprador.email);
+    //
+    // Ingresso ainda sem nome (empresa que comprou varios e nao disse quem
+    // vai) vira uma vaga: sem WhatsApp, para o link do formulario nao ir
+    // para o RH da empresa a cada presenca marcada. A equipe poe o nome e o
+    // numero de quem chegou pelo Editar da porta.
     const id = crypto.randomUUID();
     await env.DB.prepare(`
       INSERT INTO credenciamento
@@ -117,7 +213,9 @@ export async function aplicarIngresso(env, ing, { tipo = 'atualizado' } = {}) {
          ingresso_status, comprador_nome, criado_em)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
-      id, comprador?.id ?? null, ing.nome, ing.whatsapp, ing.email,
+      id, comprador?.id ?? null,
+      semNome ? `${ing.comprador.nome || ing.nome} (ingresso sem nome)` : ing.nome,
+      semNome ? null : ing.whatsapp, semNome ? null : ing.email,
       ing.produto || 'Ingresso nominal', ing.chave, ing.status,
       comprador ? null : ing.comprador.nome, quando,
     ).run();
@@ -141,6 +239,6 @@ export async function aplicarIngresso(env, ing, { tipo = 'atualizado' } = {}) {
 export function tipoDoEvento(evento) {
   if (evento === 'blinket.attendance_canceled') return 'cancelado';
   if (evento === 'blinket.attendance_checkin') return 'checkin';
-  if (/^blinket\.(attendance_(added|edited|assigned|tag_changed)|ticket_edited)$/.test(evento)) return 'atualizado';
+  if (/^blinket\.(attendance_(added|edited|assigned|tag_changed))$/.test(evento)) return 'atualizado';
   return null;
 }
