@@ -49,6 +49,7 @@
       <button class="aba" data-aba="credenciamento">Credenciamento</button>
       <button class="aba" data-aba="formularios">Formulários</button>
       <button class="aba" data-aba="sorteio">Sorteio</button>
+      <button class="aba" data-aba="certificados">Certificados</button>
     </nav>
     <button class="btn btn-fantasma" id="btn-sair">Sair</button>
   </header>
@@ -114,7 +115,7 @@
            o cadastro" some da lista (ela nao tem um dia fixo no calendario
            pra comparar com o periodo). -->
       <p class="dica-filtro" id="dica-periodo" hidden>
-        O período filtra só as mensagens com data específica — as de "tempo após o cadastro" não têm um dia fixo.
+        O período filtra só as mensagens com data específica. As de "tempo após o cadastro" não têm um dia fixo.
       </p>
 
       <div id="lista-mensagens" class="lista-mensagens"></div>
@@ -176,7 +177,7 @@
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/></svg>
             <h3>Caixa de entrada do Impulso</h3>
             <p>Escolha uma conversa à esquerda pra ver o histórico e responder.<br />
-              Resposta em texto livre só vale até 24h depois da última mensagem da pessoa (regra da Meta).</p>
+              As respostas saem pelo mesmo número das mensagens automáticas.</p>
           </div>
 
           <div class="wa-aberta" id="wa-aberta" hidden>
@@ -228,7 +229,7 @@
       <p class="sorteio-dica" id="aviso-sync" hidden></p>
 
       <div class="tabela-wrap tabela-wrap-rolavel">
-        <table class="tabela">
+        <table class="tabela tabela-cartoes">
           <thead>
             <tr>
               <th>Nome</th><th>Contato</th><th>Ingresso</th>
@@ -263,8 +264,8 @@
       </div>
 
       <p class="dica-tabela">
-        Cada linha é uma resposta completa — as quatro perguntas do formulário
-        estão nas colunas. <strong>Clique na linha</strong> para abrir a resposta
+        Cada linha é uma resposta completa, com as quatro perguntas do formulário
+        nas colunas. <strong>Clique na linha</strong> para abrir a resposta
         inteira, com o contato da pessoa.
       </p>
 
@@ -286,7 +287,7 @@
       <div class="link-publico">
         <div class="link-publico-texto">
           <strong>Link do telão</strong>
-          <span>Para a equipe da casa projetar. Só exibe — sortear é só aqui.</span>
+          <span>Para a equipe da casa projetar. Ele só exibe; sortear é só aqui.</span>
         </div>
         <input type="text" id="link-sorteio" readonly />
         <button type="button" class="btn btn-secundario" data-copiar="#link-sorteio">Copiar</button>
@@ -318,7 +319,71 @@
       <div id="lista-sorteios" class="lista-sorteios"></div>
     </section>
 
+    <!-- -------------------------- CERTIFICADOS ------------------------
+         Recebe quem tem presenca marcada no Credenciamento. Envio manual,
+         depois do evento. A arte, o modelo e a pagina de validacao do QR
+         ficam no app de certificados (functions/_certificados.js). -->
+    <section class="painel-aba" data-painel="certificados" hidden>
+      <div class="cards" id="cards-certificados"></div>
+
+      <div class="barra">
+        <input type="search" id="busca-certificados" placeholder="Buscar por nome ou WhatsApp..." />
+        <select id="filtro-certificados">
+          <option value="">Todos</option>
+          <option value="pendente">Ainda não receberam</option>
+          <option value="enviado">Já receberam</option>
+          <option value="falha">Envio falhou</option>
+          <option value="conferir">Nome para conferir</option>
+        </select>
+        <button type="button" class="btn btn-primario" id="btn-enviar-todos">Enviar para todos</button>
+        <button type="button" class="btn btn-fantasma" id="btn-cancelar-fila" hidden>Cancelar fila</button>
+        <a class="btn btn-secundario" id="link-editar-modelo" target="_blank" rel="noopener">Editar a arte ↗</a>
+      </div>
+
+      <p class="dica-tabela" id="dica-certificados">
+        Aparece aqui quem teve a <strong>presença marcada no Credenciamento</strong>.
+        Confira os nomes antes de enviar: o certificado sai exatamente como está
+        na coluna Nome. O envio para todos sai aos poucos (cerca de 48 por hora,
+        das 8h às 20h), pelo mesmo número das mensagens.
+      </p>
+      <p class="sorteio-dica" id="aviso-certificados" hidden></p>
+
+      <div class="tabela-wrap tabela-wrap-rolavel">
+        <table class="tabela tabela-cartoes">
+          <thead>
+            <tr>
+              <th>Nome no certificado</th><th>WhatsApp</th><th>Código</th>
+              <th>Envio</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="corpo-certificados"></tbody>
+        </table>
+      </div>
+    </section>
+
   </main>
+</div>
+
+<!-- =============== MODAL DO NOME NO CERTIFICADO =============== -->
+<div class="modal" id="modal-cert-nome" hidden>
+  <div class="modal-fundo" data-fechar></div>
+  <div class="modal-caixa modal-estreito" role="dialog" aria-modal="true" aria-labelledby="titulo-cert-nome">
+    <button type="button" class="modal-fechar" data-fechar aria-label="Fechar">&times;</button>
+    <h2 id="titulo-cert-nome">Nome no certificado</h2>
+    <p class="modal-sub" id="cert-nome-porta"></p>
+    <form id="form-cert-nome">
+      <input type="hidden" name="id" />
+      <label>
+        <span>Nome completo, como deve sair impresso</span>
+        <input type="text" name="nome" required maxlength="120" autocomplete="off" />
+      </label>
+      <p class="alerta alerta-erro" id="cert-nome-erro" role="alert" hidden></p>
+      <div class="modal-acoes">
+        <button type="button" class="btn btn-fantasma" data-fechar>Cancelar</button>
+        <button type="submit" class="btn btn-primario">Salvar</button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <!-- =================== MODAL DE PARTICIPANTE =================== -->
@@ -392,14 +457,18 @@
         <input type="text" name="nome" required />
       </label>
       <label>
-        <span>WhatsApp (opcional — é por ele que vai o link do formulário)</span>
+        <span>WhatsApp (opcional, é por ele que vão o link do formulário e o certificado)</span>
         <input type="tel" name="whatsapp" inputmode="numeric" placeholder="(12) 99999-9999" />
       </label>
       <label>
         <span>Acompanha quem?</span>
         <select name="anfitriao_id" id="campo-anfitriao">
-          <option value="">Ninguém — entrou avulso</option>
+          <option value="">Ninguém, entrou avulso</option>
         </select>
+      </label>
+      <label class="check-inline">
+        <input type="checkbox" name="ja_chegou" checked />
+        <span>Já chegou: marcar presença agora</span>
       </label>
 
       <p class="alerta alerta-erro" id="credenciado-erro" role="alert" hidden></p>
@@ -486,11 +555,11 @@
       </label>
       <p class="dica">
         Use <code>{{primeiro_nome}}</code> ou <code>{{nome}}</code> para personalizar.
-        Para variar o texto entre os envios (recomendado — texto idêntico em
+        Para variar o texto entre os envios (recomendado: texto idêntico em
         massa é um dos sinais que levam o número a cair), separe versões
         alternativas com uma linha só de <code>---</code>; uma é sorteada a
         cada disparo. Para formatar, selecione um trecho e use os botões
-        acima — o WhatsApp não sublinha texto, por isso a opção aqui é
+        acima. O WhatsApp não sublinha texto, por isso a opção aqui é
         negrito, itálico ou tachado.
       </p>
 

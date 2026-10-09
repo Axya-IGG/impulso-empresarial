@@ -24,7 +24,25 @@ async function sincronizarCompradores(env) {
        AND NOT EXISTS (SELECT 1 FROM credenciamento k WHERE k.lead_id = l.id)
   `).all();
 
-  const novos = results || [];
+  let novos = results || [];
+  if (!novos.length) return 0;
+
+  // Quem ja esta na lista pelo ingresso nominal (webhook blinket.* ou
+  // planilha, ver functions/_ingressos.js) e' a mesma pessoa da compra:
+  // liga a compra a essa linha em vez de criar uma segunda.
+  const ligados = new Set();
+  for (const l of novos) {
+    const email = String(l.email || '').toLowerCase() || null;
+    const r = await env.DB.prepare(`
+      UPDATE credenciamento SET lead_id = ?, produto = COALESCE(produto, ?)
+       WHERE id = (SELECT id FROM credenciamento
+                    WHERE lead_id IS NULL
+                      AND ((? IS NOT NULL AND whatsapp = ?) OR (? IS NOT NULL AND lower(email) = ?))
+                    LIMIT 1)
+    `).bind(l.id, l.produto, l.whatsapp, l.whatsapp, email, email).run();
+    if (r.meta?.changes) ligados.add(l.id);
+  }
+  novos = novos.filter(l => !ligados.has(l.id));
   if (!novos.length) return 0;
 
   await env.DB.batch(novos.map(l => env.DB.prepare(
@@ -58,6 +76,7 @@ export async function onRequestGet(context) {
     env.DB.prepare(`
       SELECT k.id, k.lead_id, k.anfitriao_id, k.nome, k.whatsapp, k.email,
              k.produto, k.presente_em, k.link_enviado_em, k.link_detalhe,
+             k.ingresso_chave, k.ingresso_status, k.comprador_nome,
              a.nome AS anfitriao_nome
         FROM credenciamento k
         LEFT JOIN credenciamento a ON a.id = k.anfitriao_id
@@ -125,15 +144,18 @@ export async function onRequestPost(context) {
     if (!anfitriao) return erro('Comprador nao encontrado.', 404);
   }
 
+  const id = crypto.randomUUID();
   await env.DB.prepare(
     `INSERT INTO credenciamento (id, anfitriao_id, nome, whatsapp, produto, criado_em)
      VALUES (?, ?, ?, ?, ?, ?)`
   ).bind(
-    crypto.randomUUID(), anfitriaoId || null, nome, whatsapp,
+    id, anfitriaoId || null, nome, whatsapp,
     anfitriaoId ? 'Acompanhante' : 'Avulso', agora()
   ).run();
 
-  return json({ ok: true });
+  // O id volta para o painel marcar a presenca em seguida (quem e'
+  // cadastrado na porta ja chegou).
+  return json({ ok: true, id });
 }
 
 /**

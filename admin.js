@@ -41,10 +41,10 @@ function toast(msg) {
 }
 
 const dataBR = (iso) => {
-  if (!iso) return '—';
+  if (!iso) return '-';
   // O banco grava ISO em UTC; o painel é operado do Brasil.
   const d = new Date(iso.includes('T') ? iso : iso.replace(' ', 'T') + 'Z');
-  return isNaN(d) ? '—' : d.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+  return isNaN(d) ? '-' : d.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
 };
 
 const telBR = (n) => {
@@ -61,11 +61,12 @@ function mostrarLogin() {
 
 // Cada aba tem sua propria URL (#leads, #recebidas...), pra dar pra
 // favoritar uma aba especifica em vez de sempre cair na de Leads.
-const ABAS_VALIDAS = ['leads', 'mensagens', 'envios', 'recebidas', 'credenciamento', 'formularios', 'sorteio'];
+const ABAS_VALIDAS = ['leads', 'mensagens', 'envios', 'recebidas', 'credenciamento', 'formularios', 'sorteio', 'certificados'];
 const CARREGAR_ABA = {
   leads: carregarLeads, mensagens: carregarMensagens, envios: carregarEnvios,
   recebidas: carregarRecebidas, credenciamento: carregarCredenciamento,
   formularios: carregarParticipantes, sorteio: carregarSorteios,
+  certificados: carregarCertificados,
 };
 
 function mostrarAba(nome) {
@@ -73,7 +74,9 @@ function mostrarAba(nome) {
   $$('.aba').forEach(a => a.classList.toggle('ativa', a.dataset.aba === nome));
   $$('.painel-aba').forEach(p => { p.hidden = p.dataset.painel !== nome; });
   history.replaceState(null, '', `#${nome}`);
-  CARREGAR_ABA[nome]();
+  // Sem o catch, uma falha ao carregar (wi-fi do hotel caindo, por exemplo)
+  // deixava a aba vazia sem dizer nada.
+  Promise.resolve().then(CARREGAR_ABA[nome]).catch(err => toast(err.message));
 }
 
 function mostrarPainel() {
@@ -133,7 +136,7 @@ $('#filtro-comprou').addEventListener('change', carregarLeads);
 // meio, campanha, conteúdo e termo completos; o texto da célula só
 // origem/campanha, que já dá pra saber de qual anúncio veio.
 function renderUtmCompra(l) {
-  if (!l.comprou) return '—';
+  if (!l.comprou) return '-';
   const partes = [l.compra_utm_source, l.compra_utm_campaign].filter(Boolean);
   if (!partes.length) return '<span class="utm-vazio">sem utm</span>';
   const detalhe = [
@@ -168,9 +171,9 @@ async function carregarLeads() {
           <td>${esc(l.nome)}${l.optout ? ' <span class="selo selo-off">saiu</span>' : ''}</td>
           <td>${esc(l.email)}</td>
           <td>${esc(telBR(l.whatsapp))}</td>
-          <td>${esc(l.origem || '—')}</td>
+          <td>${esc(l.origem || '-')}</td>
           <td>${esc(dataBR(l.criado_em))}</td>
-          <td>${l.comprou ? '<span class="selo selo-ok">comprou</span>' : '—'}</td>
+          <td>${l.comprou ? '<span class="selo selo-ok">comprou</span>' : '-'}</td>
           <td>${renderUtmCompra(l)}</td>
           <td>
             <button class="btn-mini" data-comprou="${esc(l.id)}" data-valor="${l.comprou ? 0 : 1}">
@@ -636,8 +639,8 @@ async function carregarEnvios() {
     ? envios.map(e => `
         <tr>
           <td>${esc(dataBR(e.enviado_em))}</td>
-          <td>${esc(e.lead_nome || '—')}<br><small>${esc(telBR(e.lead_whatsapp))}</small></td>
-          <td>${esc(e.mensagem_titulo || '—')}</td>
+          <td>${esc(e.lead_nome || '-')}<br><small>${esc(telBR(e.lead_whatsapp))}</small></td>
+          <td>${esc(e.mensagem_titulo || '-')}</td>
           <td><span class="selo ${selo[e.status] || 'selo-off'}">${esc(e.status)}</span></td>
           <td>${esc((e.detalhe || '').slice(0, 90))}</td>
           <td>${e.status === 'erro' ? `<button class="btn-mini" data-reenviar="${e.id}">Reenviar</button>` : ''}</td>
@@ -957,13 +960,18 @@ async function carregarCredenciamento() {
   pintarCredenciamento();
 }
 
+// Na porta ninguem digita acento nem DDI: "joao" tem de achar "João" e
+// "99720" tem de achar o numero gravado como 5512997205261.
+const semAcento = (v) => String(v || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
 function pintarCredenciamento() {
-  const busca = ($('#busca-credenciamento').value || '').trim().toLowerCase();
+  const busca = semAcento($('#busca-credenciamento').value).trim();
+  const digitos = busca.replace(/\D/g, '');
   const filtro = $('#filtro-presenca').value;
 
   const lista = credenciamento.filter(k => {
-    if (busca && ![k.nome, k.email, k.whatsapp].some(
-      c => String(c || '').toLowerCase().includes(busca))) return false;
+    if (busca && ![k.nome, k.email, k.anfitriao_nome, k.comprador_nome].some(c => semAcento(c).includes(busca))
+        && !(digitos.length >= 4 && String(k.whatsapp || '').includes(digitos))) return false;
     if (filtro === 'falta' && k.presente_em) return false;
     if (filtro === 'presente' && !k.presente_em) return false;
     if (filtro === 'sem-form' && (!k.presente_em || k.respondeu)) return false;
@@ -982,15 +990,17 @@ function pintarCredenciamento() {
         <tr class="${presente ? 'linha-presente' : ''}">
           <td>
             ${esc(k.nome)}
-            ${k.anfitriao_nome ? `<span class="sub-linha">acompanha ${esc(k.anfitriao_nome)}</span>` : ''}
-            ${!k.lead_id && !k.anfitriao_id ? '<span class="sub-linha">avulso</span>' : ''}
+            ${k.ingresso_status === 'canceled' ? '<span class="selo selo-erro">ingresso cancelado</span>' : ''}
+            ${k.anfitriao_nome ? `<span class="sub-linha">ingresso de ${esc(k.anfitriao_nome)}</span>` : ''}
+            ${!k.anfitriao_nome && k.comprador_nome ? `<span class="sub-linha">comprado por ${esc(k.comprador_nome)}</span>` : ''}
+            ${!k.lead_id && !k.anfitriao_id && !k.ingresso_chave ? '<span class="sub-linha">avulso</span>' : ''}
           </td>
           <td>
             ${k.whatsapp ? telBR(k.whatsapp) : '<span class="fraco">sem WhatsApp</span>'}
             ${k.email ? `<span class="sub-linha">${esc(k.email)}</span>` : ''}
           </td>
-          <td class="celula-produto">${esc(k.produto || '—')}</td>
-          <td>${k.respondeu ? '<span class="selo selo-ok">preencheu</span>' : '<span class="fraco">—</span>'}</td>
+          <td class="celula-produto">${esc(k.produto || '-')}</td>
+          <td>${k.respondeu ? '<span class="selo selo-ok">preencheu</span>' : '<span class="fraco">-</span>'}</td>
           <td>
             ${presente
               ? `<span class="selo selo-ok">${dataBR(k.presente_em)}</span> ${envio}`
@@ -1016,6 +1026,12 @@ $('#corpo-credenciamento').addEventListener('click', async e => {
   const excluir = e.target.closest('[data-excluir-credenciado]');
 
   if (marcar) {
+    // Desfazer tira a pessoa da lista de certificados: um toque errado no
+    // celular, no meio da fila, nao pode bastar.
+    const pessoa = credenciamento.find(k => k.id === marcar.dataset.presenca);
+    if (pessoa?.presente_em && !confirm(`Desfazer a presença de ${pessoa.nome}?
+
+Sem presença, a pessoa não recebe certificado.`)) return;
     marcar.disabled = true;
     try {
       const r = await api('/api/admin/credenciamento', {
@@ -1026,7 +1042,7 @@ $('#corpo-credenciamento').addEventListener('click', async e => {
       else if (r.envio?.ok) toast('Presença marcada. Link do formulário enviado.');
       // O detalhe técnico fica no title do selo da linha; na porta o que
       // importa é saber que precisa passar o link na mão, agora.
-      else toast('Presença marcada, mas o link NÃO foi enviado — passe o link manualmente.');
+      else toast('Presença marcada, mas o link NÃO foi enviado. Passe o link manualmente.');
       carregarCredenciamento();
     } catch (err) {
       toast(err.message);
@@ -1055,7 +1071,7 @@ const formCredenciado = $('#form-credenciado');
 $('#btn-novo-credenciado').addEventListener('click', () => {
   formCredenciado.reset();
   $('#credenciado-erro').hidden = true;
-  $('#campo-anfitriao').innerHTML = '<option value="">Ninguém — entrou avulso</option>' +
+  $('#campo-anfitriao').innerHTML = '<option value="">Ninguém, entrou avulso</option>' +
     credenciamento.filter(k => k.lead_id)
       .map(k => `<option value="${esc(k.id)}">${esc(k.nome)}</option>`).join('');
   $('#modal-credenciado').hidden = false;
@@ -1069,7 +1085,7 @@ formCredenciado.addEventListener('submit', async e => {
   botao.disabled = true;
 
   try {
-    await api('/api/admin/credenciamento', {
+    const novo = await api('/api/admin/credenciamento', {
       method: 'POST',
       body: JSON.stringify({
         nome: formCredenciado.nome.value,
@@ -1078,7 +1094,19 @@ formCredenciado.addEventListener('submit', async e => {
       }),
     });
     fecharModais();
-    toast('Adicionado à lista.');
+    // Quem e' cadastrado na porta esta' na porta: a presenca ja sai marcada
+    // (e o link do formulario ja vai), senao a pessoa ficaria sem
+    // certificado por um segundo clique que ninguem lembra de dar.
+    if (formCredenciado.ja_chegou.checked && novo.id) {
+      const r = await api('/api/admin/credenciamento', {
+        method: 'PATCH',
+        body: JSON.stringify({ id: novo.id }),
+      });
+      toast(r.envio?.ok ? 'Adicionado e presente. Link do formulário enviado.'
+        : 'Adicionado e presente. O link do formulário não foi enviado: passe manualmente.');
+    } else {
+      toast('Adicionado à lista.');
+    }
     carregarCredenciamento();
   } catch (err) {
     erro.textContent = err.message;
@@ -1234,7 +1262,7 @@ function abrirResposta(id) {
   const blocos = PERGUNTAS_FORMULARIO.map(([campo, pergunta]) => `
     <div class="resposta-bloco">
       <span class="resposta-pergunta">${esc(pergunta)}</span>
-      <p class="resposta-valor">${esc(p[campo] || '—')}</p>
+      <p class="resposta-valor">${esc(p[campo] || '-')}</p>
     </div>`).join('');
 
   // O formulário não coleta contato: o que aparece aqui vem da lista da porta,
@@ -1318,7 +1346,7 @@ async function carregarSorteios() {
   $('#sorteio-elegiveis').textContent = r.total_participantes
     ? `${r.total_participantes} participante${r.total_participantes === 1 ? '' : 's'} na lista · ` +
       `${r.total_participantes - jaGanharam.size} ainda sem ganhar nada`
-    : 'Ninguém se credenciou ainda — o sorteio só roda com participantes na lista.';
+    : 'Ninguém respondeu o formulário ainda. O sorteio só roda com participantes na lista.';
 
   $('#lista-sorteios').innerHTML = sorteios.length
     ? sorteios.map(s => {
@@ -1344,12 +1372,12 @@ async function carregarSorteios() {
           ${feito ? `
             <div class="sorteio-vencedor${ausente ? ' sorteio-vencedor-ausente' : ''}">
               <span>${ausente ? 'Não estava presente' : 'Ganhador'}</span>
-              <b>${esc(s.vencedor_nome || '—')}</b>
+              <b>${esc(s.vencedor_nome || '-')}</b>
               <small>${esc(s.vencedor_empresa || '')}</small>
             </div>
             <p class="sorteio-recibo">
               Nº ${esc(s.posicao)} de ${esc(s.total_elegiveis)} concorrentes ·
-              código ${esc(s.verificacao || '—')} · ${dataBR(s.sorteado_em)}
+              código ${esc(s.verificacao || '-')} · ${dataBR(s.sorteado_em)}
             </p>` : `
             <p class="sorteio-dica">
               ${s.repescagem
@@ -1465,6 +1493,195 @@ $('#lista-sorteios').addEventListener('click', async e => {
       toast(err.message);
       excluir.disabled = false;
     }
+  }
+});
+
+// ---------------------------------------------------------- certificados
+// Quem tem presenca no Credenciamento. O servidor sincroniza e emite o
+// codigo a cada abertura da aba (functions/_certificados.js), entao o Baixar
+// de cada linha ja e' um link direto para o PDF.
+let certs = { lista: [], base: '' };
+
+const ENVIO_CERT = {
+  enviado: ['selo-ok', 'recebeu'],
+  enviando: ['selo-andamento', 'enviando'],
+  fila: ['selo-andamento', 'na fila'],
+  falha: ['selo-erro', 'falhou'],
+  cancelado: ['selo-off', 'fila cancelada'],
+};
+
+async function carregarCertificados() {
+  const r = await api('/api/admin/certificados');
+  certs = { lista: r.certificados || [], base: r.base };
+  $('#link-editar-modelo').href = `${r.base}/admin`;
+
+  const presentes = certs.lista.filter(c => c.presente);
+  const conta = (st) => presentes.filter(c => c.envio_status === st).length;
+  $('#cards-certificados').innerHTML = [
+    ['Com certificado', presentes.filter(c => c.codigo).length],
+    ['Receberam', conta('enviado')],
+    ['Na fila', conta('fila') + conta('enviando')],
+    ['Falharam', conta('falha')],
+    ['Sem WhatsApp', presentes.filter(c => !c.whatsapp).length],
+    ['Nomes para conferir', presentes.filter(c => c.suspeito).length],
+  ].map(([rot, v]) => `<div class="card"><b>${v ?? 0}</b><span>${rot}</span></div>`).join('');
+
+  $('#btn-cancelar-fila').hidden = conta('fila') === 0;
+
+  const avisos = [];
+  if (!r.modelo) avisos.push('O app de certificados não tem modelo com arte para este evento: os certificados não são emitidos até ter.');
+  if (r.envios_24h >= r.teto_diario) avisos.push(`O número já mandou ${r.envios_24h} mensagens nas últimas 24h (teto de ${r.teto_diario}). A fila espera o teto liberar.`);
+  $('#aviso-certificados').textContent = avisos.join(' ');
+  $('#aviso-certificados').hidden = !avisos.length;
+
+  pintarCertificados();
+}
+
+function pintarCertificados() {
+  const busca = semAcento($('#busca-certificados').value).trim();
+  const digitos = busca.replace(/\D/g, '');
+  const filtro = $('#filtro-certificados').value;
+
+  const lista = certs.lista.filter(c => {
+    if (busca && !semAcento(c.nome).includes(busca) && !semAcento(c.nome_porta).includes(busca)
+        && !(digitos.length >= 4 && String(c.whatsapp || '').includes(digitos))) return false;
+    if (filtro === 'pendente' && (c.envio_status === 'enviado' || !c.presente)) return false;
+    if (filtro === 'enviado' && c.envio_status !== 'enviado') return false;
+    if (filtro === 'falha' && c.envio_status !== 'falha') return false;
+    if (filtro === 'conferir' && !c.suspeito) return false;
+    return true;
+  });
+
+  $('#corpo-certificados').innerHTML = lista.length
+    ? lista.map(c => {
+        const [classe, rotulo] = ENVIO_CERT[c.envio_status] || [];
+        const envio = c.envio_status
+          ? `<span class="selo ${classe}" ${c.envio_detalhe ? `title="${esc(c.envio_detalhe)}"` : ''}>${rotulo}</span>
+             ${c.envio_status === 'enviado' ? `<span class="sub-linha">${esc(dataBR(c.enviado_em))}</span>` : ''}`
+          : '<span class="fraco">não enviado</span>';
+        const pdf = c.codigo ? `${certs.base}/c/${encodeURIComponent(c.codigo)}.pdf?fonte=painel` : '';
+        const podeEnviar = c.presente && c.codigo && c.whatsapp && !c.revogado;
+        return `
+        <tr class="${c.presente ? '' : 'linha-apagada'}">
+          <td>
+            ${esc(c.nome)}
+            ${c.suspeito ? `<span class="selo selo-erro" title="Confira antes de enviar">${esc(c.suspeito)}</span>` : ''}
+            ${!c.presente ? '<span class="selo selo-off">sem presença</span>' : ''}
+            ${c.nome_porta && semAcento(c.nome_porta) !== semAcento(c.nome) ? `<span class="sub-linha">na porta: ${esc(c.nome_porta)}</span>` : ''}
+          </td>
+          <td>${c.whatsapp ? esc(telBR(c.whatsapp)) : '<span class="fraco">sem WhatsApp</span>'}</td>
+          <td>${c.codigo ? `<code>${esc(c.codigo)}</code>` : '<span class="fraco">-</span>'}
+            ${c.baixas > 0 ? `<span class="sub-linha">aberto ${c.baixas}x pela pessoa</span>` : ''}</td>
+          <td>${envio}</td>
+          <td class="celula-acoes">
+            <button type="button" class="btn-mini" data-cert-nome="${esc(c.id)}">Editar nome</button>
+            ${pdf ? `<a class="btn-mini" href="${esc(pdf)}" target="_blank" rel="noopener">Ver</a>
+                     <a class="btn-mini" href="${esc(pdf)}&amp;baixar=1">Baixar</a>` : ''}
+            ${podeEnviar ? `<button type="button" class="btn-mini destaque" data-cert-enviar="${esc(c.id)}">${c.envio_status === 'enviado' ? 'Reenviar' : 'Enviar'}</button>` : ''}
+          </td>
+        </tr>`;
+      }).join('')
+    : `<tr><td colspan="5" class="vazio">${certs.lista.length
+        ? 'Ninguém para esse filtro.'
+        : 'Ninguém com presença marcada ainda. Os certificados aparecem aqui conforme o Credenciamento marca quem chegou.'}</td></tr>`;
+}
+
+$('#busca-certificados').addEventListener('input', pintarCertificados);
+$('#filtro-certificados').addEventListener('change', pintarCertificados);
+
+$('#corpo-certificados').addEventListener('click', async e => {
+  const editar = e.target.closest('[data-cert-nome]');
+  const enviar = e.target.closest('[data-cert-enviar]');
+
+  if (editar) {
+    const c = certs.lista.find(x => x.id === editar.dataset.certNome);
+    if (!c) return;
+    const f = $('#form-cert-nome');
+    f.id.value = c.id;
+    f.nome.value = c.nome;
+    $('#cert-nome-porta').textContent = c.nome_porta ? `Na lista da porta: ${c.nome_porta}` : '';
+    $('#cert-nome-erro').hidden = true;
+    $('#modal-cert-nome').hidden = false;
+    f.nome.focus();
+  }
+
+  if (enviar) {
+    const c = certs.lista.find(x => x.id === enviar.dataset.certEnviar);
+    if (!c) return;
+    const pergunta = c.envio_status === 'enviado'
+      ? `${c.nome} já recebeu o certificado. Mandar de novo?`
+      : `Enviar o certificado de ${c.nome} para ${telBR(c.whatsapp)}?`;
+    if (!confirm(pergunta)) return;
+    enviar.disabled = true;
+    enviar.textContent = 'Enviando...';
+    try {
+      await api('/api/admin/certificados', {
+        method: 'POST',
+        body: JSON.stringify({ acao: 'enviar', id: c.id }),
+      });
+      toast('Certificado enviado.');
+    } catch (err) {
+      toast(err.message);
+    }
+    carregarCertificados().catch(err => toast(err.message));
+  }
+});
+
+$('#form-cert-nome').addEventListener('submit', async e => {
+  e.preventDefault();
+  const f = e.target;
+  const erro = $('#cert-nome-erro');
+  const botao = f.querySelector('button[type="submit"]');
+  erro.hidden = true;
+  botao.disabled = true;
+  try {
+    await api('/api/admin/certificados', {
+      method: 'PATCH',
+      body: JSON.stringify({ id: f.id.value, nome: f.nome.value }),
+    });
+    fecharModais();
+    toast('Nome atualizado. O PDF já sai com o nome novo.');
+    carregarCertificados().catch(err => toast(err.message));
+  } catch (err) {
+    erro.textContent = err.message;
+    erro.hidden = false;
+  } finally {
+    botao.disabled = false;
+  }
+});
+
+$('#btn-enviar-todos').addEventListener('click', async () => {
+  const pendentes = certs.lista.filter(c => c.presente && c.whatsapp && c.codigo
+    && !['enviado', 'enviando', 'fila'].includes(c.envio_status));
+  if (!pendentes.length) return toast('Ninguém pendente para enviar.');
+  const conferir = pendentes.filter(c => c.suspeito).length;
+  const horas = Math.max(1, Math.ceil(pendentes.length / 48));
+  if (!confirm(
+    `Colocar ${pendentes.length} certificado(s) na fila de envio?\n\n` +
+    `Saem aos poucos, cerca de 48 por hora, das 8h às 20h: umas ${horas}h no total.` +
+    (conferir ? `\n\nAtenção: ${conferir} nome(s) estão marcados para conferir. Use o filtro "Nome para conferir" antes, se quiser.` : '')
+  )) return;
+  const botao = $('#btn-enviar-todos');
+  botao.disabled = true;
+  try {
+    const r = await api('/api/admin/certificados', { method: 'POST', body: JSON.stringify({ acao: 'enviar_todos' }) });
+    toast(`${r.enfileirados} certificado(s) na fila.`);
+    carregarCertificados().catch(err => toast(err.message));
+  } catch (err) {
+    toast(err.message);
+  } finally {
+    botao.disabled = false;
+  }
+});
+
+$('#btn-cancelar-fila').addEventListener('click', async () => {
+  if (!confirm('Tirar da fila os certificados que ainda não saíram? Quem já recebeu não é afetado.')) return;
+  try {
+    const r = await api('/api/admin/certificados', { method: 'POST', body: JSON.stringify({ acao: 'cancelar_fila' }) });
+    toast(`${r.cancelados} envio(s) cancelado(s).`);
+    carregarCertificados().catch(err => toast(err.message));
+  } catch (err) {
+    toast(err.message);
   }
 });
 

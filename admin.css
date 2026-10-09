@@ -985,10 +985,43 @@ input:focus, select:focus, textarea:focus {
 
 @media (max-width: 640px) {
   .topo { gap: 12px; }
-  .abas { margin-left: 0; order: 3; width: 100%; }
-  .aba { flex: 1; }
+  /* Com 8 abas a barra passa da largura do celular. Antes ela empurrava a
+     pagina inteira para o lado (e o botao de presenca ficava fora da tela);
+     agora rola sozinha, de lado, dentro da propria faixa. */
+  .abas { margin-left: 0; order: 3; width: 100%; min-width: 0; overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
+  .abas::-webkit-scrollbar { display: none; }
+  .aba { flex: 0 0 auto; white-space: nowrap; padding: 8px 12px; }
   .conteudo { padding: 18px 14px 50px; }
 
   .link-publico { flex-direction: column; align-items: stretch; }
   .sorteio-campos { flex-direction: column; gap: 10px; }
+}
+
+/* ------------------------------------------------------- certificados */
+/* Os links Ver e Baixar usam o mesmo visual dos botoes da linha. */
+a.btn-mini { text-decoration: none; display: inline-block; }
+/* Linha de quem perdeu a presenca: continua visivel (pode ja ter recebido),
+   mas sai do foco. */
+.linha-apagada { opacity: 0.55; }
+#corpo-certificados code { font-size: 0.78rem; letter-spacing: 0.02em; }
+#corpo-certificados .selo { margin-left: 4px; }
+
+/* Porta e certificados no celular: cada pessoa vira um cartao, com o nome
+   em cima e os botoes embaixo, em vez de uma tabela que exige rolar de lado
+   para alcancar o "Marcar presença". */
+@media (max-width: 640px) {
+  .tabela-cartoes thead { display: none; }
+  .tabela-cartoes, .tabela-cartoes tbody { display: block; }
+  .tabela-cartoes tr {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px;
+    padding: 12px 14px; border-bottom: 1px solid var(--border);
+  }
+  .tabela-cartoes td { display: block; padding: 0; border: 0; min-width: 0; }
+  .tabela-cartoes td:first-child { grid-column: 1 / -1; font-weight: 600; }
+  .tabela-cartoes td.vazio { grid-column: 1 / -1; padding: 18px 0; }
+  .tabela-cartoes .celula-produto { display: none; }
+  .tabela-cartoes .celula-acoes {
+    grid-column: 1 / -1; white-space: normal; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px;
+  }
+  .tabela-cartoes .celula-acoes .btn-mini { padding: 9px 14px; font-size: 0.82rem; }
 }

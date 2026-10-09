@@ -1,4 +1,5 @@
 import { json, erro, agora, normalizarWhatsapp, montarUserData, enviarEventoMeta } from '../../_lib.js';
+import { aplicarIngresso, ingressoDoPayload, ehDoImpulso, tipoDoEvento } from '../../_ingressos.js';
 
 /**
  * Webhook da Eduzz (Órbita, formato v3). Payload real capturado em 03/09
@@ -101,9 +102,14 @@ export async function onRequestGet() {
 
 export async function onRequestPost({ request, env }) {
   const bruto = await request.text();
-  const assinada = env.EDUZZ_WEBHOOK_SECRET
-    ? await assinaturaValida(bruto, request.headers.get('x-signature'), env.EDUZZ_WEBHOOK_SECRET)
-    : true;
+  // Cada configuracao de webhook da Eduzz assina com a sua chave: a das
+  // faturas (EDUZZ_WEBHOOK_SECRET) e a dos ingressos (EDUZZ_INGRESSOS_SECRET).
+  const recebida = request.headers.get('x-signature');
+  const segredos = [env.EDUZZ_WEBHOOK_SECRET, env.EDUZZ_INGRESSOS_SECRET].filter(Boolean);
+  let assinada = !segredos.length;
+  for (const s of segredos) {
+    if (!assinada) assinada = await assinaturaValida(bruto, recebida, s);
+  }
 
   let payload;
   try { payload = JSON.parse(bruto); } catch { payload = null; }
@@ -124,7 +130,14 @@ export async function onRequestPost({ request, env }) {
     await env.DB.prepare(
       'INSERT INTO eduzz_eventos (evento, assinatura_ok, corpo, recebido_em) VALUES (?, ?, ?, ?)'
     ).bind(nomeEvento, assinada ? 1 : 0, bruto.slice(0, 100000), agora()).run();
-    return json({ ok: true, recebido: nomeEvento });
+
+    const tipo = tipoDoEvento(nomeEvento);
+    if (!assinada || !tipo || !ehDoImpulso(payload?.data?.event?.name)) {
+      return json({ ok: true, recebido: nomeEvento, aplicado: false });
+    }
+    const acao = await aplicarIngresso(env, ingressoDoPayload(payload.data), { tipo });
+    console.log('[eduzz-webhook] ingresso', nomeEvento, acao);
+    return json({ ok: true, recebido: nomeEvento, aplicado: acao });
   }
 
   if (!assinada) {

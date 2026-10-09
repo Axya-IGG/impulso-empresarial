@@ -212,7 +212,12 @@ CREATE TABLE IF NOT EXISTS sorteios (
   total_elegiveis INTEGER,
   posicao         INTEGER,
   verificacao     TEXT,
-  repescagem      INTEGER NOT NULL DEFAULT 0
+  repescagem      INTEGER NOT NULL DEFAULT 0,
+  -- migrations/012 e 014: rechamada no palco e o sorteio que originou esta
+  -- chamada seguinte.
+  ausente         INTEGER NOT NULL DEFAULT 0,
+  chamada         INTEGER NOT NULL DEFAULT 1,
+  origem_id       TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_sorteios_criado ON sorteios(criado_em);
 
@@ -238,3 +243,28 @@ CREATE TABLE IF NOT EXISTS eduzz_eventos (
 );
 
 CREATE INDEX IF NOT EXISTS idx_eduzz_eventos_evento ON eduzz_eventos(evento, recebido_em);
+
+-- Lista da porta: compradores, ingressos nominais e quem a equipe cadastra
+-- no dia (migrations/013 e 016).
+CREATE TABLE IF NOT EXISTS credenciamento (
+  id              TEXT PRIMARY KEY,
+  lead_id         TEXT UNIQUE,
+  anfitriao_id    TEXT REFERENCES credenciamento(id) ON DELETE CASCADE,
+  nome            TEXT NOT NULL,
+  whatsapp        TEXT,
+  email           TEXT,
+  produto         TEXT,
+  presente_em     TEXT,
+  link_enviado_em TEXT,
+  link_detalhe    TEXT,
+  criado_em       TEXT NOT NULL,
+  ingresso_chave  TEXT,
+  ingresso_status TEXT,
+  comprador_nome  TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_credenciamento_presente ON credenciamento(presente_em);
+CREATE INDEX IF NOT EXISTS idx_credenciamento_anfitriao ON credenciamento(anfitriao_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_credenciamento_ingresso
+  ON credenciamento(ingresso_chave) WHERE ingresso_chave IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_credenciamento_whatsapp ON credenciamento(whatsapp);

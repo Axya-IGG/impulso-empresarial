@@ -35,6 +35,11 @@ META_PIXEL_ID = "1478085317261876"
 # e o WHATSAPP_ACCESS_TOKEN, esse sim secret.
 WHATSAPP_PHONE_NUMBER_ID = "1303927066142421"
 WHATSAPP_WABA_ID = "4474965946059660"
+# App de certificados (impulso-certificados): dono do PDF e da validacao do
+# QR. A aba Certificados do painel monta os links e o envio a partir daqui.
+# CERT_SECRET (secret) tem de ser o MESMO valor do app, senao o codigo
+# emitido aqui da' "nao encontrado" na validacao de la'.
+CERT_URL = "https://certificados.oimpulsoempresarial.com.br"
 
 # ADMIN_SENHA, SESSION_SECRET, EVOLUTION_APIKEY, EDUZZ_WEBHOOK_SECRET,
 # META_CAPI_TOKEN, WHATSAPP_VERIFY_TOKEN, WHATSAPP_APP_SECRET e
@@ -49,6 +54,11 @@ WHATSAPP_WABA_ID = "4474965946059660"
 #   printf '%s' "$valor" | npx wrangler pages secret put WHATSAPP_VERIFY_TOKEN --project-name=impulso-empresarial
 #   printf '%s' "$valor" | npx wrangler pages secret put WHATSAPP_APP_SECRET   --project-name=impulso-empresarial
 #   printf '%s' "$valor" | npx wrangler pages secret put WHATSAPP_ACCESS_TOKEN --project-name=impulso-empresarial
+#   printf '%s' "$valor" | npx wrangler pages secret put EDUZZ_INGRESSOS_SECRET --project-name=impulso-empresarial
+#   printf '%s' "$valor" | npx wrangler pages secret put CERT_SECRET           --project-name=impulso-empresarial
+# EDUZZ_INGRESSOS_SECRET e' a chave da configuracao do webhook dos ingressos
+# (eventos blinket.*, /api/webhook/ingressos); cada configuracao da Eduzz
+# assina com a sua. CERT_SECRET: ver CERT_URL acima.
 # EDUZZ_WEBHOOK_SECRET valida o header x-signature em functions/api/webhook/eduzz.js
 # (hmac-sha256, ver developers.eduzz.com/docs/webhook/security).
 # META_CAPI_TOKEN autentica o envio de eventos de servidor pra Meta (Conversions
