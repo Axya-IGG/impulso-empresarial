@@ -495,6 +495,30 @@
   </div>
 </div>
 
+<!-- ===================== MODAL DE EDITAR SORTEIO ===================== -->
+<div class="modal" id="modal-sorteio" hidden>
+  <div class="modal-fundo" data-fechar></div>
+  <div class="modal-caixa modal-estreito" role="dialog" aria-modal="true" aria-labelledby="titulo-editar-sorteio">
+    <button type="button" class="modal-fechar" data-fechar aria-label="Fechar">&times;</button>
+    <h2 id="titulo-editar-sorteio">Editar sorteio</h2>
+    <p class="modal-sub">O telão mostra a mudança em poucos segundos, se este sorteio estiver na tela.</p>
+    <form id="form-editar-sorteio">
+      <input type="hidden" name="id" />
+      <label><span>Nome do sorteio</span><input type="text" name="titulo" required maxlength="120" /></label>
+      <label><span>Prêmio (o destaque do telão)</span><input type="text" name="premio" maxlength="200" /></label>
+      <label class="check-inline" id="campo-repescagem-editar">
+        <input type="checkbox" name="repescagem" />
+        <span>Quem já ganhou concorre de novo</span>
+      </label>
+      <p class="alerta alerta-erro" id="editar-sorteio-erro" role="alert" hidden></p>
+      <div class="modal-acoes">
+        <button type="button" class="btn btn-fantasma" data-fechar>Cancelar</button>
+        <button type="submit" class="btn btn-primario">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- ============== MODAL DE EDITAR PESSOA DA PORTA ============== -->
 <div class="modal" id="modal-editar-credenciado" hidden>
   <div class="modal-fundo" data-fechar></div>

@@ -1538,10 +1538,13 @@ formParticipante.addEventListener('submit', async e => {
 // ------------------------------------------------------------- sorteios
 let telaoId = null;
 
+let sorteiosCache = [];
+
 async function carregarSorteios() {
   await carregarLinks();
   const r = await api('/api/admin/sorteios');
   const sorteios = r.sorteios || [];
+  sorteiosCache = sorteios;
   telaoId = r.telao_id || null;
 
   const jaGanharam = new Set(sorteios.filter(s => s.vencedor_id).map(s => s.vencedor_id));
@@ -1596,6 +1599,7 @@ async function carregarSorteios() {
               ? `<button type="button" class="btn btn-secundario" data-rechamada="${esc(s.id)}"
                    title="Marca o ganhador como ausente e já sorteia outro nome para o mesmo prêmio">Não está presente · sortear outro</button>`
               : ''}
+            <button type="button" class="btn btn-fantasma" data-editar-sorteio="${esc(s.id)}">Editar</button>
             <button type="button" class="btn btn-fantasma" data-excluir-sorteio="${esc(s.id)}">Excluir</button>
           </div>
         </article>`;
@@ -1631,6 +1635,23 @@ $('#lista-sorteios').addEventListener('click', async e => {
   const rechamar = e.target.closest('[data-rechamada]');
   const excluir = e.target.closest('[data-excluir-sorteio]');
   const telao = e.target.closest('[data-telao]');
+  const editarSorteio = e.target.closest('[data-editar-sorteio]');
+
+  if (editarSorteio) {
+    const s = sorteiosCache.find(x => x.id === editarSorteio.dataset.editarSorteio);
+    if (!s) return;
+    const f = $('#form-editar-sorteio');
+    f.id.value = s.id;
+    f.titulo.value = s.titulo || '';
+    f.premio.value = s.premio || '';
+    f.repescagem.checked = Boolean(s.repescagem);
+    // Depois de sorteado a regra ja decidiu quem concorreu: so' nome e premio.
+    $('#campo-repescagem-editar').hidden = Boolean(s.sorteado_em);
+    $('#editar-sorteio-erro').hidden = true;
+    $('#modal-sorteio').hidden = false;
+    f.premio.focus();
+    return;
+  }
 
   // Troca o que a plateia esta vendo. Sem confirmacao de proposito: e' uma
   // acao reversivel num clique, e no palco cada dialogo a mais e' tempo.
@@ -1924,6 +1945,29 @@ $('#btn-cancelar-fila').addEventListener('click', async () => {
     carregarCertificados().catch(err => toast(err.message));
   } catch (err) {
     toast(err.message);
+  }
+});
+
+$('#form-editar-sorteio').addEventListener('submit', async e => {
+  e.preventDefault();
+  const f = e.target;
+  const erro = $('#editar-sorteio-erro');
+  const botao = f.querySelector('button[type="submit"]');
+  erro.hidden = true;
+  botao.disabled = true;
+  try {
+    await api(`/api/admin/sorteios/${encodeURIComponent(f.id.value)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ titulo: f.titulo.value, premio: f.premio.value, repescagem: f.repescagem.checked }),
+    });
+    fecharModais();
+    toast('Sorteio atualizado.');
+    carregarSorteios().catch(err => toast(err.message));
+  } catch (err) {
+    erro.textContent = err.message;
+    erro.hidden = false;
+  } finally {
+    botao.disabled = false;
   }
 });
 

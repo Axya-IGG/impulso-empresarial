@@ -109,12 +109,25 @@
     border-radius: 100px;
   }
 
+  /* O premio e' o maior texto da tela de espera (pedido de 09/10): e' o
+     que a plateia quer saber. O nome do sorteio vai para a etiqueta. */
   .premio {
-    font-size: clamp(26px, 5.2vh, 60px);
+    font-size: clamp(32px, 8.4vh, 100px);
+    font-weight: 800;
+    line-height: 1.08;
+    letter-spacing: -1px;
+    max-width: 20ch;
+    text-wrap: balance;
+  }
+  /* Premio durante o giro e no resultado: logo acima do nome, grande, mas
+     abaixo do nome do ganhador, que e' o momento da tela. */
+  .premio-palco {
+    font-size: clamp(22px, 4.6vh, 54px);
     font-weight: 800;
     line-height: 1.12;
-    letter-spacing: -0.5px;
-    max-width: 18ch;
+    color: var(--azul);
+    max-width: 24ch;
+    text-wrap: balance;
   }
   .premio-sub { color: var(--prata); font-size: clamp(14px, 2vh, 20px); max-width: 40ch; }
 
@@ -322,10 +335,11 @@
 
   // ---------------------------------------------------------------- telas
   function pintarEspera(s, total) {
-    escreverMiolo('espera:' + s.id,
-      '<span class="etiqueta">' + (s.chamada > 1 ? s.chamada + 'ª chamada' : 'A seguir') + '</span>' +
-      '<h1 class="premio">' + esc(s.titulo) + '</h1>' +
-      (s.premio ? '<p class="premio-sub">' + esc(s.premio) + '</p>' : '') +
+    // Nome e premio entram na assinatura: editados no painel, o telao
+    // precisa redesenhar mesmo sendo o mesmo sorteio.
+    escreverMiolo('espera:' + s.id + ':' + s.titulo + '|' + (s.premio || '') + '|' + s.repescagem,
+      '<span class="etiqueta">' + (s.chamada > 1 ? s.chamada + 'ª chamada' : 'A seguir') + ' · ' + esc(s.titulo) + '</span>' +
+      '<h1 class="premio">' + esc(s.premio || s.titulo) + '</h1>' +
       '<p class="premio-sub pulso" style="margin-top:1.5vh">Aguardando o sorteio começar…</p>' +
       (s.repescagem
         ? '<p class="recibo">Nesta rodada quem já ganhou concorre de novo</p>'
@@ -346,9 +360,10 @@
   }
 
   function pintarVencedor(s) {
-    escreverMiolo('vencedor:' + s.id,
+    escreverMiolo('vencedor:' + s.id + ':' + s.titulo + '|' + (s.premio || ''),
       '<div class="vencedor-bloco">' +
         '<span class="etiqueta">' + rotulo(s) + '</span>' +
+        (s.premio ? '<div class="premio-palco">' + esc(s.premio) + '</div>' : '') +
         '<div class="nome-palco" style="margin-top:2vh">' + esc(s.vencedor_nome) + '</div>' +
         '<div class="empresa-palco">' + esc(s.vencedor_empresa || '') + '</div>' +
         '<div class="recibo">' +
@@ -365,7 +380,8 @@
     var fim = Date.now() + DURACAO_GIRO_MS;
     escreverMiolo('giro:' + s.id,
       '<span class="etiqueta">' + rotulo(s) + '</span>' +
-      '<div class="nome-palco girando" id="giro" style="margin-top:2vh">—</div>' +
+      (s.premio ? '<div class="premio-palco">' + esc(s.premio) + '</div>' : '') +
+      '<div class="nome-palco girando" id="giro" style="margin-top:2vh">-</div>' +
       '<div class="empresa-palco" id="giro-empresa">&nbsp;</div>');
 
     var alvoGiro = $('#giro');

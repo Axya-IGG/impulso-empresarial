@@ -188,3 +188,34 @@ export async function onRequestDelete(context) {
   ]);
   return json({ ok: true });
 }
+
+/**
+ * Edita nome, premio e repescagem de um sorteio (pedido de 09/10/2026).
+ *
+ * Nome e premio podem mudar a qualquer momento, inclusive depois de
+ * sorteado (erro de digitacao no premio que esta no telao). A repescagem
+ * so' muda antes do sorteio: depois, ela ja decidiu quem concorreu, e
+ * troca-la reescreveria a regra de um resultado que a plateia viu.
+ */
+export async function onRequestPut(context) {
+  const { request, env, params } = context;
+
+  let corpo;
+  try { corpo = await request.json(); } catch { return erro('Corpo invalido.'); }
+
+  const titulo = String(corpo?.titulo ?? '').trim().slice(0, 120);
+  const premio = String(corpo?.premio ?? '').trim().slice(0, 200);
+  if (titulo.length < 2) return erro('De um nome ao sorteio.');
+
+  const s = await env.DB.prepare('SELECT id, sorteado_em FROM sorteios WHERE id = ?').bind(params.id).first();
+  if (!s) return erro('Sorteio nao encontrado.', 404);
+
+  const repescagem = corpo?.repescagem ? 1 : 0;
+  await env.DB.prepare(
+    `UPDATE sorteios SET titulo = ?, premio = ?,
+            repescagem = CASE WHEN sorteado_em IS NULL THEN ? ELSE repescagem END
+      WHERE id = ?`
+  ).bind(titulo, premio || null, repescagem, params.id).run();
+
+  return json({ ok: true, repescagem_mantida: Boolean(s.sorteado_em) });
+}
