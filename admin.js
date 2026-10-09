@@ -344,9 +344,6 @@ function renderizarMensagens() {
               <h3>${esc(m.titulo)}</h3>
               ${dataTopo ? `<span class="msg-data-topo">${esc(dataTopo)}</span>` : ''}
               <span class="selo ${m.ativo ? 'selo-ok' : 'selo-off'}">${m.ativo ? 'ativa' : 'pausada'}</span>
-              ${m.template_nome
-                ? `<span class="selo selo-oficial" title="Template: ${esc(m.template_nome)}">Template ativo</span>`
-                : '<span class="selo selo-off" title="Sem template aprovado pela Meta, nao entra na fila de envio">Sem template</span>'}
             </div>
             <div class="msg-quando">
               ${esc(descreverQuando(m))} · ${esc(PUBLICOS[m.publico] || PUBLICOS.todos)}
@@ -1039,10 +1036,16 @@ $('#corpo-credenciamento').addEventListener('click', async e => {
 
   if (excluir) {
     if (!confirm('Remover esta pessoa da lista?')) return;
-    await api(`/api/admin/credenciamento?id=${encodeURIComponent(excluir.dataset.excluirCredenciado)}`,
-      { method: 'DELETE' });
-    toast('Removido da lista.');
-    carregarCredenciamento();
+    excluir.disabled = true;
+    try {
+      await api(`/api/admin/credenciamento?id=${encodeURIComponent(excluir.dataset.excluirCredenciado)}`,
+        { method: 'DELETE' });
+      toast('Removido da lista.');
+      carregarCredenciamento();
+    } catch (err) {
+      toast(err.message);
+      excluir.disabled = false;
+    }
   }
 });
 
@@ -1100,13 +1103,27 @@ $$('[data-copiar]').forEach(botao => botao.addEventListener('click', async () =>
 $$('[data-regerar]').forEach(botao => botao.addEventListener('click', async () => {
   const papel = botao.dataset.regerar;
   if (!confirm('Gerar um endereço novo? Quem estiver com o link antigo perde o acesso na hora.')) return;
-  const r = await api('/api/admin/links-publicos', {
-    method: 'POST',
-    body: JSON.stringify({ papel }),
-  });
-  linksPublicos = null;
-  $(papel === 'sorteio' ? '#link-sorteio' : '#link-credenciamento').value = r.link;
-  toast('Link novo gerado.');
+  botao.disabled = true;
+  try {
+    const r = await api('/api/admin/links-publicos', {
+      method: 'POST',
+      body: JSON.stringify({ papel }),
+    });
+    linksPublicos = null;
+    // O campo tem de ser o da aba certa. Já esteve apontando para um
+    // '#link-credenciamento' que deixou de existir na renomeação para
+    // /formulario: o token virava no servidor, o campo seguia exibindo o
+    // link velho (já morto) e nem o toast aparecia, porque a atribuição
+    // num elemento nulo derrubava o handler. Dar o link errado na porta é
+    // pior do que não trocar.
+    const campo = $(papel === 'sorteio' ? '#link-sorteio' : '#link-formulario');
+    if (campo) campo.value = r.link;
+    toast('Link novo gerado.');
+  } catch (err) {
+    toast(err.message);
+  } finally {
+    botao.disabled = false;
+  }
 }));
 
 // ------------------------------------------------------- participantes
@@ -1289,10 +1306,13 @@ formParticipante.addEventListener('submit', async e => {
 });
 
 // ------------------------------------------------------------- sorteios
+let telaoId = null;
+
 async function carregarSorteios() {
   await carregarLinks();
   const r = await api('/api/admin/sorteios');
   const sorteios = r.sorteios || [];
+  telaoId = r.telao_id || null;
 
   const jaGanharam = new Set(sorteios.filter(s => s.vencedor_id).map(s => s.vencedor_id));
   $('#sorteio-elegiveis').textContent = r.total_participantes
@@ -1304,17 +1324,21 @@ async function carregarSorteios() {
     ? sorteios.map(s => {
         const feito = Boolean(s.sorteado_em);
         const ausente = Boolean(s.ausente);
+        const noTelao = s.id === telaoId;
         const chamada = s.chamada > 1 ? ` <span class="sorteio-chamada">${s.chamada}ª chamada</span>` : '';
         return `
-        <article class="sorteio-card${feito ? '' : ' sorteio-card-aberto'}${ausente ? ' sorteio-card-ausente' : ''}">
+        <article class="sorteio-card${feito ? '' : ' sorteio-card-aberto'}${ausente ? ' sorteio-card-ausente' : ''}${noTelao ? ' sorteio-card-telao' : ''}">
           <div class="sorteio-cabeca">
             <div>
               <h3>${esc(s.titulo)}${chamada}</h3>
               ${s.premio ? `<p class="sorteio-premio">${esc(s.premio)}</p>` : ''}
             </div>
-            <span class="selo ${ausente ? 'selo-off' : feito ? 'selo-ok' : 'selo-andamento'}">
-              ${ausente ? 'Ausente' : feito ? 'Sorteado' : 'Aguardando'}
-            </span>
+            <div class="sorteio-selos">
+              ${noTelao ? '<span class="selo selo-oficial">no telão</span>' : ''}
+              <span class="selo ${ausente ? 'selo-off' : feito ? 'selo-ok' : 'selo-andamento'}">
+                ${ausente ? 'Ausente' : feito ? 'Sorteado' : 'Aguardando'}
+              </span>
+            </div>
           </div>
 
           ${feito ? `
@@ -1335,6 +1359,8 @@ async function carregarSorteios() {
             </p>`}
 
           <div class="sorteio-acoes">
+            ${noTelao ? '' : `<button type="button" class="btn btn-secundario" data-telao="${esc(s.id)}"
+                 title="Passa a exibir este prêmio no telão">Mostrar no telão</button>`}
             ${feito ? '' : `<button type="button" class="btn btn-primario" data-sortear="${esc(s.id)}">Sortear agora</button>`}
             ${feito && !ausente
               ? `<button type="button" class="btn btn-secundario" data-rechamada="${esc(s.id)}"
@@ -1374,6 +1400,24 @@ $('#lista-sorteios').addEventListener('click', async e => {
   const sortear = e.target.closest('[data-sortear]');
   const rechamar = e.target.closest('[data-rechamada]');
   const excluir = e.target.closest('[data-excluir-sorteio]');
+  const telao = e.target.closest('[data-telao]');
+
+  // Troca o que a plateia esta vendo. Sem confirmacao de proposito: e' uma
+  // acao reversivel num clique, e no palco cada dialogo a mais e' tempo.
+  if (telao) {
+    telao.disabled = true;
+    try {
+      await api('/api/admin/sorteios', {
+        method: 'PATCH',
+        body: JSON.stringify({ telao_id: telao.dataset.telao }),
+      });
+      toast('Telão trocado.');
+      carregarSorteios();
+    } catch (err) {
+      toast(err.message);
+      telao.disabled = false;
+    }
+  }
 
   // Caminho do palco: um clique, sem digitar nada. O ganhador anterior fica
   // registrado como ausente e o mesmo prêmio vai para a chamada seguinte.
@@ -1398,7 +1442,11 @@ $('#lista-sorteios').addEventListener('click', async e => {
     sortear.disabled = true;
     try {
       const r = await api(`/api/admin/sorteios/${sortear.dataset.sortear}`, { method: 'POST' });
-      toast(`Ganhador: ${r.vencedor.nome}`);
+      // ja_sorteado: outra aba correu na frente. O nome mostrado e' o que
+      // ficou gravado, nao o que esta requisicao tinha tirado.
+      toast(r.ja_sorteado
+        ? `Já havia sido sorteado. Ganhador: ${r.vencedor.nome}`
+        : `Ganhador: ${r.vencedor.nome}`);
       carregarSorteios();
     } catch (err) {
       toast(err.message);
@@ -1408,9 +1456,15 @@ $('#lista-sorteios').addEventListener('click', async e => {
 
   if (excluir) {
     if (!confirm('Excluir este sorteio? Ele some do telão e do histórico.')) return;
-    await api(`/api/admin/sorteios/${excluir.dataset.excluirSorteio}`, { method: 'DELETE' });
-    toast('Sorteio excluído.');
-    carregarSorteios();
+    excluir.disabled = true;
+    try {
+      await api(`/api/admin/sorteios/${excluir.dataset.excluirSorteio}`, { method: 'DELETE' });
+      toast('Sorteio excluído.');
+      carregarSorteios();
+    } catch (err) {
+      toast(err.message);
+      excluir.disabled = false;
+    }
   }
 });
 

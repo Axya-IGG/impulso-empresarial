@@ -5,9 +5,9 @@ import { json, erro, normalizarWhatsapp, enviarWhatsapp, renderizar, escolherVar
  * `envios`. Serve para conferir texto e formatacao antes de soltar para a
  * base — e para checar, num aperto, se a instancia da Evolution caiu.
  *
- * Restaurado em 30/09 junto com o resto do envio pela Evolution: a
- * estrutura da API oficial (enviarWhatsappMeta) fica em stand-by em
- * functions/_lib.js ate' a Meta aprovar o nome de exibicao do numero.
+ * Desde 09/10 a Evolution e' o unico canal de WhatsApp do projeto — a API
+ * oficial da Meta saiu de functions/_lib.js naquele dia, depois de o numero
+ * passar a recusar todas as tentativas.
  */
 export async function onRequestPost({ request, env }) {
   let corpo;

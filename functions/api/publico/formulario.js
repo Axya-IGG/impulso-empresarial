@@ -1,8 +1,13 @@
 import { json, erro, agora, ipDaRequisicao, chaveParticipante } from '../../_lib.js';
 
-const LIMITE_POR_IP = 60;   // por hora — no credenciamento o wi-fi do hotel
-                            // sai num IP so' para todo mundo, entao a trava
-                            // precisa ser bem mais folgada que a da landing
+// Por hora, por IP. Alto de proposito: no evento o wi-fi do hotel sai num IP
+// so' para a sala inteira, e a operadora de celular tambem agrupa muita gente
+// atras do mesmo endereco. Com 60 (o valor anterior) uma plateia de cem
+// pessoas respondendo na primeira hora veria a 61a em diante levar "muitos
+// cadastros deste endereco" — justamente quem a trava nao deveria pegar. Quem
+// de fato protege este endpoint e' o token do link, entregue so' na porta; o
+// numero aqui e' rede contra script maluco, nao contra participante.
+const LIMITE_POR_IP = 500;
 
 const FAIXAS = [
   'Até 9 funcionários',

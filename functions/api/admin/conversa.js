@@ -1,4 +1,4 @@
-import { json, erro, enviarWhatsappMetaTexto, registrarMensagemSaida } from '../../_lib.js';
+import { json, erro, enviarWhatsapp, registrarMensagemSaida } from '../../_lib.js';
 
 /**
  * Thread completa de um contato (as duas direcoes), pra abrir a conversa
@@ -28,10 +28,12 @@ export async function onRequestGet({ request, env }) {
 }
 
 /**
- * Responde pelo texto livre da API oficial — so' funciona dentro da janela
- * de 24h desde a ultima mensagem do lead (regra da propria Meta, nao da
- * pra contornar). Sem template porque e' resposta livre numa conversa em
- * andamento, nao disparo novo.
+ * Responde pela Evolution. A API oficial da Meta saiu de todos os caminhos
+ * de envio do projeto em 09/10: o numero oficial recusava tudo ("Object
+ * with ID ... does not exist, cannot be loaded due to missing permissions")
+ * e, mesmo funcionando, texto livre so' passa na janela de 24h desde a
+ * ultima mensagem da pessoa. Um canal so' tambem torna o erro legivel — o
+ * detalhe que aparece no painel vem sempre do mesmo lugar.
  */
 export async function onRequestPost({ request, env }) {
   let corpo;
@@ -42,8 +44,8 @@ export async function onRequestPost({ request, env }) {
   if (!whatsapp) return erro('Informe o whatsapp.');
   if (!texto) return erro('Escreva a resposta.');
 
-  const r = await enviarWhatsappMetaTexto(env, whatsapp, texto);
-  if (!r.ok) return erro(`A Meta recusou o envio: ${r.detalhe}`, 422);
+  const r = await enviarWhatsapp(env, whatsapp, texto);
+  if (!r.ok) return erro(`A Evolution recusou o envio: ${r.detalhe}`, 422);
 
   const lead = await env.DB.prepare('SELECT id FROM leads WHERE whatsapp = ?').bind(whatsapp).first();
   await registrarMensagemSaida(env, lead?.id ?? null, whatsapp, texto);

@@ -223,3 +223,7 @@ CREATE TABLE IF NOT EXISTS config (
   valor         TEXT NOT NULL,
   atualizado_em TEXT NOT NULL
 );
+
+-- Uma chamada seguinte por sorteio (ver migrations/014_sorteio_telao.sql).
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sorteios_origem
+  ON sorteios(origem_id) WHERE origem_id IS NOT NULL;

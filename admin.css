@@ -855,6 +855,16 @@ input:focus, select:focus, textarea:focus {
 .resposta-meta b { color: var(--text); font-weight: 600; }
 .resposta-meta a { color: var(--primary); }
 
+/* --------------------------------------- sorteio exibido no telao
+   Com varios premios criados de antemao, o operador precisa ver de relance
+   qual deles a plateia esta olhando. */
+.sorteio-selos { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+.sorteio-card-telao {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary) inset;
+}
+
 /* --------------------------------------------------- link publico */
 .link-publico {
   display: flex;

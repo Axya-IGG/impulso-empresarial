@@ -1,4 +1,4 @@
-import { json, erro, agora, enviarWhatsapp, enviarWhatsappMeta, separarNome, renderizar, escolherVariante, registrarMensagemSaida } from '../../_lib.js';
+import { json, erro, agora, enviarWhatsapp, renderizar, escolherVariante, registrarMensagemSaida } from '../../_lib.js';
 
 /**
  * Reenvio manual de um envio com erro, disparado pelo operador na aba
@@ -7,12 +7,9 @@ import { json, erro, agora, enviarWhatsapp, enviarWhatsappMeta, separarNome, ren
  * mesmo par — e é esse índice que impede o cron de mandar a mesma mensagem
  * duas vezes, então o reenvio manual tem que jogar pelas mesmas regras.
  *
- * Restaurado em 30/09 junto com o resto do envio pela Evolution (ver
- * testar.js). Em 01/10 ganhou o mesmo fallback do worker
- * (enviarComFallback em worker-remarketing/src/index.js): se a mensagem
- * tiver template_nome, tenta a API oficial primeiro e so' cai pra Evolution
- * se a Meta recusar — sem isso, o reenvio manual falhava direto toda vez
- * que a Evolution estava fora do ar, mesmo quando a Meta aceitaria.
+ * Em 09/10 a API oficial da Meta saiu daqui e de todos os outros caminhos
+ * de envio: o numero recusava 100% das tentativas. Restou um canal so', a
+ * Evolution — o mesmo de testar.js e do worker.
  */
 export async function onRequestPost({ request, env }) {
   let corpo;
@@ -23,7 +20,7 @@ export async function onRequestPost({ request, env }) {
 
   const envio = await env.DB.prepare(`
     SELECT e.id, e.status, e.lead_id, l.nome, l.whatsapp, l.optout,
-           m.texto AS mensagem_texto, m.template_nome
+           m.texto AS mensagem_texto
       FROM envios e
       JOIN leads l     ON l.id = e.lead_id
       JOIN mensagens m ON m.id = e.mensagem_id
@@ -35,14 +32,7 @@ export async function onRequestPost({ request, env }) {
   if (envio.optout) return erro('Este lead descadastrou-se; reenvio bloqueado.');
 
   const texto = renderizar(escolherVariante(envio.mensagem_texto), envio);
-  let r;
-  if (envio.template_nome) {
-    const rMeta = await enviarWhatsappMeta(env, envio.whatsapp, envio.template_nome, separarNome(envio.nome).fn);
-    r = rMeta.ok ? rMeta : await enviarWhatsapp(env, envio.whatsapp, texto);
-    if (!rMeta.ok && !r.ok) r = { ok: false, detalhe: `Meta: ${rMeta.detalhe} | Evolution: ${r.detalhe}` };
-  } else {
-    r = await enviarWhatsapp(env, envio.whatsapp, texto);
-  }
+  const r = await enviarWhatsapp(env, envio.whatsapp, texto);
 
   await env.DB.prepare(
     'UPDATE envios SET status = ?, detalhe = ?, enviado_em = ? WHERE id = ?'

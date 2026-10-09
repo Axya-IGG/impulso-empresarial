@@ -274,7 +274,7 @@
     <img src="/assets/logo-impulso-footer.png" alt="Impulso Empresarial" />
     <div class="contador-caixa">
       <div class="contador-num" id="contador">0</div>
-      <div class="contador-rot" id="contador-rot">participantes concorrendo</div>
+      <div class="contador-rot" id="contador-rot">participantes na lista</div>
     </div>
   </header>
 
@@ -439,7 +439,11 @@
       .map(function (s) { return s.vencedor_id; }).filter(Boolean);
 
     $('#contador').textContent = novo.total;
-    $('#contador-rot').textContent = novo.total === 1 ? 'participante concorrendo' : 'participantes concorrendo';
+    // "na lista", nao "concorrendo": o bolo de uma rodada pode ser menor que
+    // a lista (quem ja ganhou sai, quem esta ausente sai), e o recibo embaixo
+    // do nome diz "de N concorrentes". Os dois numeros apareciam juntos na
+    // tela, diferentes, numa tela cujo proposito e' ser conferivel.
+    $('#contador-rot').textContent = novo.total === 1 ? 'participante na lista' : 'participantes na lista';
     pintarNomes(novo.participantes || [], vencedores);
     pintarRodape(novo.anteriores || []);
 

@@ -118,6 +118,30 @@ export async function tokenPublicoValido(env, papel, recebido) {
   return diff === 0;
 }
 
+// ------------------------------------------------------------ config
+// Par chave/valor para as poucas escolhas que a operacao faz e precisam
+// sobreviver a um F5 — hoje, qual sorteio esta no telao. Mesma tabela dos
+// tokens publicos: nao vale uma tabela nova para isso.
+
+export async function lerConfig(env, chave) {
+  const r = await env.DB.prepare('SELECT valor FROM config WHERE chave = ?').bind(chave).first();
+  return r?.valor ?? null;
+}
+
+export async function gravarConfig(env, chave, valor) {
+  if (valor === null) {
+    await env.DB.prepare('DELETE FROM config WHERE chave = ?').bind(chave).run();
+    return;
+  }
+  await env.DB.prepare(
+    'INSERT INTO config (chave, valor, atualizado_em) VALUES (?, ?, ?) ' +
+    'ON CONFLICT(chave) DO UPDATE SET valor = excluded.valor, atualizado_em = excluded.atualizado_em'
+  ).bind(chave, valor, agora()).run();
+}
+
+/** Qual sorteio o telao esta exibindo. Vazio = o mais recente criado. */
+export const CHAVE_TELAO = 'telao_sorteio_id';
+
 /**
  * Chave de deduplicacao do participante: nome + empresa, sem acento, sem
  * pontuacao e sem caixa. O formulario nao pede telefone nem e-mail, entao
@@ -142,7 +166,11 @@ export function chaveParticipante(nome, empresa) {
 // precisamos provar e "esta pessoa digitou a senha ha menos de N horas".
 
 const enc = new TextEncoder();
-const DURACAO_SESSAO_MS = 8 * 60 * 60 * 1000;
+// 16h. Era 8h e nao cobria um dia de evento: o credenciamento abre antes das
+// 8h e os sorteios vao ate' o fim da tarde, entao a sessao caia no meio da
+// operacao — com a equipe na porta ou o operador no palco tendo de digitar a
+// senha de novo. 16h cobre montagem, evento e desmontagem com folga.
+const DURACAO_SESSAO_MS = 16 * 60 * 60 * 1000;
 
 async function chaveHmac(segredo) {
   return crypto.subtle.importKey(
@@ -202,11 +230,17 @@ export const cookieSessaoExpirado = () =>
 // worker-remarketing/src/index.js — remover os dois de novo assim que a
 // Meta aprovar o nome e a campanha estiver concluida.
 /**
- * Envia uma mensagem de texto pela Evolution API.
+ * Envia uma mensagem de texto pela Evolution API — canal unico de WhatsApp
+ * do projeto desde 09/10.
  * Retorna { ok, detalhe } — nunca lanca, para que uma falha num lead nao
  * derrube a rodada inteira do cron.
+ *
+ * `timeoutMs` so' deve ser usado onde ha alguem esperando a resposta (o
+ * credenciamento na porta). No cron fica sem prazo de proposito: la' ninguem
+ * espera, e desistir cedo marcaria como erro um envio que talvez tenha saido
+ * — e o par (lead, mensagem) nao e' tentado de novo.
  */
-export async function enviarWhatsapp(env, numero, texto) {
+export async function enviarWhatsapp(env, numero, texto, timeoutMs = 0) {
   const base = (env.EVOLUTION_URL || '').replace(/\/+$/, '');
   const instancia = env.EVOLUTION_INSTANCIA;
   try {
@@ -214,6 +248,7 @@ export async function enviarWhatsapp(env, numero, texto) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', apikey: env.EVOLUTION_APIKEY },
       body: JSON.stringify({ number: numero, text: texto }),
+      ...(timeoutMs ? { signal: AbortSignal.timeout(timeoutMs) } : {}),
     });
     const corpo = await r.text();
     return { ok: r.ok, detalhe: corpo.slice(0, 400) };
@@ -273,72 +308,18 @@ export async function registrarMensagemSaida(env, leadId, whatsapp, texto) {
   }
 }
 
-// ----------------------------------------------------- WhatsApp Cloud API
-/**
- * Envia um template aprovado pela API oficial do WhatsApp (Meta Cloud API).
- * Retorna { ok, detalhe } — nunca lanca, para que uma falha num lead nao
- * derrube a rodada inteira do cron.
- *
- * So' da pra mandar um template ja aprovado pela Meta, referenciado pelo
- * nome — nao ha envio de texto livre fora da janela de 24h de conversa.
- * primeiroNome preenche o unico {{1}} que os templates de hoje usam; se um
- * template sem variavel for adicionado no futuro, primeiroNome vira sem
- * uso (nao quebra, so' nao e' referenciado no corpo).
- */
-export async function enviarWhatsappMeta(env, numero, templateNome, primeiroNome) {
-  try {
-    const r = await fetch(`https://graph.facebook.com/v21.0/${env.WHATSAPP_PHONE_NUMBER_ID}/messages`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${env.WHATSAPP_ACCESS_TOKEN}`,
-      },
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        to: numero,
-        type: 'template',
-        template: {
-          name: templateNome,
-          language: { code: 'pt_BR' },
-          components: [{ type: 'body', parameters: [{ type: 'text', text: primeiroNome }] }],
-        },
-      }),
-    });
-    const corpo = await r.text();
-    return { ok: r.ok, detalhe: corpo.slice(0, 400) };
-  } catch (e) {
-    return { ok: false, detalhe: String(e).slice(0, 400) };
-  }
-}
-
-/**
- * Resposta em texto livre pela API oficial — diferente de enviarWhatsappMeta
- * (que so' manda template), isto so' funciona dentro da janela de 24h desde
- * a ultima mensagem que o lead mandou pra gente (regra da propria Meta pra
- * mensagem iniciada pelo negocio sem template). Usado so' pelo painel, pra
- * responder quem interagiu — nunca pelo disparo em massa.
- */
-export async function enviarWhatsappMetaTexto(env, numero, texto) {
-  try {
-    const r = await fetch(`https://graph.facebook.com/v21.0/${env.WHATSAPP_PHONE_NUMBER_ID}/messages`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${env.WHATSAPP_ACCESS_TOKEN}`,
-      },
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        to: numero,
-        type: 'text',
-        text: { body: texto },
-      }),
-    });
-    const corpo = await r.text();
-    return { ok: r.ok, detalhe: corpo.slice(0, 400) };
-  } catch (e) {
-    return { ok: false, detalhe: String(e).slice(0, 400) };
-  }
-}
+// ------------------------------------------- WhatsApp: canal unico
+// O envio pela API oficial do WhatsApp (Meta Cloud API) saiu daqui em
+// 09/10 — enviarWhatsappMeta (template) e enviarWhatsappMetaTexto (texto
+// livre). O numero passou a recusar 100% das tentativas ("Object with ID
+// <phone_number_id> does not exist, cannot be loaded due to missing
+// permissions") e o projeto ficou so' com a Evolution (enviarWhatsapp,
+// acima). Voltar a usar a Meta nao e' religar codigo: e preciso o numero
+// responder de novo e os templates estarem aprovados. O codigo removido
+// esta no historico do git, no commit desta data.
+//
+// Nada disto tem a ver com o bloco abaixo: o Conversions API e' rastreio
+// de pixel, nao mensagem, e segue em uso.
 
 // -------------------------------------------------------- Meta Conversions API
 // Compartilhado por functions/api/lead.js (evento Lead) e

@@ -1,6 +1,6 @@
 import {
   json, erro, agora, normalizarWhatsapp, normalizarChave, tokenPublico,
-  enviarWhatsapp, enviarWhatsappMetaTexto, registrarMensagemSaida,
+  enviarWhatsapp, registrarMensagemSaida,
 } from '../../_lib.js';
 
 /**
@@ -35,6 +35,12 @@ async function sincronizarCompradores(env) {
 
   return novos.length;
 }
+
+// Prazo do envio na porta. Sem ele, uma Evolution lenta prende a requisicao
+// e a fila do credenciamento para junto — com gente esperando em pe'. Melhor
+// desistir, registrar a falha e deixar a equipe passar o link na mao: a
+// presenca ja' foi marcada antes do envio, entao nada se perde.
+const ENVIO_TIMEOUT_MS = 8000;
 
 const csvCampo = (v) => {
   const s = String(v ?? '');
@@ -133,12 +139,12 @@ export async function onRequestPost(context) {
 /**
  * Marca presenca (ou desfaz) e, ao marcar, manda o link do formulario.
  *
- * O envio tenta a API oficial e cai para a Evolution, na ordem — a mesma do
- * reenviar.js. Vale avisar que texto livre pela Meta so' passa dentro da
- * janela de 24h desde a ultima mensagem da pessoa, e no dia do evento a
- * maioria estara fora dela; por isso o resultado do envio e devolvido e
- * mostrado na linha, e a aba tem o link a mao para a equipe passar na
- * marra quando falhar.
+ * O envio vai pela Evolution, canal unico do projeto desde 09/10. Na porta
+ * ha fila atras: o envio tem prazo (ENVIO_TIMEOUT_MS) para nao travar o
+ * credenciamento inteiro quando a Evolution demora a responder. O resultado
+ * volta na resposta e aparece na linha, e a aba mantem o link a mao para a
+ * equipe passar na marra quando o envio falhar — que no dia e o caminho
+ * mais provavel para quem bloqueia mensagem de numero desconhecido.
  */
 export async function onRequestPatch(context) {
   const { request, env } = context;
@@ -178,16 +184,7 @@ export async function onRequestPatch(context) {
     `Oi, ${primeiro}! Bem-vindo(a) ao Impulso Empresarial 2ª edição.\n\n` +
     `Responda este formulário rapidinho para concorrer aos sorteios do evento:\n${link}`;
 
-  // Evolution primeiro: é o canal escolhido para o evento. A API oficial da
-  // Meta só manda texto livre dentro de 24h desde a última mensagem da pessoa,
-  // e no dia quase ninguém está nessa janela — além de o nome de exibição do
-  // número seguir em PENDING_REVIEW (ver wrangler.pages.toml). Ela fica como
-  // rede de segurança, para o caso de a Evolution estar fora do ar.
-  let r = await enviarWhatsapp(env, pessoa.whatsapp, texto);
-  if (!r.ok) {
-    const rMeta = await enviarWhatsappMetaTexto(env, pessoa.whatsapp, texto);
-    r = rMeta.ok ? rMeta : { ok: false, detalhe: `Evolution: ${r.detalhe} | Meta: ${rMeta.detalhe}` };
-  }
+  const r = await enviarWhatsapp(env, pessoa.whatsapp, texto, ENVIO_TIMEOUT_MS);
 
   await env.DB.prepare(
     'UPDATE credenciamento SET link_enviado_em = ?, link_detalhe = ? WHERE id = ?'

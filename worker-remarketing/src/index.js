@@ -1,13 +1,14 @@
-import { agora, enviarWhatsapp, enviarWhatsappMeta, separarNome, dividirVariantes, renderizar, registrarMensagemSaida } from '../../functions/_lib.js';
+import { agora, enviarWhatsapp, dividirVariantes, renderizar, registrarMensagemSaida } from '../../functions/_lib.js';
 
-// Os dois canais ficam ativos ao mesmo tempo desde 01/10: a Evolution caiu
-// de novo (disparo manual feito fora deste sistema, nao tem relacao com o
-// ritmo daqui) e a API oficial, mesmo com o nome de exibicao ainda
-// PENDING_REVIEW na Meta, vem aceitando parte dos envios. Mensagem com
-// `template_nome` tenta a API oficial primeiro; se recusar, cai pra
-// Evolution no mesmo envio (ver enviarComFallback). Mensagem sem
-// template_nome continua so' na Evolution, por nao ter template aprovado
-// pra tentar na Meta.
+// Canal unico: Evolution. A API oficial da Meta saiu em 09/10, depois de
+// passar tres dias recusando 100% das tentativas com "Object with ID
+// <phone_number_id> does not exist, cannot be loaded due to missing
+// permissions" — token ou vinculo do numero caiu. Enquanto ela esteve no
+// caminho, cada envio gastava uma ida ate a Meta so' pra falhar e a
+// Evolution entregava logo atras; o detalhe do erro ficava com os dois
+// canais grudados, dificil de ler. Para voltar a usar a Meta, e preciso
+// mais do que religar este trecho: o numero tem de voltar a responder e os
+// templates, a ser aprovados.
 
 // Teto por rodada. O cron roda de 5 em 5 minutos: 4/rodada da no maximo 48
 // mensagens/hora. Bem baixo de proposito: quando entra uma leva de leads de
@@ -74,24 +75,6 @@ async function proximaVariante(env, mensagemId, texto) {
 }
 
 /**
- * Tenta a API oficial primeiro (so' se a mensagem tiver template_nome);
- * se recusar, cai pra Evolution no mesmo envio, sem esperar a proxima
- * rodada. Sem template_nome, vai direto pra Evolution — nao ha template
- * aprovado pra tentar na Meta. O detalhe guarda os dois erros quando as
- * duas falham, pra dar pra diagnosticar qual canal (e por que) recusou.
- */
-async function enviarComFallback(env, item, variante) {
-  if (item.template_nome) {
-    const rMeta = await enviarWhatsappMeta(env, item.whatsapp, item.template_nome, separarNome(item.nome).fn);
-    if (rMeta.ok) return rMeta;
-    const rEvo = await enviarWhatsapp(env, item.whatsapp, renderizar(variante, item));
-    if (rEvo.ok) return rEvo;
-    return { ok: false, detalhe: `Meta: ${rMeta.detalhe} | Evolution: ${rEvo.detalhe}` };
-  }
-  return enviarWhatsapp(env, item.whatsapp, renderizar(variante, item));
-}
-
-/**
  * Monta a fila da rodada: pares (lead, mensagem) que ja venceram e ainda
  * nao foram enviados.
  *
@@ -129,7 +112,7 @@ async function montarFila(db, limite) {
   `;
 
   const porAtraso = await db.prepare(`
-    SELECT l.id AS lead_id, l.nome, l.whatsapp, m.id AS mensagem_id, m.texto, m.template_nome
+    SELECT l.id AS lead_id, l.nome, l.whatsapp, m.id AS mensagem_id, m.texto
       FROM leads l
       JOIN mensagens m
         ON m.ativo = 1 AND m.arquivado = 0 AND m.tipo = 'atraso' AND m.id != ?
@@ -167,7 +150,7 @@ async function montarFila(db, limite) {
   // a data da COMPRA pra mensagem de 'compradores' (mesma logica do
   // 'atraso' acima) e o cadastro pros demais publicos.
   const porData = await db.prepare(`
-    SELECT l.id AS lead_id, l.nome, l.whatsapp, m.id AS mensagem_id, m.texto, m.template_nome
+    SELECT l.id AS lead_id, l.nome, l.whatsapp, m.id AS mensagem_id, m.texto
       FROM leads l
       JOIN mensagens m
         ON m.ativo = 1 AND m.arquivado = 0 AND m.tipo = 'data' AND m.id != ?
@@ -258,7 +241,7 @@ async function rodar(env, forcarForaDaJanela = false) {
       continue; // ja reservado por outra rodada — o UNIQUE barrou
     }
 
-    const r = await enviarComFallback(env, item, variante);
+    const r = await enviarWhatsapp(env, item.whatsapp, renderizar(variante, item));
     await env.DB.prepare(
       'UPDATE envios SET status = ?, detalhe = ?, enviado_em = ? WHERE lead_id = ? AND mensagem_id = ?'
     ).bind(r.ok ? 'enviado' : 'erro', r.detalhe, agora(), item.lead_id, item.mensagem_id).run();
