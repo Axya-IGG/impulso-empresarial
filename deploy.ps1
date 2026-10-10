@@ -165,19 +165,35 @@ if (Test-Path -LiteralPath $TerserBin) {
 $semBom = New-Object System.Text.UTF8Encoding($false)
 $htmls  = @(Get-ChildItem -LiteralPath $StagePub -Filter *.html -File)
 
+# Carimbo do deploy, somado ao hash do conteudo na querystring do asset.
+#
+# So' o hash nao bastava. Em 09/10 o admin.js saiu com hash novo, mas uma
+# requisicao feita segundos depois do upload pegou o arquivo ANTIGO de um no'
+# de borda que ainda nao tinha recebido o novo — e o Cloudflare guardou essa
+# resposta velha sob a URL nova, com o immutable de 1 ano do _headers. Ou seja,
+# a URL que deveria quebrar o cache nasceu cacheada errada, e nao ha hash de
+# conteudo que resolva: o endereco ja' estava envenenado.
+#
+# Com o carimbo, cada publicacao gera um endereco inedito, entao uma entrada
+# ruim no cache morre no deploy seguinte em vez de durar um ano. O custo e
+# rebaixar o cache de CSS/JS a cada deploy — irrelevante aqui, sao poucos KB,
+# e perto de servir codigo velho no dia do evento nao se compara.
+$Carimbo = Get-Date -Format 'MMddHHmm'
+
 foreach ($asset in @('style.css', 'script.js', 'admin.css', 'admin.js', 'assets/hero-realizadoras.jpg', 'images/fabi-vieira.jpg', 'images/juliana-godoi.jpg', 'images/daniel-godoi.jpg', 'images/debora-mariano.jpg')) {
     $caminho = Join-Path $StagePub $asset
     if (-not (Test-Path -LiteralPath $caminho)) { continue }
 
     $hash = (Get-FileHash -LiteralPath $caminho -Algorithm SHA256).Hash.Substring(0, 10).ToLower()
+    $versao = "$hash-$Carimbo"
     $padrao = [regex]::Escape($asset) + '\?v=[A-Za-z0-9._-]+'
 
     foreach ($h in $htmls) {
         $txt  = [System.IO.File]::ReadAllText($h.FullName)
-        $novo = [regex]::Replace($txt, $padrao, "${asset}?v=$hash")
+        $novo = [regex]::Replace($txt, $padrao, "${asset}?v=$versao")
         if ($novo -ne $txt) { [System.IO.File]::WriteAllText($h.FullName, $novo, $semBom) }
     }
-    Write-Host ("  versao: {0,-11} -> {1}" -f $asset, $hash) -ForegroundColor DarkGray
+    Write-Host ("  versao: {0,-11} -> {1}" -f $asset, $versao) -ForegroundColor DarkGray
 }
 
 $staged = Get-ChildItem -LiteralPath $Stage -Recurse -File
