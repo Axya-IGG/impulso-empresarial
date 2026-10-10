@@ -209,6 +209,20 @@
     margin-bottom: 22px;
   }
 
+  .trocar-pessoa {
+    margin-top: 22px;
+    background: none;
+    border: 0;
+    padding: 6px;
+    font: inherit;
+    font-size: 13px;
+    color: var(--prata);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+  }
+  .trocar-pessoa:hover { color: var(--azul); }
+
   .aviso {
     min-height: 100svh;
     display: grid;
@@ -274,6 +288,30 @@
   var atual = 0;
   var enviando = false;
   var concluido = false;
+
+  // Trava por aparelho. O servidor ja' recusa o mesmo nome duas vezes, mas
+  // so' depois de a pessoa digitar tudo de novo; aqui ela nem chega la'.
+  // Pega tambem o caso inocente — reabrir o link e preencher outra vez sem
+  // lembrar que ja' tinha preenchido.
+  //
+  // NAO e' um bloqueio duro de proposito: na porta o celular pode ser
+  // emprestado para quem esta sem bateria, e travar o aparelho deixaria
+  // essa pessoa fora do sorteio. Por isso a tela tem a saida "nao sou eu",
+  // que limpa a marca. Quem quiser burlar ainda esbarra no servidor, que
+  // nao deixa o mesmo nome entrar duas vezes.
+  var CHAVE_LOCAL = 'impulso_formulario_2a';
+
+  function jaRespondeuAqui() {
+    try { return JSON.parse(localStorage.getItem(CHAVE_LOCAL) || 'null'); }
+    catch (e) { return null; }   // modo privado/armazenamento bloqueado
+  }
+  function marcarRespondido(nome) {
+    try { localStorage.setItem(CHAVE_LOCAL, JSON.stringify({ nome: nome, em: Date.now() })); }
+    catch (e) { /* sem armazenamento: so' o servidor segura */ }
+  }
+  function limparMarca() {
+    try { localStorage.removeItem(CHAVE_LOCAL); } catch (e) {}
+  }
 
   var $ = function (s) { return document.querySelector(s); };
   var slide = $('#slide');
@@ -343,6 +381,26 @@
     pintarProgresso();
   }
 
+  function renderJaRespondeu(marca) {
+    var primeiro = String(marca.nome || '').trim().split(/\s+/)[0] || '';
+    slide.innerHTML = '' +
+      '<div class="selo"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#77cbf5" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>' +
+      '<h1>' + (primeiro ? esc(primeiro) + ', você já está na lista!' : 'Você já está na lista!') + '</h1>' +
+      '<p class="ajuda">Este formulário já foi respondido neste aparelho. ' +
+      'Cada pessoa concorre uma vez — fique de olho no telão.</p>' +
+      '<button type="button" class="trocar-pessoa" id="btn-outra-pessoa">Não sou eu, quero preencher o meu</button>';
+    $('#navegacao').hidden = true;
+    $('#barra').style.width = '100%';
+    $('#btn-outra-pessoa').addEventListener('click', function () {
+      limparMarca();
+      respostas = {};
+      atual = 0;
+      concluido = false;
+      $('#navegacao').hidden = false;
+      render();
+    });
+  }
+
   function renderConcluido() {
     slide.innerHTML = '' +
       '<div class="selo"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#77cbf5" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>' +
@@ -392,6 +450,7 @@
         return c;
       });
     }).then(function (c) {
+      marcarRespondido(respostas.nome);
       enviando = false;
       concluido = true;
       anima('saindo-frente', render);
@@ -410,8 +469,13 @@
     .then(function (r) {
       if (r.ok) {
         $('#palco').hidden = false;
-        $('#navegacao').hidden = false;
-        render();
+        var marca = jaRespondeuAqui();
+        if (marca) {
+          renderJaRespondeu(marca);
+        } else {
+          $('#navegacao').hidden = false;
+          render();
+        }
       } else {
         return r.json().catch(function () { return {}; }).then(function (c) {
           $('#texto-bloqueado').textContent = c.erro || 'Peça o endereço atualizado à organização do evento.';

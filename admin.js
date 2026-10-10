@@ -1694,9 +1694,15 @@ $('#lista-sorteios').addEventListener('click', async e => {
   }
 
   if (sortear) {
+    // O título nomeia o prêmio: com vários sorteios criados de antemão, a
+    // confirmação só serve para alguma coisa se disser QUAL deles vai rodar.
+    // "Sortear agora?" genérico, com três cards parecidos na tela, confirma o
+    // clique errado com a mesma facilidade do certo.
+    const alvo = sorteiosCache.find(x => x.id === sortear.dataset.sortear) || {};
     if (!(await confirmar({
-      titulo: 'Sortear agora?',
-      texto: 'O telão vai girar os nomes e revelar o ganhador.\n\nNão dá para refazer: para tirar outro nome, crie um sorteio novo.',
+      titulo: `Sortear ${alvo.titulo || 'agora'}?`,
+      texto: (alvo.premio ? `Prêmio: ${alvo.premio}\n\n` : '') +
+        'O telão vai girar os nomes e revelar o ganhador.\n\nNão dá para refazer: para tirar outro nome, crie um sorteio novo.',
       botao: 'Sortear',
     }))) return;
     sortear.disabled = true;

@@ -235,7 +235,17 @@
         return api('PATCH', '', { telao_id: d.telao }).then(function () { toast('Telão trocado.'); });
       });
     } else if (d.sortear) {
-      passo = confirmar({ titulo: 'Sortear agora?', texto: 'O telão vai girar os nomes e revelar o ganhador.\n\nNão dá para refazer: para tirar outro nome, crie um sorteio novo.', botao: 'Sortear' })
+      // O título nomeia o prêmio: com vários sorteios criados de antemão, a
+      // confirmação só serve para alguma coisa se disser QUAL deles vai
+      // rodar. "Sortear agora?" genérico, com três cards parecidos na tela,
+      // confirma o clique errado com a mesma facilidade do certo.
+      var alvo = sorteios.filter(function (x) { return x.id === d.sortear; })[0] || {};
+      passo = confirmar({
+        titulo: 'Sortear ' + (alvo.titulo || 'agora') + '?',
+        texto: (alvo.premio ? 'Prêmio: ' + alvo.premio + '\n\n' : '') +
+          'O telão vai girar os nomes e revelar o ganhador.\n\nNão dá para refazer: para tirar outro nome, crie um sorteio novo.',
+        botao: 'Sortear',
+      })
         .then(function (sim) {
           if (!sim) return;
           bt.disabled = true;
