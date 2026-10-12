@@ -212,17 +212,23 @@ export async function sincronizarCertificados(env) {
 // Mesmas variacoes do worker de entrega do app (worker-envio/src/index.js):
 // texto identico em massa e' um dos sinais que derrubam numero na API nao
 // oficial, e os dois caminhos saem do mesmo numero.
-const MENSAGEM = `Oi, {{primeiro_nome}}! Seu certificado de participação no {{evento}} está aqui. 🎉
+const MENSAGEM = `Oi, {{primeiro_nome}}! Que alegria ter você com a gente no {{evento}}. 💙
 
-Pode validar a autenticidade dele em {{link}}
+Seu certificado de participação está aqui em anexo. Ele é seu, você fez por merecer!
+
+Se puder, posta nos stories e marca a gente: @oimpulsoempresarial. Vamos adorar ver e repostar. 🚀
 ---
-{{primeiro_nome}}, obrigado por participar do {{evento}}! Segue o seu certificado de participação.
+{{primeiro_nome}}, obrigado de coração por ter vivido o {{evento}} com a gente!
 
-Para conferir que ele é autêntico: {{link}}
+Aqui vai o seu certificado de participação. 🎉
+
+Que tal compartilhar essa conquista? Posta nos seus stories e marca o @oimpulsoempresarial, a gente quer repostar você por lá.
 ---
-Olá, {{primeiro_nome}}! Aqui está o seu certificado do {{evento}}. Foi muito bom ter você com a gente.
+Olá, {{primeiro_nome}}! Foi muito bom ter você no {{evento}}. Sua presença fez diferença.
 
-Autenticidade em {{link}}`;
+Segue em anexo o seu certificado de participação. 📜
+
+Bora mostrar pra todo mundo? Compartilha nos stories e marca @oimpulsoempresarial. Estamos de olho para repostar! 💙`;
 
 export const urlCertificados = (env) =>
   String(env.CERT_URL || 'https://certificados.oimpulsoempresarial.com.br').replace(/\/+$/, '');
