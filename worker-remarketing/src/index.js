@@ -227,9 +227,11 @@ async function contarGastoHoje(env) {
 // ==================================================================
 // Publico: credenciamento com presenca marcada na porta. Nao passa por
 // `mensagens`/`envios` porque muitos presentes nao sao leads (ingresso
-// nominal, cadastro na porta). Mesmas regras do resto do worker: janela de
-// 8h as 20h, cota da rodada e teto diario compartilhados, pausa aleatoria,
-// variacoes em fila e opt-out respeitado.
+// nominal, cadastro na porta). Ritmo proprio, mais lento que o do
+// remarketing e pedido pelo dono do projeto: uma mensagem a cada
+// `intervaloS` (com variacao de alguns segundos), so' dentro das janelas
+// abaixo, que ja' ficam dentro das 8h as 20h. Teto diario compartilhado,
+// variacoes em fila e opt-out respeitados como no resto do worker.
 //
 // Liga e desliga sem deploy pela chave `pesquisa_satisfacao_ativa` da
 // tabela config ('1' liga; qualquer outra coisa ou ausente, desligada).
@@ -237,10 +239,18 @@ const PESQUISA = {
   campanha: 'pesquisa-satisfacao-2026',
   chaveAtiva: 'pesquisa_satisfacao_ativa',
   link: 'https://docs.google.com/forms/d/e/1FAIpQLScyQ_tnt-DkXOLhMNply7LMrO0K-aiCk57FNdeORy5L6nV3LA/viewform',
+  // Horario de Brasilia. 16/10 ate' as 20h e 17/10 das 10h as 17h: 570 min
+  // a partir das 17h30 para 65 numeros, 8 min 45 s entre um envio e outro.
+  janelas: [
+    ['2026-10-16T08:00:00-03:00', '2026-10-16T20:00:00-03:00'],
+    ['2026-10-17T10:00:00-03:00', '2026-10-17T17:00:00-03:00'],
+  ],
+  intervaloS: 525,
+  variacaoS: 30,
   // A saudacao de cada variacao tem a forma "Palavra, {{primeiro_nome}}!" ou
   // "?": quando o numero e' de mais de uma pessoa, o nome sai e sobra so'
   // "Oi!" (ver textoPesquisa).
-  texto: `Oi, {{primeiro_nome}}! Aqui é do Impulso Empresarial. 💙
+  texto: `Oi, {{primeiro_nome}}! Aqui é o Gabriel, do Impulso Empresarial. 💙
 
 Ainda estamos muito felizes com o que vivemos juntos no dia 10, e a sua opinião é o que vai deixar a próxima edição ainda melhor.
 
@@ -249,14 +259,14 @@ Você pode responder uma pesquisa rapidinha? Leva poucos minutos:
 
 Obrigado por fazer parte!
 ---
-Tudo bem, {{primeiro_nome}}? Obrigado mais uma vez por ter vindo ao Impulso Empresarial!
+Tudo bem, {{primeiro_nome}}? Aqui é o Gabriel, do Impulso Empresarial. Obrigado mais uma vez por ter vindo ao evento!
 
 Queremos saber como foi a sua experiência, do conteúdo à organização. Responde pra gente? É rapidinho:
 {{link}}
 
 Cada resposta ajuda a construir a próxima edição. 🚀
 ---
-Olá, {{primeiro_nome}}! Foi muito bom ter você no Impulso Empresarial.
+Olá, {{primeiro_nome}}! Quem fala é o Gabriel, do Impulso Empresarial. Foi muito bom ter você com a gente.
 
 Estamos preparando a próxima edição e a sua opinião conta muito. Separamos uma pesquisa curta de satisfação:
 {{link}}
@@ -325,6 +335,40 @@ async function filaPesquisa(env, limite) {
   }));
 }
 
+const dentroDaJanela = (ms) => PESQUISA.janelas.some(([a, b]) => ms >= Date.parse(a) && ms < Date.parse(b));
+
+/**
+ * No maximo UM envio por rodada do cron. O proximo envio vence
+ * `intervaloS` (+/- `variacaoS`) depois do ultimo; se vencer dentro desta
+ * rodada, espera ate' la' e envia. O limite de 280 s de espera garante que
+ * esta rodada ja' enviou (e gravou) antes de a seguinte comecar, 5 min
+ * depois, entao duas rodadas nao disputam o mesmo horario. Primeira
+ * mensagem de cada janela sai logo na abertura.
+ */
+async function rodarPesquisa(env) {
+  const ativa = await env.DB.prepare('SELECT valor FROM config WHERE chave = ?')
+    .bind(PESQUISA.chaveAtiva).first().catch(() => null);
+  if (ativa?.valor !== '1') return { desligada: true };
+
+  const ultimo = await env.DB.prepare(
+    'SELECT MAX(enviado_em) AS em FROM disparos_presentes WHERE campanha = ?'
+  ).bind(PESQUISA.campanha).first();
+  const variacao = (Math.random() * 2 - 1) * PESQUISA.variacaoS * 1000;
+  const devido = ultimo?.em ? Date.parse(ultimo.em) + PESQUISA.intervaloS * 1000 + variacao : 0;
+  const quando = Math.max(Date.now(), devido);
+
+  if (quando - Date.now() > 280000) return { aguardando: new Date(quando).toISOString() };
+  if (!dentroDaJanela(quando)) return { fora_da_janela: true };
+  if (await contarGastoHoje(env) >= MAX_POR_DIA) return { teto_diario_atingido: true };
+
+  const [item] = await filaPesquisa(env, 1);
+  if (!item) return { concluido: true };
+
+  if (quando > Date.now()) await dorme(quando - Date.now());
+  const r = await enviarPesquisa(env, item);
+  return r ? { enviado: r.ok, whatsapp: item.whatsapp } : { ja_reservado: true };
+}
+
 async function enviarPesquisa(env, item) {
   const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM disparos_presentes WHERE campanha = ?')
     .bind(PESQUISA.campanha).first();
@@ -358,19 +402,10 @@ async function rodar(env, forcarForaDaJanela = false) {
 
   if (limite === 0) return { fila: 0, enviados: 0, erros: 0, teto_diario_atingido: true };
 
-  // Remarketing primeiro; a pesquisa usa so' o que sobrou da cota da rodada.
-  const normal = await montarFila(env.DB, limite);
-  const fila = [...normal, ...await filaPesquisa(env, limite - normal.length)];
+  const fila = await montarFila(env.DB, limite);
   let enviados = 0, erros = 0;
 
   for (const item of fila) {
-    if (item.pesquisa) {
-      const r = await enviarPesquisa(env, item);
-      if (r) r.ok ? enviados++ : erros++;
-      if (fila.length > 1) await dorme(pausaAleatoria());
-      continue;
-    }
-
     // Calculada ANTES da reserva: proximaVariante conta envios ja'
     // existentes desta mensagem, e a reserva abaixo cria mais um.
     const variante = await proximaVariante(env, item.mensagem_id, item.texto);
@@ -488,6 +523,7 @@ export default {
   async scheduled(_evento, env, ctx) {
     ctx.waitUntil(rodar(env));
     ctx.waitUntil(rodarEmergencia(env));
+    ctx.waitUntil(rodarPesquisa(env));
   },
 
   // Disparo manual, para testar sem esperar o cron. Protegido pelo mesmo
@@ -498,6 +534,7 @@ export default {
       return new Response('Nao autorizado', { status: 401 });
     }
     if (url.pathname === '/emergencia') return Response.json(await rodarEmergencia(env));
+    if (url.pathname === '/pesquisa') return Response.json(await rodarPesquisa(env));
     if (url.pathname !== '/rodar') return new Response('Not found', { status: 404 });
     // ?forcar=1 ignora a janela de horario — so' pra testar de madrugada
     // sem esperar o dia seguinte; o cron nunca manda essa flag.
