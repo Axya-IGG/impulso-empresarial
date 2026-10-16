@@ -1,4 +1,4 @@
-import { agora, enviarWhatsapp, dividirVariantes, renderizar, registrarMensagemSaida } from '../../functions/_lib.js';
+import { agora, enviarWhatsapp, dividirVariantes, renderizar, registrarMensagemSaida, normalizarWhatsapp } from '../../functions/_lib.js';
 
 // Canal unico: Evolution. A API oficial da Meta saiu em 09/10, depois de
 // passar tres dias recusando 100% das tentativas com "Object with ID
@@ -208,7 +208,143 @@ async function contarGastoHoje(env) {
     console.log('[remarketing] cert_entregas indisponivel, teto sem ela:', String(e).slice(0, 120));
   }
 
-  return (jaHoje?.n ?? 0) + certificadosHoje;
+  // Mesmo motivo do try/catch acima: banco sem a tabela nao derruba nada.
+  let presentesHoje = 0;
+  try {
+    const r = await env.DB.prepare(
+      `SELECT COUNT(*) AS n FROM disparos_presentes WHERE enviado_em > datetime('now','-1 day')`
+    ).first();
+    presentesHoje = r?.n ?? 0;
+  } catch (e) {
+    console.log('[remarketing] disparos_presentes indisponivel, teto sem ela:', String(e).slice(0, 120));
+  }
+
+  return (jaHoje?.n ?? 0) + certificadosHoje + presentesHoje;
+}
+
+// ==================================================================
+// DISPARO PARA QUEM ESTEVE NO EVENTO (pesquisa de satisfacao, 16/10)
+// ==================================================================
+// Publico: credenciamento com presenca marcada na porta. Nao passa por
+// `mensagens`/`envios` porque muitos presentes nao sao leads (ingresso
+// nominal, cadastro na porta). Mesmas regras do resto do worker: janela de
+// 8h as 20h, cota da rodada e teto diario compartilhados, pausa aleatoria,
+// variacoes em fila e opt-out respeitado.
+//
+// Liga e desliga sem deploy pela chave `pesquisa_satisfacao_ativa` da
+// tabela config ('1' liga; qualquer outra coisa ou ausente, desligada).
+const PESQUISA = {
+  campanha: 'pesquisa-satisfacao-2026',
+  chaveAtiva: 'pesquisa_satisfacao_ativa',
+  link: 'https://docs.google.com/forms/d/e/1FAIpQLScyQ_tnt-DkXOLhMNply7LMrO0K-aiCk57FNdeORy5L6nV3LA/viewform',
+  // A saudacao de cada variacao tem a forma "Palavra, {{primeiro_nome}}!" ou
+  // "?": quando o numero e' de mais de uma pessoa, o nome sai e sobra so'
+  // "Oi!" (ver textoPesquisa).
+  texto: `Oi, {{primeiro_nome}}! Aqui é do Impulso Empresarial. 💙
+
+Ainda estamos muito felizes com o que vivemos juntos no dia 10, e a sua opinião é o que vai deixar a próxima edição ainda melhor.
+
+Você pode responder uma pesquisa rapidinha? Leva poucos minutos:
+{{link}}
+
+Obrigado por fazer parte!
+---
+Tudo bem, {{primeiro_nome}}? Obrigado mais uma vez por ter vindo ao Impulso Empresarial!
+
+Queremos saber como foi a sua experiência, do conteúdo à organização. Responde pra gente? É rapidinho:
+{{link}}
+
+Cada resposta ajuda a construir a próxima edição. 🚀
+---
+Olá, {{primeiro_nome}}! Foi muito bom ter você no Impulso Empresarial.
+
+Estamos preparando a próxima edição e a sua opinião conta muito. Separamos uma pesquisa curta de satisfação:
+{{link}}
+
+Leva só alguns minutos. Desde já, obrigado! 🙏`,
+};
+
+// Ingresso no nome da empresa ("Quality Job Recursos Humanos", "NEXO
+// PROSPER CONTABILIDADE SS"): saudacao sem nome, senao vira "Oi, Quality!".
+const NOME_DE_EMPRESA = /\b(ltda|eireli|epp|me|ss|sa|assoc|associacao|contabilidade|construtora|consultoria|assessoria|servicos|recursos humanos|ingresso sem nome)\b/;
+
+/** Primeiro nome capitalizado ("JAQUELINE" -> "Jaqueline"), ou '' se for empresa. */
+function primeiroNome(nome) {
+  const limpo = String(nome || '').trim();
+  const chave = limpo.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  if (!limpo || NOME_DE_EMPRESA.test(chave)) return '';
+  const p = limpo.split(/\s+/)[0].toLowerCase();
+  return p.charAt(0).toUpperCase() + p.slice(1);
+}
+
+/** Texto final: um nome so' entra quando o numero e' de uma pessoa so'. */
+function textoPesquisa(variante, nomes) {
+  const lista = String(nomes || '').split(' / ').filter(Boolean);
+  const primeiro = lista.length === 1 ? primeiroNome(lista[0]) : '';
+  const comNome = primeiro
+    ? variante.replaceAll('{{primeiro_nome}}', primeiro)
+    : variante.replace(/, \{\{primeiro_nome\}\}([!?])/g, '$1');
+  return comNome.replaceAll('{{link}}', PESQUISA.link);
+}
+
+/**
+ * Proximos numeros da pesquisa. Agrupa por WhatsApp NORMALIZADO, em JS e
+ * nao no SQL, para que "12 99134-9866" e "5512991349866" sejam o mesmo
+ * numero: duas pessoas com o mesmo WhatsApp recebem uma mensagem so'.
+ * Fica de fora quem pediu para sair (leads.optout) e quem ja' tem linha
+ * nesta campanha (inclusive erro: reenvio so' manual).
+ */
+async function filaPesquisa(env, limite) {
+  if (limite <= 0) return [];
+  const ativa = await env.DB.prepare('SELECT valor FROM config WHERE chave = ?')
+    .bind(PESQUISA.chaveAtiva).first().catch(() => null);
+  if (ativa?.valor !== '1') return [];
+
+  const { results } = await env.DB.prepare(`
+    SELECT nome, whatsapp FROM credenciamento
+     WHERE presente_em IS NOT NULL AND whatsapp IS NOT NULL AND whatsapp != ''
+     ORDER BY presente_em
+  `).all();
+  const optout = new Set(((await env.DB.prepare(
+    'SELECT whatsapp FROM leads WHERE optout = 1'
+  ).all()).results || []).map(r => normalizarWhatsapp(r.whatsapp)).filter(Boolean));
+  const feitos = new Set(((await env.DB.prepare(
+    'SELECT whatsapp FROM disparos_presentes WHERE campanha = ?'
+  ).bind(PESQUISA.campanha).all()).results || []).map(r => r.whatsapp));
+
+  const porNumero = new Map();
+  for (const r of results || []) {
+    const n = normalizarWhatsapp(r.whatsapp);
+    if (!n || optout.has(n) || feitos.has(n)) continue;
+    if (!porNumero.has(n)) porNumero.set(n, []);
+    const nome = String(r.nome || '').trim();
+    if (nome && !porNumero.get(n).includes(nome)) porNumero.get(n).push(nome);
+  }
+  return [...porNumero].slice(0, limite).map(([whatsapp, nomes]) => ({
+    pesquisa: true, whatsapp, nomes: nomes.join(' / '),
+  }));
+}
+
+async function enviarPesquisa(env, item) {
+  const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM disparos_presentes WHERE campanha = ?')
+    .bind(PESQUISA.campanha).first();
+  const variantes = dividirVariantes(PESQUISA.texto);
+  const texto = textoPesquisa(variantes[(n?.n ?? 0) % variantes.length], item.nomes);
+
+  // Reserva antes de enviar, igual a `envios`: o UNIQUE barra a segunda.
+  try {
+    await env.DB.prepare(
+      `INSERT INTO disparos_presentes (campanha, whatsapp, nomes, status, enviado_em) VALUES (?, ?, ?, 'enviando', ?)`
+    ).bind(PESQUISA.campanha, item.whatsapp, item.nomes, agora()).run();
+  } catch {
+    return null;
+  }
+  const r = await enviarWhatsapp(env, item.whatsapp, texto);
+  await env.DB.prepare(
+    'UPDATE disparos_presentes SET status = ?, detalhe = ?, enviado_em = ? WHERE campanha = ? AND whatsapp = ?'
+  ).bind(r.ok ? 'enviado' : 'erro', r.detalhe, agora(), PESQUISA.campanha, item.whatsapp).run();
+  if (r.ok) await registrarMensagemSaida(env, null, item.whatsapp, texto);
+  return r;
 }
 
 async function rodar(env, forcarForaDaJanela = false) {
@@ -222,10 +358,19 @@ async function rodar(env, forcarForaDaJanela = false) {
 
   if (limite === 0) return { fila: 0, enviados: 0, erros: 0, teto_diario_atingido: true };
 
-  const fila = await montarFila(env.DB, limite);
+  // Remarketing primeiro; a pesquisa usa so' o que sobrou da cota da rodada.
+  const normal = await montarFila(env.DB, limite);
+  const fila = [...normal, ...await filaPesquisa(env, limite - normal.length)];
   let enviados = 0, erros = 0;
 
   for (const item of fila) {
+    if (item.pesquisa) {
+      const r = await enviarPesquisa(env, item);
+      if (r) r.ok ? enviados++ : erros++;
+      if (fila.length > 1) await dorme(pausaAleatoria());
+      continue;
+    }
+
     // Calculada ANTES da reserva: proximaVariante conta envios ja'
     // existentes desta mensagem, e a reserva abaixo cria mais um.
     const variante = await proximaVariante(env, item.mensagem_id, item.texto);

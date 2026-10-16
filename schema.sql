@@ -268,3 +268,19 @@ CREATE INDEX IF NOT EXISTS idx_credenciamento_anfitriao ON credenciamento(anfitr
 CREATE UNIQUE INDEX IF NOT EXISTS idx_credenciamento_ingresso
   ON credenciamento(ingresso_chave) WHERE ingresso_chave IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_credenciamento_whatsapp ON credenciamento(whatsapp);
+
+-- Disparo para quem esteve no evento, uma linha por (campanha, WhatsApp)
+-- (ver migrations/017_disparos_presentes.sql).
+CREATE TABLE IF NOT EXISTS disparos_presentes (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  campanha    TEXT NOT NULL,
+  whatsapp    TEXT NOT NULL,
+  nomes       TEXT,
+  status      TEXT NOT NULL,
+  detalhe     TEXT,
+  enviado_em  TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_disparos_presentes_unico
+  ON disparos_presentes(campanha, whatsapp);
+CREATE INDEX IF NOT EXISTS idx_disparos_presentes_data
+  ON disparos_presentes(enviado_em);
