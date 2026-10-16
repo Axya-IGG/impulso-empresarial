@@ -240,7 +240,7 @@ const PESQUISA = {
   chaveAtiva: 'pesquisa_satisfacao_ativa',
   link: 'https://docs.google.com/forms/d/e/1FAIpQLScyQ_tnt-DkXOLhMNply7LMrO0K-aiCk57FNdeORy5L6nV3LA/viewform',
   // Horario de Brasilia. 16/10 ate' as 20h e 17/10 das 10h as 17h: 570 min
-  // a partir das 17h30 para 65 numeros, 8 min 45 s entre um envio e outro.
+  // a partir das 17h25 para 65 numeros, 8 min 45 s entre um envio e outro.
   janelas: [
     ['2026-10-16T08:00:00-03:00', '2026-10-16T20:00:00-03:00'],
     ['2026-10-17T10:00:00-03:00', '2026-10-17T17:00:00-03:00'],
@@ -252,21 +252,21 @@ const PESQUISA = {
   // "Oi!" (ver textoPesquisa).
   texto: `Oi, {{primeiro_nome}}! Aqui é o Gabriel, do Impulso Empresarial. 💙
 
-Ainda estamos muito felizes com o que vivemos juntos no dia 10, e a sua opinião é o que vai deixar a próxima edição ainda melhor.
+Estamos muito felizes com o que vivemos juntos no dia 10, e a sua opinião é o que vai deixar a próxima edição ainda melhor.
 
 Você pode responder uma pesquisa rapidinha? Leva poucos minutos:
 {{link}}
 
 Obrigado por fazer parte!
 ---
-Tudo bem, {{primeiro_nome}}? Aqui é o Gabriel, do Impulso Empresarial. Obrigado mais uma vez por ter vindo ao evento!
+Tudo bem, {{primeiro_nome}}? Aqui é o Gabriel, do Impulso Empresarial. Obrigado mais uma vez por ter participado do NOSSO evento!
 
-Queremos saber como foi a sua experiência, do conteúdo à organização. Responde pra gente? É rapidinho:
+Queremos saber como foi a sua experiência, do conteúdo à organização. Poderia responder pra gente? É rapidinho:
 {{link}}
 
-Cada resposta ajuda a construir a próxima edição. 🚀
+Cada resposta ajuda a construir uma próxima edição melhor ainda!. 🚀
 ---
-Olá, {{primeiro_nome}}! Quem fala é o Gabriel, do Impulso Empresarial. Foi muito bom ter você com a gente.
+Olá, {{primeiro_nome}}! Aqui é o Gabriel, do Impulso Empresarial. Foi muito bom ter você com a gente no NOSSO evento!
 
 Estamos preparando a próxima edição e a sua opinião conta muito. Separamos uma pesquisa curta de satisfação:
 {{link}}
